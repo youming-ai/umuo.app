@@ -1,0 +1,539 @@
+/**
+ * 监控系统集成示例
+ * 展示如何在现有代码中集成性能监控系统
+ */
+
+import {
+  initializeUnifiedPerformanceMonitoring,
+  useUnifiedPerformanceMonitoring,
+  UnifiedPerformanceMonitoring,
+} from "./unified-performance-monitoring";
+import { MetricCategory } from "./performance-monitoring";
+
+// Note: These imports would need to be implemented based on your actual monitoring setup
+// import {
+//   monitorFileOperation,
+//   monitorAsyncFileOperation,
+//   recordPerformanceMetric,
+// } from "./file-performance-monitoring";
+
+// Note: These imports would need to be implemented based on your actual monitoring setup
+// import {
+//   monitorDatabaseOperation,
+//   monitorAsyncDatabaseOperation,
+// } from "./database-performance-monitoring";
+
+// import { monitorApiRequest, monitorAsyncApiRequest } from "./api-performance-monitoring";
+
+import {
+  measurePerformance,
+  measureAsyncPerformance,
+  recordPerformanceMetric as recordGeneralMetric,
+} from "./performance-monitoring";
+
+// 导入现有的核心模块
+// import { uploadFile } from "./file-upload";
+// import { DbUtils } from "./db";
+// import { groqClient } from "./groq-client";
+
+/**
+ * 初始化监控系统
+ * 在应用程序启动时调用
+ */
+export function initializeMonitoring() {
+  // 配置监控系统
+  const config = {
+    enabled: true,
+    enableDashboard: true,
+    enableRealTimeUpdates: true,
+    enableAlerts: true,
+    autoStart: true,
+    config: {
+      performance: {
+        enabled: true,
+        sampleRate: 1.0,
+        memoryThreshold: 500, // 500MB
+        performanceThreshold: 1000, // 1秒
+        enableConsoleLogging: false,
+      },
+      file: {
+        enabled: true,
+        trackDetailedMetrics: true,
+        trackMemoryUsage: true,
+        trackTransferSpeed: true,
+        performanceThresholds: {
+          upload: 30000, // 30秒
+          validation: 5000, // 5秒
+          chunking: 10000, // 10秒
+        },
+      },
+      database: {
+        enabled: true,
+        trackSlowQueries: true,
+        slowQueryThreshold: 1000, // 1秒
+        trackConnectionState: true,
+        trackTransactionPerformance: true,
+      },
+      api: {
+        enabled: true,
+        trackSlowRequests: true,
+        slowRequestThreshold: 5000, // 5秒
+        trackRateLimits: true,
+        trackRetries: true,
+        trackCachePerformance: true,
+      },
+    },
+  };
+
+  // 初始化统一监控系统
+  initializeUnifiedPerformanceMonitoring(config);
+
+  console.log("Performance monitoring system initialized");
+}
+
+/**
+ * 文件上传监控集成示例
+ */
+export async function monitoredUploadFile(
+  file: File,
+  onProgress?: (progress: number) => void,
+): Promise<number> {
+  const { monitorAsyncFileOperation } = useFilePerformanceMonitoring();
+
+  return monitorAsyncFileOperation(
+    "upload",
+    file.size,
+    async () => {
+      // 调用原有的上传函数
+      const result = await uploadFile(file, onProgress);
+      return result;
+    },
+    {
+      fileName: file.name,
+      fileType: file.type,
+      timestamp: Date.now(),
+    },
+  );
+}
+
+/**
+ * 数据库操作监控集成示例
+ */
+export class MonitoredDbUtils {
+  private static instance: MonitoredDbUtils;
+  private dbUtils: DbUtils;
+
+  constructor() {
+    this.dbUtils = new DbUtils();
+  }
+
+  static getInstance(): MonitoredDbUtils {
+    if (!MonitoredDbUtils.instance) {
+      MonitoredDbUtils.instance = new MonitoredDbUtils();
+    }
+    return MonitoredDbUtils.instance;
+  }
+
+  async addFile(fileData: any): Promise<number> {
+    const { monitorAsyncDatabaseOperation } = useDatabasePerformanceMonitoring();
+
+    return monitorAsyncDatabaseOperation(
+      "insert",
+      "files",
+      1,
+      async () => {
+        return this.dbUtils.addFile(fileData);
+      },
+      {
+        fileName: fileData.name,
+        fileSize: fileData.size,
+      },
+    );
+  }
+
+  async getFile(id: number): Promise<any> {
+    const { monitorAsyncDatabaseOperation } = useDatabasePerformanceMonitoring();
+
+    return monitorAsyncDatabaseOperation(
+      "query",
+      "files",
+      1,
+      async () => {
+        return this.dbUtils.getFile(id);
+      },
+      { fileId: id },
+    );
+  }
+
+  async addSegments(segments: any[]): Promise<void> {
+    const { monitorAsyncDatabaseOperation } = useDatabasePerformanceMonitoring();
+
+    return monitorAsyncDatabaseOperation(
+      "bulk_insert",
+      "segments",
+      segments.length,
+      async () => {
+        return this.dbUtils.addSegments(segments);
+      },
+      {
+        segmentsCount: segments.length,
+        transcriptId: segments[0]?.transcriptId,
+      },
+    );
+  }
+}
+
+/**
+ * API调用监控集成示例
+ */
+export class MonitoredGroqClient {
+  async transcribe(audioData: Blob, options?: any): Promise<any> {
+    const { monitorAsyncApiRequest } = useApiPerformanceMonitoring();
+
+    return monitorAsyncApiRequest(
+      "transcription",
+      "POST",
+      "/api/groq/transcribe",
+      audioData.size,
+      async () => {
+        // 调用原有的API客户端
+        return groqClient.transcribe(audioData, options);
+      },
+      {
+        audioSize: audioData.size,
+        options,
+      },
+    );
+  }
+
+  async chat(messages: any[], options?: any): Promise<any> {
+    const { monitorAsyncApiRequest } = useApiPerformanceMonitoring();
+
+    const requestSize = JSON.stringify({ messages, options }).length;
+
+    return monitorAsyncApiRequest(
+      "groq_api",
+      "POST",
+      "/api/groq/chat",
+      requestSize,
+      async () => {
+        return groqClient.chat(messages, options);
+      },
+      {
+        messagesCount: messages.length,
+        options,
+      },
+    );
+  }
+}
+
+/**
+ * 音频处理监控集成示例
+ */
+export async function monitoredAudioProcessing(
+  audioFile: File,
+  processingSteps: string[] = [],
+): Promise<any> {
+  const { measureAsyncPerformance } = useUnifiedPerformanceMonitoring();
+
+  return measureAsyncPerformance(
+    "audio_processing",
+    MetricCategory.CUSTOM,
+    async () => {
+      const results = [];
+
+      for (const step of processingSteps) {
+        const stepResult = await measureAsyncPerformance(`audio_${step}`, MetricCategory.CUSTOM, async () => {
+          // 这里应该调用实际的音频处理函数
+          console.log(`Processing audio step: ${step}`);
+          await new Promise((resolve) => setTimeout(resolve, 100)); // 模拟处理时间
+          return { step, status: "completed", timestamp: Date.now() };
+        });
+        results.push(stepResult);
+      }
+
+      return {
+        fileId: audioFile.name,
+        processingResults: results,
+        totalProcessingTime: Date.now(),
+      };
+    },
+    {
+      fileName: audioFile.name,
+      fileSize: audioFile.size,
+      processingSteps,
+    },
+  );
+}
+
+/**
+ * 批量操作监控集成示例
+ */
+export async function monitoredBatchOperation<T>(
+  operationName: string,
+  items: T[],
+  processFn: (item: T, index: number) => Promise<any>,
+  batchSize: number = 10,
+): Promise<any[]> {
+  const { measureAsyncPerformance } = useUnifiedPerformanceMonitoring();
+
+  return measureAsyncPerformance(
+    `batch_${operationName}`,
+    MetricCategory.CUSTOM,
+    async () => {
+      const results: any[] = [];
+      const totalItems = items.length;
+      let processedItems = 0;
+
+      // 分批处理
+      for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+
+        const batchResults = await Promise.all(
+          batch.map(async (item, batchIndex) => {
+            const result = await measureAsyncPerformance(
+              `${operationName}_item`,
+              MetricCategory.CUSTOM,
+              async () => {
+                return processFn(item, i + batchIndex);
+              },
+              {
+                itemIndex: i + batchIndex,
+                totalItems,
+                batchSize: batch.length,
+              },
+            );
+
+            processedItems++;
+
+            // 记录进度
+            recordGeneralMetric(
+              "batch_progress",
+              MetricCategory.CUSTOM,
+              (processedItems / totalItems) * 100,
+              "percent",
+              { operationName, processedItems, totalItems },
+            );
+
+            return result;
+          }),
+        );
+
+        results.push(...batchResults);
+
+        // 批次间延迟，避免过载
+        if (i + batchSize < items.length) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      return results;
+    },
+    {
+      operationName,
+      totalItems: items.length,
+      batchSize,
+    },
+  );
+}
+
+/**
+ * 缓存性能监控示例
+ */
+export class MonitoredCache {
+  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private hitCount = 0;
+  private missCount = 0;
+
+  constructor(
+    private readonly maxSize: number = 1000,
+    private readonly ttl: number = 5 * 60 * 1000, // 5分钟
+  ) {}
+
+  async get(key: string): Promise<any> {
+    const { monitorAsyncApiRequest } = useApiPerformanceMonitoring();
+
+    return monitorAsyncApiRequest(
+      "cache_get",
+      "GET",
+      "/cache",
+      0,
+      async () => {
+        const cached = this.cache.get(key);
+
+        if (cached && Date.now() - cached.timestamp < this.ttl) {
+          this.hitCount++;
+          // 记录缓存命中
+          const { recordCacheHit } = useApiPerformanceMonitoring();
+          recordCacheHit("cache", key, 5); // 假设缓存响应时间为5ms
+          return cached.data;
+        }
+
+        this.missCount++;
+        // 记录缓存未命中
+        const { recordCacheMiss } = useApiPerformanceMonitoring();
+        recordCacheMiss("cache", key);
+
+        return null;
+      },
+      { key },
+    );
+  }
+
+  async set(key: string, data: any): Promise<void> {
+    const { monitorAsyncApiRequest } = useApiPerformanceMonitoring();
+
+    return monitorAsyncApiRequest(
+      "cache_set",
+      "POST",
+      "/cache",
+      JSON.stringify(data).length,
+      async () => {
+        // 清理过期或过多的缓存
+        if (this.cache.size >= this.maxSize) {
+          this.cleanup();
+        }
+
+        this.cache.set(key, { data, timestamp: Date.now() });
+      },
+      { key, dataSize: JSON.stringify(data).length },
+    );
+  }
+
+  getStats() {
+    const totalRequests = this.hitCount + this.missCount;
+    const hitRate = totalRequests > 0 ? (this.hitCount / totalRequests) * 100 : 0;
+
+    return {
+      hitCount: this.hitCount,
+      missCount: this.missCount,
+      hitRate: hitRate,
+      cacheSize: this.cache.size,
+      maxSize: this.maxSize,
+    };
+  }
+
+  private cleanup() {
+    const now = Date.now();
+    for (const [key, value] of this.cache.entries()) {
+      if (now - value.timestamp > this.ttl) {
+        this.cache.delete(key);
+      }
+    }
+
+    // 如果还是太大，删除最旧的条目
+    if (this.cache.size > this.maxSize) {
+      const entries = Array.from(this.cache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+
+      const toDelete = entries.slice(0, entries.length - this.maxSize);
+      toDelete.forEach(([key]) => this.cache.delete(key));
+    }
+  }
+}
+
+/**
+ * 自定义性能指标记录示例
+ */
+export class CustomMetricsRecorder {
+  recordUserAction(action: string, details?: Record<string, any>) {
+    recordGeneralMetric(
+      `user_action_${action}`,
+      MetricCategory.USER_EXPERIENCE,
+      1,
+      "count",
+      { action },
+      details,
+    );
+  }
+
+  recordFeatureUsage(feature: string, duration: number) {
+    recordGeneralMetric(`feature_usage_${feature}`, MetricCategory.CUSTOM, duration, "ms", { feature });
+  }
+
+  recordError(errorType: string, context?: Record<string, any>) {
+    recordGeneralMetric(`error_${errorType}`, MetricCategory.CUSTOM, 1, "count", { errorType }, context);
+  }
+
+  recordBusinessMetric(metricName: string, value: number, unit: string = "count") {
+    recordGeneralMetric(`business_${metricName}`, MetricCategory.CUSTOM, value, unit, { metricName });
+  }
+}
+
+// 导出监控工具实例
+export const monitoringTools = {
+  // 初始化
+  initializeMonitoring,
+
+  // 文件监控
+  monitoredUploadFile,
+
+  // 数据库监控
+  MonitoredDbUtils,
+
+  // API监控
+  MonitoredGroqClient,
+
+  // 音频处理监控
+  monitoredAudioProcessing,
+
+  // 批量操作监控
+  monitoredBatchOperation,
+
+  // 缓存监控
+  MonitoredCache,
+
+  // 自定义指标
+  CustomMetricsRecorder,
+
+  // 获取监控报告
+  getPerformanceReport: () => {
+    const { getUnifiedReport } = useUnifiedPerformanceMonitoring();
+    return getUnifiedReport();
+  },
+
+  // 获取仪表板数据
+  getDashboardData: () => {
+    const { getDashboardData } = useUnifiedPerformanceMonitoring();
+    return getDashboardData();
+  },
+};
+
+// 使用示例
+/*
+// 1. 初始化监控系统
+monitoringTools.initializeMonitoring();
+
+// 2. 使用监控的文件上传
+const fileId = await monitoringTools.monitoredUploadFile(file, (progress) => {
+  console.log(`Upload progress: ${progress}%`);
+});
+
+// 3. 使用监控的数据库操作
+const dbUtils = MonitoredDbUtils.getInstance();
+const file = await dbUtils.getFile(fileId);
+
+// 4. 使用监控的API调用
+const groqClient = new MonitoredGroqClient();
+const transcription = await groqClient.transcribe(audioData);
+
+// 5. 使用监控的批量操作
+const results = await monitoringTools.monitoredBatchOperation(
+  "process_segments",
+  segments,
+  async (segment, index) => {
+    return processSegment(segment);
+  },
+  50
+);
+
+// 6. 使用监控的缓存
+const cache = new MonitoredCache();
+await cache.set("user_data", userData);
+const cachedData = await cache.get("user_data");
+
+// 7. 记录自定义指标
+const metricsRecorder = new CustomMetricsRecorder();
+metricsRecorder.recordUserAction("file_upload", { fileSize: file.size });
+metricsRecorder.recordFeatureUsage("transcription", processingTime);
+*/

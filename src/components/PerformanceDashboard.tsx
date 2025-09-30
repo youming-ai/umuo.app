@@ -1,0 +1,527 @@
+import type { DashboardData } from "../types/dashboard-data";
+/**
+ * 性能监控仪表板组件
+ * 提供实时的性能指标展示和系统健康监控
+ */
+
+("use client");
+
+import type React from "react";
+import { useState, useEffect } from "react";
+import {
+  useUnifiedPerformanceMonitoring,
+  type UnifiedPerformanceReport,
+} from "@/lib/unified-performance-monitoring";
+
+// 性能指标卡片组件
+const MetricCard: React.FC<{
+  title: string;
+  value: string | number;
+  unit?: string;
+  trend?: "up" | "down" | "stable";
+  status?: "good" | "warning" | "error";
+}> = ({ title, value, unit, trend, status }) => {
+  const getStatusColor = () => {
+    switch (status) {
+      case "good":
+        return "text-green-600";
+      case "warning":
+        return "text-yellow-600";
+      case "error":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
+  const getTrendIcon = () => {
+    switch (trend) {
+      case "up":
+        return "↗️";
+      case "down":
+        return "↘️";
+      case "stable":
+        return "➡️";
+      default:
+        return "";
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+      <h3 className="text-lg font-semibold text-gray-700 mb-2">{title}</h3>
+      <div className="flex items-baseline">
+        <span className={`text-3xl font-bold ${getStatusColor()}`}>{value}</span>
+        {unit && <span className="text-gray-500 ml-1">{unit}</span>}
+        {trend && <span className="ml-2 text-xl">{getTrendIcon()}</span>}
+      </div>
+    </div>
+  );
+};
+
+// 告警组件
+const AlertItem: React.FC<{
+  alert: {
+    id: string;
+    severity: "critical" | "high" | "medium" | "low";
+    title: string;
+    message: string;
+    timestamp: number;
+    recommendation: string;
+  };
+  onResolve: (alertId: string) => void;
+}> = ({ alert, onResolve }) => {
+  const getSeverityColor = () => {
+    switch (alert.severity) {
+      case "critical":
+        return "bg-red-100 border-red-400 text-red-700";
+      case "high":
+        return "bg-orange-100 border-orange-400 text-orange-700";
+      case "medium":
+        return "bg-yellow-100 border-yellow-400 text-yellow-700";
+      case "low":
+        return "bg-blue-100 border-blue-400 text-blue-700";
+      default:
+        return "bg-gray-100 border-gray-400 text-gray-700";
+    }
+  };
+
+  const formatTime = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString();
+  };
+
+  return (
+    <div className={`p-4 rounded-lg border-l-4 mb-3 ${getSeverityColor()}`}>
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <h4 className="font-semibold text-lg mb-1">{alert.title}</h4>
+          <p className="text-sm mb-2">{alert.message}</p>
+          <p className="text-xs opacity-75">
+            <strong>建议:</strong> {alert.recommendation}
+          </p>
+          <p className="text-xs opacity-50 mt-1">{formatTime(alert.timestamp)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => onResolve(alert.id)}
+          className="ml-4 px-3 py-1 text-xs bg-white rounded hover:bg-gray-50 transition-colors"
+        >
+          解决
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// 性能图表组件（简化版本）
+const PerformanceChart: React.FC<{
+  title: string;
+  data: Array<{ time: number; value: number }>;
+  unit: string;
+  color: string;
+}> = ({ title, data, unit, color }) => {
+  const maxValue = Math.max(...data.map((d) => d.value), 1);
+  const minValue = Math.min(...data.map((d) => d.value), 0);
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+      <h3 className="text-lg font-semibold text-gray-700 mb-4">{title}</h3>
+      <div className="h-40 relative">
+        {data.length > 0 ? (
+          <div className="absolute inset-0 flex items-end justify-between">
+            {data.map((point, index) => (
+              <div
+                key={index}
+                className="flex-1 mx-0.5"
+                style={{ height: `${((point.value - minValue) / (maxValue - minValue)) * 100}%` }}
+              >
+                <div className="w-full rounded-t" style={{ backgroundColor: color }} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400">暂无数据</div>
+        )}
+      </div>
+      <div className="flex justify-between text-xs text-gray-500 mt-2">
+        <span>
+          {minValue.toFixed(1)}
+          {unit}
+        </span>
+        <span>
+          {maxValue.toFixed(1)}
+          {unit}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// 主要仪表板组件
+export const PerformanceDashboard: React.FC = () => {
+  const { getUnifiedReport, getDashboardData, clearAllData, resolveAlert } =
+    useUnifiedPerformanceMonitoring();
+
+  const [report, setReport] = useState<UnifiedPerformanceReport | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 加载数据
+  const loadData = async () => {
+    setIsRefreshing(true);
+    try {
+      const newReport = getUnifiedReport();
+      const newDashboardData = getDashboardData();
+
+      setReport(newReport);
+      setDashboardData(newDashboardData);
+      setLastRefresh(Date.now());
+    } catch {
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // 初始化和定时刷新
+  useEffect(() => {
+    loadData();
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 30000); // 每30秒刷新一次
+
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  // 处理告警解决
+  const handleResolveAlert = (alertId: string) => {
+    resolveAlert(alertId);
+    loadData(); // 刷新数据
+  };
+
+  // 手动刷新
+  const handleRefresh = () => {
+    loadData();
+  };
+
+  // 清理数据
+  const handleClearData = () => {
+    if (confirm("确定要清理所有监控数据吗？")) {
+      clearAllData();
+      loadData();
+    }
+  };
+
+  if (!report || !dashboardData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">加载性能数据中...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const formatUptime = (milliseconds: number) => {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}天 ${hours % 24}小时`;
+    if (hours > 0) return `${hours}小时 ${minutes % 60}分钟`;
+    if (minutes > 0) return `${minutes}分钟`;
+    return `${seconds}秒`;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* 头部 */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">性能监控仪表板</h1>
+            <p className="text-gray-600 mt-2">
+              实时监控系统性能和健康状态
+              <span className="ml-4 text-sm text-gray-500">
+                最后更新: {new Date(lastRefresh).toLocaleTimeString()}
+              </span>
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {isRefreshing ? "刷新中..." : "刷新数据"}
+            </button>
+            <button
+              type="button"
+              onClick={handleClearData}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              清理数据
+            </button>
+          </div>
+        </div>
+
+        {/* 系统概览 */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">系统概览</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <MetricCard
+              title="健康评分"
+              value={report.systemHealth.score}
+              unit="分"
+              status={
+                report.systemHealth.score > 80
+                  ? "good"
+                  : report.systemHealth.score > 60
+                    ? "warning"
+                    : "error"
+              }
+            />
+            <MetricCard
+              title="活动操作"
+              value={dashboardData.overview.activeOperations}
+              unit="个"
+            />
+            <MetricCard title="总操作数" value={dashboardData.overview.totalOperations} unit="个" />
+            <MetricCard
+              title="错误率"
+              value={dashboardData.overview.errorRate.toFixed(1)}
+              unit="%"
+              status={
+                dashboardData.overview.errorRate > 10
+                  ? "error"
+                  : dashboardData.overview.errorRate > 5
+                    ? "warning"
+                    : "good"
+              }
+            />
+          </div>
+        </div>
+
+        {/* 性能趋势图表 */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">性能趋势</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PerformanceChart
+              title="响应时间趋势"
+              data={dashboardData.charts.performanceTrend}
+              unit="ms"
+              color="#3B82F6"
+            />
+            <PerformanceChart
+              title="错误率趋势"
+              data={dashboardData.charts.errorRate}
+              unit="%"
+              color="#EF4444"
+            />
+            <PerformanceChart
+              title="吞吐量趋势"
+              data={dashboardData.charts.throughput}
+              unit="ops/s"
+              color="#10B981"
+            />
+            <PerformanceChart
+              title="内存使用趋势"
+              data={dashboardData.charts.memoryUsage}
+              unit="%"
+              color="#F59E0B"
+            />
+          </div>
+        </div>
+
+        {/* 详细指标 */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">详细指标</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 文件处理指标 */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">文件处理</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">总文件数</span>
+                  <span className="font-semibold">{report.fileMetrics.totalFiles}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">总大小</span>
+                  <span className="font-semibold">
+                    {(report.fileMetrics.totalSize / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">成功率</span>
+                  <span
+                    className={`font-semibold ${report.fileMetrics.successRate > 90 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {report.fileMetrics.successRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">平均处理时间</span>
+                  <span className="font-semibold">
+                    {report.fileMetrics.averageProcessingTime.toFixed(0)} ms
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* 数据库指标 */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">数据库操作</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">总操作数</span>
+                  <span className="font-semibold">{report.databaseMetrics.totalOperations}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">成功率</span>
+                  <span
+                    className={`font-semibold ${report.databaseMetrics.successRate > 95 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {report.databaseMetrics.successRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">平均响应时间</span>
+                  <span className="font-semibold">
+                    {report.databaseMetrics.averageExecutionTime.toFixed(0)} ms
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">索引使用率</span>
+                  <span
+                    className={`font-semibold ${report.databaseMetrics.indexUsage.indexUsageRate > 80 ? "text-green-600" : "text-yellow-600"}`}
+                  >
+                    {report.databaseMetrics.indexUsage.indexUsageRate.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* API指标 */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">API调用</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">总请求数</span>
+                  <span className="font-semibold">{report.apiMetrics.totalRequests}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">成功率</span>
+                  <span
+                    className={`font-semibold ${report.apiMetrics.successRate > 95 ? "text-green-600" : "text-red-600"}`}
+                  >
+                    {report.apiMetrics.successRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">平均响应时间</span>
+                  <span className="font-semibold">
+                    {report.apiMetrics.averageResponseTime.toFixed(0)} ms
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">传输数据</span>
+                  <span className="font-semibold">
+                    {(report.apiMetrics.totalDataTransferred / 1024 / 1024).toFixed(1)} MB
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 告警和建议 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 告警 */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-700">
+                系统告警 ({report.alerts.length})
+              </h3>
+              <span
+                className={`px-2 py-1 rounded text-xs font-semibold ${
+                  report.alerts.length === 0
+                    ? "bg-green-100 text-green-800"
+                    : report.alerts.length < 3
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                }`}
+              >
+                {report.alerts.length === 0 ? "正常" : report.alerts.length < 3 ? "注意" : "警告"}
+              </span>
+            </div>
+            <div className="max-h-96 scrollable">
+              {report.alerts.length > 0 ? (
+                report.alerts.map((alert) => (
+                  <AlertItem key={alert.id} alert={alert} onResolve={handleResolveAlert} />
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p>暂无系统告警</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 建议 */}
+          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-700 mb-4">
+              优化建议 ({report.recommendations.length})
+            </h3>
+            <div className="space-y-3 max-h-96 scrollable">
+              {report.recommendations.length > 0 ? (
+                report.recommendations.map((recommendation, index) => (
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    </div>
+                    <p className="text-sm text-gray-700">{recommendation}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="text-4xl mb-2">🎯</div>
+                  <p>系统运行良好，暂无优化建议</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 系统信息 */}
+        <div className="mt-8 bg-white rounded-lg shadow p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4">系统信息</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+            <div>
+              <p className="text-gray-600">会话ID</p>
+              <p className="font-mono text-xs text-gray-500">{report.sessionInfo.sessionId}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">运行时间</p>
+              <p className="font-semibold">{formatUptime(report.sessionInfo.uptime)}</p>
+            </div>
+            <div>
+              <p className="text-gray-600">内存使用</p>
+              <p className="font-semibold">
+                {report.performanceMetrics.memory
+                  ? `${report.performanceMetrics.memory.used}MB / ${report.performanceMetrics.memory.total}MB (${report.performanceMetrics.memory.percentage}%)`
+                  : "N/A"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PerformanceDashboard;
