@@ -140,12 +140,6 @@ export function handleError(error: unknown, context?: string): AppError {
     return error;
   }
 
-  if (typeof error === "string") {
-    const appError = createError("internalServerError", error, undefined, 500);
-    logError(appError, context);
-    return appError;
-  }
-
   if (error instanceof Error) {
     const appError = createError("internalServerError", error.message, { stack: error.stack }, 500);
     logError(appError, context);
@@ -154,7 +148,7 @@ export function handleError(error: unknown, context?: string): AppError {
 
   const appError = createError(
     "internalServerError",
-    "未知错误",
+    "Unknown error occurred",
     typeof error === "object" && error !== null ? { error } : undefined,
     500,
   );
@@ -174,7 +168,7 @@ export function handleSilently(error: unknown, _context?: string): AppError {
 
   return createError(
     "internalServerError",
-    "未知错误",
+    "Unknown error occurred",
     typeof error === "object" && error !== null ? { error } : undefined,
     500,
   );
@@ -200,7 +194,7 @@ export function validationError(message: string, details?: Record<string, unknow
 
 // 未找到错误
 export function notFoundError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("fileNotFound", message, details, 404);
+  return createError("dbRecordNotFound", message, details, 404);
 }
 
 // 内部服务器错误

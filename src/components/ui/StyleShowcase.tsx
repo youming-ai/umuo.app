@@ -7,20 +7,17 @@ export default function StyleShowcase() {
 
   const toggleTheme = () => {
     setIsDark(!isDark);
-    document.documentElement.classList.toggle('dark');
+    document.documentElement.classList.toggle("dark");
   };
 
   return (
-    <div className={`min-h-screen p-8 ${isDark ? 'dark' : ''}`}>
+    <div className={`min-h-screen p-8 ${isDark ? "dark" : ""}`}>
       <div className="max-w-6xl mx-auto space-y-12">
         {/* Theme Toggle */}
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">UI Style Showcase</h1>
-          <button
-            onClick={toggleTheme}
-            className="btn-secondary"
-          >
-            {isDark ? '☀️ Light' : '🌙 Dark'}
+          <button onClick={toggleTheme} className="btn-secondary">
+            {isDark ? "☀️ Light" : "🌙 Dark"}
           </button>
         </div>
 
@@ -33,9 +30,7 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-4">Primary Buttons</h3>
               <div className="space-y-3">
-                <button className="btn-primary w-full">
-                  Primary Button
-                </button>
+                <button className="btn-primary w-full">Primary Button</button>
                 <button className="btn-primary w-full" disabled>
                   Disabled Primary
                 </button>
@@ -49,9 +44,7 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-4">Secondary Buttons</h3>
               <div className="space-y-3">
-                <button className="btn-secondary w-full">
-                  Secondary Button
-                </button>
+                <button className="btn-secondary w-full">Secondary Button</button>
                 <button className="btn-secondary w-full" disabled>
                   Disabled Secondary
                 </button>
@@ -65,9 +58,7 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-4">Outline Buttons</h3>
               <div className="space-y-3">
-                <button className="btn-outline w-full">
-                  Outline Button
-                </button>
+                <button className="btn-outline w-full">Outline Button</button>
                 <button className="btn-outline w-full" disabled>
                   Disabled Outline
                 </button>
@@ -81,9 +72,7 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-4">Ghost Buttons</h3>
               <div className="space-y-3">
-                <button className="btn-ghost w-full">
-                  Ghost Button
-                </button>
+                <button className="btn-ghost w-full">Ghost Button</button>
                 <button className="btn-ghost w-full" disabled>
                   Disabled Ghost
                 </button>
@@ -97,9 +86,7 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-4">Danger Buttons</h3>
               <div className="space-y-3">
-                <button className="btn-danger w-full">
-                  Danger Button
-                </button>
+                <button className="btn-danger w-full">Danger Button</button>
                 <button className="btn-danger w-full" disabled>
                   Disabled Danger
                 </button>
@@ -186,8 +173,11 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-3">Shadow Differences</h3>
               <p className="text-secondary mb-4">
-                <strong>Light Theme:</strong> More pronounced shadows with lighter opacity for subtle depth.<br/>
-                <strong>Dark Theme:</strong> Deeper shadows with higher opacity to create visual separation in dark environments.
+                <strong>Light Theme:</strong> More pronounced shadows with lighter opacity for
+                subtle depth.
+                <br />
+                <strong>Dark Theme:</strong> Deeper shadows with higher opacity to create visual
+                separation in dark environments.
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <button className="btn-primary">Light Theme Shadow</button>
@@ -198,8 +188,9 @@ export default function StyleShowcase() {
             <div className="card-default">
               <h3 className="text-lg font-semibold mb-3">Bottom Border Emphasis</h3>
               <p className="text-secondary mb-4">
-                All buttons and cards feature enhanced bottom borders (4-6px) that provide visual weight and depth.
-                In active states, the bottom border reduces to 1px to simulate a pressed effect.
+                All buttons and cards feature enhanced bottom borders (4-6px) that provide visual
+                weight and depth. In active states, the bottom border reduces to 1px to simulate a
+                pressed effect.
               </p>
               <div className="flex gap-3">
                 <button className="btn-primary">4px Bottom</button>
@@ -236,8 +227,8 @@ export default function StyleShowcase() {
           <div className="card-default">
             <h3 className="text-lg font-semibold mb-3">Focus States</h3>
             <p className="text-secondary mb-4">
-              All buttons have enhanced focus states with 2px outline and proper offset for keyboard navigation.
-              Tab through the buttons below to see the focus indicators.
+              All buttons have enhanced focus states with 2px outline and proper offset for keyboard
+              navigation. Tab through the buttons below to see the focus indicators.
             </p>
             <div className="flex gap-3 flex-wrap">
               <button className="btn-primary">Tab to me 1</button>
@@ -252,7 +243,8 @@ export default function StyleShowcase() {
             <h3 className="text-lg font-semibold mb-3">WCAG Compliance</h3>
             <p className="text-secondary mb-4">
               Enhanced color contrast ratios ensure AA compliance in both light and dark themes.
-              Text remains readable with improved contrast ratios (3:1 for large text, 4.5:1 for normal text).
+              Text remains readable with improved contrast ratios (3:1 for large text, 4.5:1 for
+              normal text).
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-surface/10 p-4 rounded">

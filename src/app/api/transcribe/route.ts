@@ -177,10 +177,19 @@ export async function POST(request: NextRequest) {
       meta: formValidation.data.meta,
     });
   } catch (error) {
+    // 安全处理错误 - 避免暴露敏感信息
+    const isProduction = process.env.NODE_ENV === "production";
+
     return apiError({
       code: "INTERNAL_ERROR",
-      message: "Internal server error during transcription",
-      details: error instanceof Error ? { message: error.message, stack: error.stack } : undefined,
+      message: isProduction
+        ? "转录服务暂时不可用，请稍后重试"
+        : "Internal server error during transcription",
+      details: isProduction
+        ? undefined
+        : error instanceof Error
+          ? { message: error.message, stack: error.stack }
+          : undefined,
       statusCode: 500,
     });
   }

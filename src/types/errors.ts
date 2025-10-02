@@ -299,6 +299,7 @@ export const UserFriendlyMessages: Record<string, string> = {
   NETWORK_ERROR: "网络连接失败，请检查网络设置",
   INTERNAL_SERVER_ERROR: "系统内部错误，请联系技术支持",
   SERVICE_UNAVAILABLE: "服务暂时不可用，请稍后再试",
+  API_VALIDATION_ERROR: "输入验证失败，请检查输入参数",
 };
 
 // 默认错误消息

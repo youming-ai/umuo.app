@@ -269,7 +269,7 @@ export function useTranscriptionManager() {
 
           // 使用setTimeout避免在render期间调用setState
           setTimeout(() => {
-            startTranscription(nextFile.id!);
+            startTranscription(nextFile.id);
           }, 0);
         }
       }

@@ -94,7 +94,7 @@ export class GroqAuthenticationError extends GroqClientError {
 
 export class GroqSecurityError extends GroqClientError {
   constructor(message: string) {
-    super(message, ErrorCodes.apiAuthError, 403);
+    super(message, ErrorCodes.securityError, 403);
     this.name = "GroqSecurityError";
   }
 }
@@ -140,23 +140,12 @@ export class GroqClient {
     if (isTestEnvironment()) {
       this.apiKeyValidation = {
         isValid: true,
-        isConfigured: true,
         errors: [],
         warnings: [],
         score: 100,
         format: {
           hasCorrectPrefix: true,
-          hasCorrectLength: true,
-          matchesPattern: true,
-        },
-        security: {
-          isExposed: false,
-          hasSuspiciousPattern: false,
-          isTestKey: false,
-        },
-        usage: {
-          requestCount: 0,
-          errorRate: 0,
+          hasValidLength: true,
         },
       };
     } else {
@@ -233,7 +222,7 @@ export class GroqClient {
 
     // 文件大小验证
     if (file.size > MAX_FILE_SIZE) {
-      throw new GroqClientError(ERROR_MESSAGES.FILE_TOO_LARGE, ErrorCodes.apiValidationError, 400);
+      throw new GroqClientError(ERROR_MESSAGES.FILE_TOO_LARGE, ErrorCodes.validationError, 400);
     }
 
     const context = createErrorContext("GroqClient", "transcribe", {
@@ -355,7 +344,7 @@ export class GroqClient {
   ): Promise<Array<GroqTranscriptionResponse & { chunkIndex: number }>> {
     // 块数量限制
     if (chunks.length > MAX_CHUNKS) {
-      throw new GroqClientError(ERROR_MESSAGES.TOO_MANY_CHUNKS, ErrorCodes.apiValidationError, 400);
+      throw new GroqClientError(ERROR_MESSAGES.TOO_MANY_CHUNKS, ErrorCodes.validationError, 400);
     }
 
     const results: Array<GroqTranscriptionResponse & { chunkIndex: number }> = [];

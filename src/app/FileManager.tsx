@@ -8,7 +8,7 @@ import StatsCards from "@/components/file/StatsCards";
 import Navigation from "@/components/ui/Navigation";
 import { useAppState, useFiles, useTranscriptionManager, useTranscripts } from "@/hooks";
 
-export default function HomePageClient() {
+export default function FileManager() {
   const router = useRouter();
 
   // 使用 hooks 获取数据

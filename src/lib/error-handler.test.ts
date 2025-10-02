@@ -57,7 +57,7 @@ describe("Error Handler", () => {
 
       expect(error.code).toBe(ErrorCodes.apiValidationError);
       expect(error.message).toBe("Test error");
-      expect(error.timestamp).toBeInstanceOf(Number);
+      expect(typeof error.timestamp).toBe("number");
       expect(error.context).toBeDefined();
     });
 
@@ -206,18 +206,18 @@ describe("Error Handler", () => {
       const error = createError("apiValidationError", "Test error");
 
       showErrorToast(error);
-      expect(toast.error).toHaveBeenCalledWith("Test error");
+      expect(toast.error).toHaveBeenCalledWith("输入验证失败，请检查输入参数");
     });
 
     test("should show error toast for regular error", () => {
       const error = new Error("Regular error");
       showErrorToast(error);
-      expect(toast.error).toHaveBeenCalledWith("Regular error");
+      expect(toast.error).toHaveBeenCalledWith("系统内部错误，请联系技术支持");
     });
 
     test("should show error toast for string", () => {
       showErrorToast("String error");
-      expect(toast.error).toHaveBeenCalledWith("String error");
+      expect(toast.error).toHaveBeenCalledWith("系统内部错误，请联系技术支持");
     });
 
     test("should show success toast", () => {

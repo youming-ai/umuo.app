@@ -1,5 +1,17 @@
 import { FileUploadUtils } from "./file-upload";
 import { createObjectUrl, revokeObjectUrl } from "./url-manager";
+import {
+  MAX_FILE_SIZE,
+  MAX_AUDIO_DURATION,
+  MAX_CHUNKS,
+  DEFAULT_CHUNK_DURATION,
+  DEFAULT_OVERLAP,
+  API_TIMEOUT,
+  validateFileSize,
+  validateAudioDuration,
+  validateChunkCount,
+  ERROR_MESSAGES,
+} from "./transcription-config";
 
 export interface AudioChunk {
   blob: Blob;
@@ -23,19 +35,60 @@ export async function getAudioDuration(blob: Blob): Promise<number> {
   return new Promise((resolve, reject) => {
     const audio = new Audio();
     const url = createObjectUrl(blob);
+    let isResolved = false;
+
+    // 超时处理
+    const timeout = setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true;
+        revokeObjectUrl(url);
+        audio.src = "";
+        reject(new Error(`Audio duration detection timeout after ${API_TIMEOUT}ms`));
+      }
+    }, API_TIMEOUT);
+
+    const cleanup = () => {
+      if (!isResolved) {
+        isResolved = true;
+        clearTimeout(timeout);
+        revokeObjectUrl(url);
+        audio.src = "";
+      }
+    };
 
     audio.addEventListener("loadedmetadata", () => {
-      const duration = audio.duration;
-      revokeObjectUrl(url);
-      resolve(duration);
+      if (!isResolved) {
+        const duration = audio.duration;
+        cleanup();
+        resolve(duration);
+      }
     });
 
     audio.addEventListener("error", (_error) => {
-      revokeObjectUrl(url);
-      reject(new Error("Failed to load audio metadata"));
+      if (!isResolved) {
+        cleanup();
+        reject(new Error("Failed to load audio metadata"));
+      }
     });
 
-    audio.src = url;
+    // 添加加载中止处理
+    audio.addEventListener("abort", () => {
+      if (!isResolved) {
+        cleanup();
+        reject(new Error("Audio loading was aborted"));
+      }
+    });
+
+    try {
+      audio.src = url;
+    } catch (error) {
+      cleanup();
+      reject(
+        new Error(
+          `Failed to set audio source: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+    }
   });
 }
 
@@ -46,8 +99,8 @@ export async function sliceAudio(
   blob: Blob,
   startTime: number,
   endTime: number,
-  chunkSeconds: number = 45,
-  overlap: number = 0.2,
+  chunkSeconds: number = DEFAULT_CHUNK_DURATION,
+  overlap: number = DEFAULT_OVERLAP,
 ): Promise<AudioChunk[]> {
   // 参数验证
   if (startTime >= endTime) {
@@ -58,74 +111,116 @@ export async function sliceAudio(
     throw new Error("Invalid start time: must be non-negative");
   }
 
-  // 内存安全检查
-  if (blob.size > 500 * 1024 * 1024) {
-    // 500MB limit
-    throw new Error("Audio file too large for processing. Maximum size is 500MB.");
+  // 文件大小验证
+  const sizeValidation = validateFileSize(blob.size);
+  if (!sizeValidation.isValid) {
+    throw new Error(sizeValidation.error || "File size validation failed");
   }
 
   const audioContext = new AudioContext();
+  let isContextClosed = false;
+
+  // 确保资源清理的辅助函数
+  const closeAudioContext = async () => {
+    if (!isContextClosed && audioContext.state !== "closed") {
+      try {
+        await audioContext.close();
+        isContextClosed = true;
+      } catch (closeError) {
+        console.warn("Failed to close AudioContext:", closeError);
+        isContextClosed = true; // 即使失败也标记为已关闭
+      }
+    }
+  };
+
+  // 设置超时机制
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Audio processing timeout after ${API_TIMEOUT}ms`));
+    }, API_TIMEOUT);
+  });
 
   try {
-    const arrayBuffer = await blob.arrayBuffer();
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const processingPromise = (async () => {
+      // 添加超时保护的ArrayBuffer读取
+      const arrayBuffer = await Promise.race([blob.arrayBuffer(), timeoutPromise]);
 
-    // 检查时间范围是否在音频缓冲区内
-    if (startTime >= audioBuffer.duration) {
-      throw new Error("Start time exceeds audio duration");
-    }
+      // 添加超时保护的音频解码
+      const audioBuffer = await Promise.race([
+        audioContext.decodeAudioData(arrayBuffer),
+        timeoutPromise,
+      ]);
 
-    const actualEndTime = Math.min(endTime, audioBuffer.duration);
-    if (startTime >= actualEndTime) {
-      throw new Error("Invalid time range after considering audio duration");
-    }
-
-    const chunks: AudioChunk[] = [];
-
-    let currentStart = startTime;
-    let chunkIndex = 0;
-    const MAX_CHUNKS = 100; // 限制最大块数量防止内存泄漏
-    while (currentStart < actualEndTime && chunkIndex < MAX_CHUNKS) {
-      const chunkEnd = Math.min(currentStart + chunkSeconds, actualEndTime);
-      const chunkDuration = chunkEnd - currentStart;
-
-      if (chunkDuration <= 0) {
-        break;
+      // 检查时间范围是否在音频缓冲区内
+      if (startTime >= audioBuffer.duration) {
+        throw new Error("Start time exceeds audio duration");
       }
 
-      // 使用实际的音频提取函数
-      const chunkBlob = await extractAudioSegment(
-        audioBuffer,
-        currentStart,
-        chunkEnd,
-        audioContext,
-      );
+      const actualEndTime = Math.min(endTime, audioBuffer.duration);
+      if (startTime >= actualEndTime) {
+        throw new Error("Invalid time range after considering audio duration");
+      }
 
-      chunks.push({
-        blob: chunkBlob,
-        startTime: currentStart,
-        endTime: chunkEnd,
-        duration: chunkDuration,
-        index: chunkIndex,
-      });
+      const chunks: AudioChunk[] = [];
+      let currentStart = startTime;
+      let chunkIndex = 0;
 
-      currentStart = chunkEnd - overlap;
-      chunkIndex++;
-    }
+      while (currentStart < actualEndTime && chunkIndex < MAX_CHUNKS) {
+        // 检查上下文状态
+        if (audioContext.state === "closed") {
+          throw new Error("AudioContext was closed unexpectedly");
+        }
 
-    // 检查是否因为达到最大块数而停止
-    if (chunkIndex >= MAX_CHUNKS) {
-      // biome-ignore lint/suspicious/noConsole: Intentional warning for chunk limit
-      console.warn(`Maximum chunk limit (${MAX_CHUNKS}) reached, stopping processing`);
-    }
+        const chunkEnd = Math.min(currentStart + chunkSeconds, actualEndTime);
+        const chunkDuration = chunkEnd - currentStart;
 
-    return chunks;
+        if (chunkDuration <= 0) {
+          break;
+        }
+
+        // 使用实际的音频提取函数
+        const chunkBlob = await extractAudioSegment(
+          audioBuffer,
+          currentStart,
+          chunkEnd,
+          audioContext,
+        );
+
+        chunks.push({
+          blob: chunkBlob,
+          startTime: currentStart,
+          endTime: chunkEnd,
+          duration: chunkDuration,
+          index: chunkIndex,
+        });
+
+        currentStart = chunkEnd - overlap;
+        chunkIndex++;
+      }
+
+      // 检查是否因为达到最大块数而停止
+      if (chunkIndex >= MAX_CHUNKS) {
+        console.warn(`Maximum chunk limit (${MAX_CHUNKS}) reached, stopping processing`);
+      }
+
+      return chunks;
+    })();
+
+    return await processingPromise;
   } catch (error) {
-    throw new Error(
-      `Audio processing error: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
+    // 提供更详细的错误信息
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    if (errorMessage.includes("timeout")) {
+      throw new Error(`音频处理超时: ${errorMessage}`);
+    } else if (errorMessage.includes("decode")) {
+      throw new Error(`音频解码失败: ${errorMessage}`);
+    } else {
+      throw new Error(`音频处理错误: ${errorMessage}`);
+    }
   } finally {
-    await audioContext.close();
+    // 确保AudioContext被正确关闭
+    await closeAudioContext();
   }
 }
 
@@ -223,8 +318,8 @@ function encodeWav(samples: Float32Array, sampleRate: number): Blob {
  */
 export async function processAudioFile(
   fileBlobOrId: Blob | number,
-  chunkSeconds: number = 45,
-  overlap: number = 0.2,
+  chunkSeconds: number = DEFAULT_CHUNK_DURATION,
+  overlap: number = DEFAULT_OVERLAP,
 ): Promise<AudioChunk[]> {
   let fileBlob: Blob;
 
@@ -236,15 +331,18 @@ export async function processAudioFile(
   }
   const duration = await getAudioDuration(fileBlob);
 
-  // 文件大小和时长检查
-  if (fileBlob.size > 500 * 1024 * 1024) {
-    throw new Error("File size exceeds 500MB limit. Please use a smaller audio file.");
+  // 文件大小验证
+  const sizeValidation = validateFileSize(fileBlob.size);
+  if (!sizeValidation.isValid) {
+    throw new Error(sizeValidation.error || "File size validation failed");
   }
 
-  if (duration > 3600) {
-    // 1小时限制
-    throw new Error("Audio duration exceeds 1 hour limit. Please use a shorter audio file.");
+  // 音频时长验证
+  const durationValidation = validateAudioDuration(duration);
+  if (!durationValidation.isValid) {
+    throw new Error(durationValidation.error || "Audio duration validation failed");
   }
+
   const chunks = await sliceAudio(fileBlob, 0, duration, chunkSeconds, overlap);
 
   // 如果传入的是文件ID，更新文件元数据
@@ -259,17 +357,56 @@ export async function processAudioFile(
  */
 export async function getAudioMetadata(blob: Blob): Promise<AudioMetadata> {
   const audioContext = new AudioContext();
-  const arrayBuffer = await blob.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+  let isContextClosed = false;
 
-  await audioContext.close();
-
-  return {
-    duration: audioBuffer.duration,
-    sampleRate: audioBuffer.sampleRate,
-    channels: audioBuffer.numberOfChannels,
-    bitrate: Math.round((blob.size * 8) / audioBuffer.duration),
+  const closeAudioContext = async () => {
+    if (!isContextClosed && audioContext.state !== "closed") {
+      try {
+        await audioContext.close();
+        isContextClosed = true;
+      } catch (closeError) {
+        console.warn("Failed to close AudioContext in getAudioMetadata:", closeError);
+        isContextClosed = true;
+      }
+    }
   };
+
+  try {
+    // 添加超时保护
+    const arrayBuffer = await Promise.race([
+      blob.arrayBuffer(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("ArrayBuffer read timeout")), API_TIMEOUT),
+      ),
+    ]);
+
+    const audioBuffer = await Promise.race([
+      audioContext.decodeAudioData(arrayBuffer),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Audio decode timeout")), API_TIMEOUT),
+      ),
+    ]);
+
+    await closeAudioContext();
+
+    return {
+      duration: audioBuffer.duration,
+      sampleRate: audioBuffer.sampleRate,
+      channels: audioBuffer.numberOfChannels,
+      bitrate: Math.round((blob.size * 8) / audioBuffer.duration),
+    };
+  } catch (error) {
+    await closeAudioContext();
+
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    if (errorMessage.includes("timeout")) {
+      throw new Error(`音频元数据获取超时: ${errorMessage}`);
+    } else if (errorMessage.includes("decode")) {
+      throw new Error(`音频解码失败: ${errorMessage}`);
+    } else {
+      throw new Error(`获取音频元数据失败: ${errorMessage}`);
+    }
+  }
 }
 
 /**

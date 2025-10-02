@@ -10,9 +10,9 @@ import {
 
 // Mock the Web Audio API
 const mockAudioContext = {
-  createBufferSource: jest.fn().mockReturnValue({ buffer: null, connect: jest.fn(), start: jest.fn(), stop: jest.fn() }),
+  createBufferSource: jest.fn(),
   createAnalyser: jest.fn(),
-  createGain: jest.fn().mockReturnValue({ connect: jest.fn(), gain: { value: 1 } }),
+  createGain: jest.fn(),
   createScriptProcessor: jest.fn(),
   decodeAudioData: jest.fn(),
   close: jest.fn(),
@@ -35,7 +35,7 @@ const mockAudioBuffer = {
   length: 44100,
   sampleRate: 44100,
   duration: 1,
-  getChannelData: jest.fn(() => new Float32Array(44100).fill(0)),
+  getChannelData: jest.fn(),
   copyToChannel: jest.fn(),
 };
 
@@ -109,15 +109,26 @@ describe("Audio Processing", () => {
 
       // Mock OfflineAudioContext
       const mockOfflineContext = {
-        createBufferSource: jest.fn().mockReturnValue({ buffer: null, connect: jest.fn(), start: jest.fn(), stop: jest.fn() }),
-        createGain: jest.fn().mockReturnValue({ connect: jest.fn(), gain: { value: 1 } }),
+        createBufferSource: jest.fn().mockReturnValue({
+          buffer: null,
+          connect: jest.fn(),
+          start: jest.fn(),
+          stop: jest.fn(),
+        }),
+        createBufferSource: jest.fn().mockReturnValue({
+          buffer: null,
+          connect: jest.fn(),
+          start: jest.fn(),
+          stop: jest.fn(),
+        }),
+        createGain: jest.fn(),
         startRendering: jest.fn().mockResolvedValue(mockAudioBuffer),
         destination: {},
       };
 
       global.OfflineAudioContext = jest.fn(() => mockOfflineContext) as any;
 
-      const result = await sliceAudio(blob, startTime, endTime, 0.5, 0);
+      const result = await sliceAudio(blob, startTime, endTime);
 
       expect(result).toBeInstanceOf(Array);
       expect(result).toHaveLength(1);
@@ -155,45 +166,20 @@ describe("Audio Processing", () => {
 
   describe("processAudioFile", () => {
     test("should process audio file", async () => {
-      // Mock the Audio element for getAudioDuration to succeed
-      const mockAudio = {
-        addEventListener: jest.fn((event, callback) => {
-          if (event === "loadedmetadata") {
-            setTimeout(callback, 0);
-          }
-        }),
-        src: "",
-        duration: 1,
-      };
-      global.Audio = jest.fn(() => mockAudio) as any;
       const file = new File(["audio blob"], "test.mp3", { type: "audio/mpeg" });
 
       const result = await processAudioFile(file);
+
       expect(result).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            startTime: 0,
-            endTime: expect.any(Number),
-            duration: expect.any(Number),
-            index: expect.any(Number),
-          }),
-        ]),
+        expect.objectContaining({
+          duration: 1,
+          chunks: expect.any(Array),
+        }),
       );
     });
 
     test("should handle processing errors", async () => {
       const file = new File(["audio blob"], "test.mp3", { type: "audio/mpeg" });
-      // Mock the Audio element for getAudioDuration to succeed
-      const mockAudio = {
-        addEventListener: jest.fn((event, callback) => {
-          if (event === "loadedmetadata") {
-            setTimeout(callback, 0);
-          }
-        }),
-        src: "",
-        duration: 1,
-      };
-      global.Audio = jest.fn(() => mockAudio) as any;
       const decodeError = new Error("Processing failed");
       mockAudioContext.decodeAudioData.mockRejectedValue(decodeError);
 

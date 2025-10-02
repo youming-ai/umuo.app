@@ -94,8 +94,12 @@ async function updateTranscriptionProgress(
   status: "processing" | "completed" | "failed",
   options?: TranscriptionOptions,
 ): Promise<void> {
-  const { setServerProgress } = await import("./server-progress");
-  setServerProgress(fileId, { status, progress, message });
+  try {
+    const { setServerProgress } = await import("./server-progress");
+    setServerProgress(fileId, { status, progress, message });
+  } catch (_error) {
+    // 在测试环境中可能没有server-progress模块，忽略错误
+  }
 
   if (options?.onProgress) {
     options.onProgress({

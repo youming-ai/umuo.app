@@ -2,7 +2,7 @@
  * API性能监控测试
  */
 
-import { ApiPerformanceMonitoring, ApiOperation, HttpMethod } from "./api-performance-monitoring";
+import { ApiPerformanceMonitoring, ApiOperation, HttpMethod, monitorApiRequest } from "./api-performance-monitoring";
 import { PerformanceMonitoring, MetricCategory } from "./performance-monitoring";
 
 // Mock PerformanceMonitoring
@@ -15,8 +15,22 @@ describe("ApiPerformanceMonitoring", () => {
   let apiMonitoring: ApiPerformanceMonitoring;
   let mockPerformanceMonitoring: jest.Mocked<PerformanceMonitoring>;
 
+  let mockTime = 0;
+  let advanceMockTime: (ms: number) => void;
+
   beforeEach(() => {
+    // Mock performance.now() to work with jest fake timers
+    Object.defineProperty(global.performance, "now", {
+      value: jest.fn(() => mockTime),
+      writable: true,
+    });
+    
+    // Function to advance mock time
+    advanceMockTime = (ms: number) => {
+      mockTime += ms;
+    };
     // 重置所有mock
+    mockTime = 0;
     jest.clearAllMocks();
 
     // 创建mock实例
@@ -56,7 +70,7 @@ describe("ApiPerformanceMonitoring", () => {
       expect(requestId).toContain("transcription_POST");
 
       // 模拟一些处理时间
-      jest.advanceTimersByTime(200);
+      advanceMockTime(200);
 
       const metric = apiMonitoring.endApiRequest(requestId, 200, 2048);
 
@@ -460,7 +474,7 @@ describe("ApiPerformanceMonitoring", () => {
       );
 
       // 模拟很长的响应时间
-      jest.advanceTimersByTime(6000); // 6秒，超过默认的5秒阈值
+      advanceMockTime(6000); // 6秒，超过默认的5秒阈值
 
       apiMonitoring.endApiRequest(requestId, 200, 2048);
 
@@ -568,7 +582,7 @@ describe("ApiPerformanceMonitoring", () => {
       );
 
       // 模拟超过阈值的响应时间
-      jest.advanceTimersByTime(300);
+      advanceMockTime(300);
 
       sensitiveMonitoring.endApiRequest(requestId, 200, 1024);
 
@@ -598,7 +612,7 @@ describe("ApiPerformanceMonitoring", () => {
         1024,
       );
 
-      jest.advanceTimersByTime(6000);
+      advanceMockTime(6000);
 
       disabledMonitoring.endApiRequest(requestId, 200, 1024);
 
@@ -717,7 +731,7 @@ describe("ApiPerformanceMonitoring", () => {
         return { data: "success", status: 200 };
       };
 
-      const result = (apiMonitoring as any).monitorApiRequest(
+      const result = monitorApiRequest(
         ApiOperation.TRANSCRIPTION,
         HttpMethod.POST,
         "/api/test",
@@ -760,7 +774,7 @@ describe("ApiPerformanceMonitoring", () => {
       };
 
       expect(() => {
-        (apiMonitoring as any).monitorApiRequest(
+        monitorApiRequest(
           ApiOperation.TRANSCRIPTION,
           HttpMethod.POST,
           "/api/test",
