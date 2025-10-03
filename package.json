@@ -1,7 +1,7 @@
 {
   "name": "shadowing-learning",
   "version": "1.0.0",
-  "description": "- 所有用户文件本地存储（IndexedDB），不做云端持久化。 - 仅在转写阶段将音频经服务端中转发送到 Groq 的 Whisper-large-v3（不在服务端落盘）。 - 转写初稿返回后，调用 OpenRouter 做：① 规范化分句；② 语言标注；③ 简短翻译；④ 日语假名；⑤ 术语统一。 - 技术栈建议：Next.js（App Router） + React + TypeScript + Tailwind + shadcn/ui + Lucide icons + Dexie(IndexedDB)",
+  "description": "",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -21,6 +21,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ai-sdk/groq": "^2.0.22",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-progress": "^1.1.7",
@@ -31,10 +32,11 @@
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "ai": "^5.0.60",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.2.0",
-    "groq-sdk": "^0.32.0",
+    "groq-sdk": "^0.33.0",
     "lucide-react": "^0.543.0",
     "next": "^15.5.3",
     "next-themes": "^0.4.6",

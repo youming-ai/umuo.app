@@ -1,7 +1,7 @@
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api-response";
-import { transcribeWithEnhancedGroq, handleEnhancedGroqError } from "@/lib/enhanced-groq-client";
+import { transcribeWithAI, handleAIError } from "@/lib/ai-client";
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({
@@ -118,9 +118,9 @@ function validateFormData(formData: FormData) {
   return { success: true as const, data: validatedForm.data };
 }
 
-// Helper function to process transcription using enhanced Groq client
-async function processTranscription(uploadedFile: File, language: string) {
-  console.log("开始处理增强转录请求:", {
+// Helper function to process transcription using Vercel AI SDK
+async function processTranscriptionWithAI(uploadedFile: File, language: string) {
+  console.log("开始处理AI转录请求:", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
     fileType: uploadedFile.type,
@@ -129,14 +129,14 @@ async function processTranscription(uploadedFile: File, language: string) {
   });
 
   try {
-    const result = await transcribeWithEnhancedGroq(uploadedFile, {
+    const result = await transcribeWithAI(uploadedFile, {
       language,
       model: "whisper-large-v3-turbo",
       responseFormat: "verbose_json",
       temperature: 0,
     });
 
-    console.log("增强转录成功完成:", {
+    console.log("AI转录成功完成:", {
       fileName: uploadedFile.name,
       textLength: result.text?.length || 0,
       segmentsCount: result.segments?.length || 0,
@@ -146,7 +146,7 @@ async function processTranscription(uploadedFile: File, language: string) {
 
     return { success: true as const, data: result };
   } catch (transcriptionError) {
-    console.error("增强转录处理失败:", {
+    console.error("AI转录处理失败:", {
       fileName: uploadedFile.name,
       error: transcriptionError instanceof Error ? transcriptionError.message : String(transcriptionError),
       errorType: transcriptionError instanceof Error ? transcriptionError.constructor.name : "Unknown",
@@ -154,7 +154,7 @@ async function processTranscription(uploadedFile: File, language: string) {
     });
 
     // 使用统一的错误处理
-    const errorInfo = handleEnhancedGroqError(transcriptionError);
+    const errorInfo = handleAIError(transcriptionError);
 
     return {
       success: false as const,
@@ -193,8 +193,8 @@ export async function POST(request: NextRequest) {
       return formValidation.error;
     }
 
-    // Process transcription
-    const transcriptionResult = await processTranscription(formValidation.data.audio, language);
+    // Process transcription using Vercel AI SDK
+    const transcriptionResult = await processTranscriptionWithAI(formValidation.data.audio, language);
     if (!transcriptionResult.success) {
       return transcriptionResult.error;
     }
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     return apiSuccess({
       status: "completed",
       text: transcriptionResult.data.text,
-      language: transcriptionResult.data.language ?? language,
+      language: transcriptionResult.data.language,
       duration: transcriptionResult.data.duration,
       segments: transcriptionResult.data.segments,
       meta: formValidation.data.meta,
