@@ -10,7 +10,7 @@ import type { AppError } from "@/types/errors";
 export enum ApiOperation {
   TRANSCRIPTION = "transcription",
   GROQ_API = "groq_api",
-  OPENROUTER_API = "openrouter_api",
+  GEMINI_API = "gemini_api",
   FILE_UPLOAD = "file_upload",
   FILE_DOWNLOAD = "file_download",
   VALIDATION = "validation",

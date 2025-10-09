@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api-response";
-import { transcribeWithAI, handleAIError } from "@/lib/ai-client";
+import { transcribeWithEnhancedGroq, handleEnhancedGroqError } from "@/lib/enhanced-groq-client";
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({
@@ -129,7 +129,7 @@ async function processTranscriptionWithAI(uploadedFile: File, language: string) 
   });
 
   try {
-    const result = await transcribeWithAI(uploadedFile, {
+    const result = await transcribeWithEnhancedGroq(uploadedFile, {
       language,
       model: "whisper-large-v3-turbo",
       responseFormat: "verbose_json",
@@ -154,7 +154,7 @@ async function processTranscriptionWithAI(uploadedFile: File, language: string) 
     });
 
     // 使用统一的错误处理
-    const errorInfo = handleAIError(transcriptionError);
+    const errorInfo = handleEnhancedGroqError(transcriptionError);
 
     return {
       success: false as const,

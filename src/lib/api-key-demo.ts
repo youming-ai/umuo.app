@@ -12,7 +12,7 @@ import {
   type ApiKeyValidationResult,
   type ApiKeyStatus,
 } from "./api-key-manager";
-import { GroqClient } from "./groq-client";
+import { EnhancedGroqClient } from "./enhanced-groq-client";
 
 /**
  * 演示 API 密钥验证功能

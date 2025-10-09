@@ -12,6 +12,8 @@ export const ROUTES = {
   SETTINGS: "/settings",
   /** 账户页面 */
   ACCOUNT: "/account",
+  /** 健康检查页面 */
+  HEALTH_CHECK: "/health-check",
 } as const;
 
 export type RouteKey = keyof typeof ROUTES;
