@@ -31,7 +31,7 @@ interface HealthCheckResult {
   id: string;                    // 结果ID
   checkId: string;              // 关联的检查ID
   category: CheckCategory;      // 检查类别
-  serviceName: string;          // 服务名称 (如 "Groq", "Gemini")
+  serviceName: string;          // 服务名称 (如 "Groq", "")
   status: 'pass' | 'fail' | 'warning';  // 结果状态
   metrics: PerformanceMetrics;  // 性能指标
   error?: ErrorInfo;            // 错误信息

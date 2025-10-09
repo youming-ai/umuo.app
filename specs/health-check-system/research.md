@@ -32,7 +32,7 @@
 ### Rationale
 1. **广泛兼容性**: 这些格式覆盖了95%以上的用户需求
 2. **浏览器原生支持**: 现代浏览器都原生支持这些格式的解码
-3. **AI服务兼容**: Groq、Gemini等主流AI服务都支持这些格式
+3. **AI服务兼容**: Groq、等主流AI服务都支持这些格式
 4. **质量控制**: 避免支持过多格式导致的质量控制复杂化
 
 ### Technical Considerations
@@ -88,7 +88,7 @@ interface PerformanceMetrics {
 ## Research Topic 4: 多AI服务提供商的监控和诊断模式
 
 ### Decision
-**实现统一的服务抽象层，支持Groq、Gemini等服务的状态监控**
+**实现统一的服务抽象层，支持Groq、等服务的状态监控**
 
 ### Rationale
 1. **一致性**: 统一的接口便于管理和扩展新的服务提供商
@@ -143,7 +143,7 @@ interface ServiceStatus {
 - **存储方案**: IndexedDB (Dexie) 本地存储
 - **支持格式**: MP3, WAV, M4A, OGG, WebM
 - **性能目标**: 检查<2分钟，转录测试<30秒，UI响应<100ms
-- **服务支持**: Groq、Gemini等多AI服务
+- **服务支持**: Groq、等多AI服务
 - **隐私保护**: 所有数据本地处理，API调用仅用于测试连通性
 
 所有研究问题已解决，可以进入Phase 1设计阶段。

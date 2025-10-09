@@ -14,7 +14,7 @@ This guide helps you quickly set up and use the AI transcription functionality c
 
 - Modern web browser with JavaScript enabled
 - Stable internet connection
-- Valid API keys for AI services (Groq, Gemini, etc.)
+- Valid API key for Groq AI service
 - Audio files for testing (optional, default test audio provided)
 
 ## Quick Start
@@ -113,8 +113,7 @@ const config = {
     'authentication'
   ],
   enabledServices: [
-    'Groq',
-    'Gemini'
+    'Groq'
   ]
 };
 ```
@@ -248,7 +247,7 @@ const alertThresholds = {
 const scheduleHealthCheck = async () => {
   const config = {
     categories: ['api-connectivity', 'authentication'],
-    services: ['Groq', 'Gemini'],
+    services: ['Groq'],
     parallel: true
   };
 

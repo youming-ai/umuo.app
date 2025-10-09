@@ -1,8 +1,7 @@
+# Implementation Plan: AI Transcription Functionality Check
 
-# Implementation Plan: AI转录功能完整性检查
-
-**Branch**: `001-new-feature-request` | **Date**: 2025-10-03 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-new-feature-request/spec.md`
+**Branch**: `002-ai` | **Date**: 2025-10-08 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/002-ai/spec.md`
 
 ## Execution Flow (/plan command scope)
 ```
@@ -18,7 +17,7 @@
    → Update Progress Tracking: Initial Constitution Check
 5. Execute Phase 0 → research.md
    → If NEEDS CLARIFICATION remain: ERROR "Resolve unknowns"
-6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for Gemini CLI, `QWEN.md` for Qwen Code or `AGENTS.md` for opencode).
+6. Execute Phase 1 → contracts, data-model.md, quickstart.md, agent-specific template file (e.g., `CLAUDE.md` for Claude Code, `.github/copilot-instructions.md` for GitHub Copilot, `GEMINI.md` for  CLI, `QWEN.md` for Qwen Code or `AGENTS.md` for opencode).
 7. Re-evaluate Constitution Check section
    → If new violations: Refactor design, return to Phase 1
    → Update Progress Tracking: Post-Design Constitution Check
@@ -31,16 +30,16 @@
 - Phase 3-4: Implementation execution (manual or via tools)
 
 ## Summary
-AI转录功能完整性检查是一个系统诊断和评估功能，用于验证现有转录服务的稳定性、错误处理完整性和用户体验质量。该功能将提供全面的健康检查、性能监控和问题诊断能力。
+AI转录功能检查是一个系统诊断和验证功能，用于验证现有AI转录服务的可用性、响应时间和质量。该功能将为语言学习者提供全面的服务状态监控、错误诊断和性能评估能力，确保转录体验的稳定性和可靠性。
 
 ## Technical Context
 **Language/Version**: TypeScript + Next.js 15
-**Primary Dependencies**: Groq SDK, Vercel AI SDK, Zod, React 19, shadcn/ui
-**Storage**: IndexedDB (Dexie) + 临时API传输
+**Primary Dependencies**: Groq SDK, AI SDK, React 19, shadcn/ui, Dexie
+**Storage**: IndexedDB (Dexie) + 本地浏览器存储
 **Testing**: Jest + React Testing Library + Playwright
 **Target Platform**: Web应用 (PWA)
 **Project Type**: Web应用程序 (前端+后端API)
-**Performance Goals**: 检查完成时间<5分钟，API响应<2秒，UI响应<100ms
+**Performance Goals**: 检查完成时间<2分钟，单次转录测试<30秒，UI响应<100ms
 **Constraints**: 本地数据隐私保护，离线功能支持，多AI服务容错
 **Scale/Scope**: 单用户本地应用，支持多种音频格式和AI服务
 
@@ -48,8 +47,8 @@ AI转录功能完整性检查是一个系统诊断和评估功能，用于验证
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
 ### 用户体验优先 ✅
-- **检查**: 功能必须提供直观的检查界面和清晰的问题报告
-- **合规**: 将设计用户友好的健康检查界面，提供详细的问题说明和修复建议
+- **检查**: 功能必须提供直观的检查界面和清晰的状态显示
+- **合规**: 将设计用户友好的服务状态界面，提供详细的诊断信息和解决建议
 
 ### 本地数据隐私保护 ✅
 - **检查**: 确保检查过程不暴露用户敏感数据和API密钥
@@ -57,15 +56,15 @@ AI转录功能完整性检查是一个系统诊断和评估功能，用于验证
 
 ### 多AI服务集成与容错 ✅
 - **检查**: 验证多个AI服务的可用性和切换机制
-- **合规**: 将检查Groq服务状态，确保服务正常工作
+- **合规**: 将检查Groq、等服务状态，确保降级机制正常工作
 
 ### 渐进式Web应用标准 ✅
 - **检查**: 验证离线功能和PWA特性
 - **合规**: 检查将包含Service Worker状态和离线可用性测试
 
 ### 音频处理精确同步 ✅
-- **检查**: 验证音频同步精度和并发控制
-- **合规**: 将测试音频分片处理的性能和同步准确性
+- **检查**: 验证音频处理质量和同步精度
+- **合规**: 将测试音频转录的准确性和处理性能
 
 ### 技术架构约束 ✅
 - **检查**: 确保使用正确的技术栈和代码质量
@@ -75,7 +74,7 @@ AI转录功能完整性检查是一个系统诊断和评估功能，用于验证
 
 ### Documentation (this feature)
 ```
-specs/[###-feature]/
+specs/002-ai/
 ├── plan.md              # This file (/plan command output)
 ├── research.md          # Phase 0 output (/plan command)
 ├── data-model.md        # Phase 1 output (/plan command)
@@ -85,63 +84,56 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
 ```
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
 src/
-├── models/
-├── services/
-├── cli/
-└── lib/
+├── app/
+│   ├── api/
+│   │   └── health-check/
+│   │       ├── run/
+│   │       ├── status/
+│   │       └── results/
+│   └── health-check/
+│       └── page.tsx
+├── components/
+│   └── health-check/
+│       ├── HealthCheckDashboard.tsx
+│       ├── ServiceStatusCard.tsx
+│       ├── TestRunner.tsx
+│       └── ReportViewer.tsx
+├── lib/
+│   ├── health-check/
+│   │   ├── types.ts
+│   │   ├── database.ts
+│   │   ├── checks/
+│   │   │   ├── api-connectivity.ts
+│   │   │   ├── transcription-test.ts
+│   │   │   └── quality-metrics.ts
+│   │   └── report-generator.ts
+│   └── groq-client.ts
+└── hooks/
+    └── useHealthCheck.ts
 
 tests/
-├── contract/
 ├── integration/
+│   └── health-check/
 └── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
-backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
-
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
-
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
-
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+    └── health-check/
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Web application structure with Next.js 15 App Router, following existing project patterns
 
 ## Phase 0: Outline & Research
 1. **Extract unknowns from Technical Context** above:
-   - For each NEEDS CLARIFICATION → research task
-   - For each dependency → best practices task
-   - For each integration → patterns task
+   - FR-007: 自动健康检查功能需求 → research task
+   - Audio format support requirements → research task
+   - Performance benchmarking approach → research task
 
 2. **Generate and dispatch research agents**:
    ```
-   For each unknown in Technical Context:
-     Task: "Research {unknown} for {feature context}"
-   For each technology choice:
-     Task: "Find best practices for {tech} in {domain}"
+   Research: "自动健康检查功能的最佳实践和用户需求"
+   Research: "AI转录服务的音频格式支持和兼容性"
+   Research: "Web应用中的性能基准测试实现方法"
+   Research: "多AI服务提供商的监控和诊断模式"
    ```
 
 3. **Consolidate findings** in `research.md` using format:
@@ -190,99 +182,111 @@ directories captured above]
 ### Task Generation Strategy
 基于Phase 1的设计文档，任务将按以下策略生成：
 
-1. **基础架构任务** (优先级：高)
+1. **基础设施任务** (优先级：高)
    - 数据库模式实现 (Dexie数据库)
    - 健康检查核心类型定义
    - API路由框架搭建
 
-2. **核心功能任务** (优先级：高)
+2. **API端点任务** (优先级：高)
+   - 根据OpenAPI契约创建端点实现
+   - 每个端点对应一个契约测试任务 [P]
+   - 错误处理和验证逻辑
+
+3. **核心检查功能任务** (优先级：高)
    - API连通性检查实现
-   - 错误处理验证实现
-   - 性能测试工具实现
-   - 用户界面响应性检查
+   - 转录功能测试实现
+   - 认证和配额状态检查
+   - 性能指标收集
 
-3. **检查执行引擎** (优先级：中)
-   - 检查调度器实现
-   - 结果聚合器实现
-   - 报告生成器实现
-
-4. **用户界面组件** (优先级：中)
+4. **用户界面任务** (优先级：中)
    - 健康检查仪表板
+   - 服务状态卡片组件
    - 检查进度显示器
    - 报告查看器
-   - 设置管理器
 
-5. **高级功能任务** (优先级：低)
-   - 实时通知系统
-   - 数据导出功能
-   - 历史趋势分析
-   - 自动修复建议
-
-### 任务分类和并行执行策略
-
-**可并行执行的任务 [P]**:
-- 不同检查类别的实现
-- 独立UI组件开发
-- 单元测试编写
-- API契约测试
-
-**顺序依赖的任务**:
-- 数据库模式 → 数据访问层 → 业务逻辑层
-- 核心检查功能 → 报告生成 → 用户界面
-- 基础组件 → 复合组件 → 集成测试
+5. **集成和测试任务** (优先级：中)
+   - 端到端测试场景
+   - 性能基准测试
+   - 错误处理验证
 
 ### 具体任务生成计划
 
-**Phase 2a: 基础设施 (5-7个任务)**
+**Phase 2a: 基础设施 (5-6个任务)**
 1. 设置健康检查数据库模式
 2. 定义核心类型和接口 [P]
 3. 实现数据访问层 [P]
 4. 创建API路由结构 [P]
 5. 配置错误处理框架 [P]
 
-**Phase 2b: 检查实现 (8-10个任务)**
-6. 实现API连通性检查 [P]
-7. 实现错误处理验证 [P]
-8. 实现性能基准测试 [P]
-9. 实现用户体验检查 [P]
-10. 实现安全合规检查 [P]
-11. 创建检查调度器
-12. 实现结果聚合器
+**Phase 2b: API实现 (8-10个任务)**
+6. POST /api/health-check/run 端点实现
+7. GET /api/health-check/status/{checkId} 端点实现 [P]
+8. GET /api/health-check/results/{checkId} 端点实现 [P]
+9. GET /api/health-check/reports 端点实现 [P]
+10. PUT /api/health-check/config 端点实现 [P]
+11. GET /api/health-check/services/status 端点实现 [P]
+12. POST /api/health-check/test/transcription 端点实现 [P]
 
-**Phase 2c: 用户界面 (6-8个任务)**
-13. 创建健康检查仪表板 [P]
-14. 实现检查运行器组件 [P]
-15. 创建报告查看器 [P]
-16. 实现设置管理器 [P]
-17. 创建通知系统 [P]
-18. 实现响应式布局
+**Phase 2c: 核心检查逻辑 (6-8个任务)**
+13. API连通性检查实现 [P]
+14. 转录功能测试实现 [P]
+15. 认证状态验证实现 [P]
+16. 配额状态检查实现 [P]
+17. 性能指标收集器 [P]
+18. 健康检查调度器
+19. 报告生成器
 
-**Phase 2d: 集成和测试 (4-6个任务)**
-19. 编写单元测试套件 [P]
-20. 实现集成测试 [P]
-21. 创建端到端测试
-22. 性能优化和调优
-23. 文档更新和部署准备
+**Phase 2d: 用户界面 (7-9个任务)**
+20. 健康检查仪表板 [P]
+21. 服务状态卡片组件 [P]
+22. 检查运行器组件 [P]
+23. 报告查看器组件 [P]
+24. 设置管理器组件 [P]
+25. 测试音频上传组件 [P]
+26. 实时状态指示器 [P]
+27. 响应式布局实现
 
-### 预估输出
-- **总任务数**: 25-30个
-- **并行任务**: 约15个 (标记为[P])
-- **关键路径**: 约10个顺序依赖任务
-- **预估实施时间**: 2-3周
+**Phase 2e: 测试和集成 (5-6个任务)**
+28. 契约测试套件 [P]
+29. 单元测试实现 [P]
+30. 集成测试场景 [P]
+31. 端到端测试流程
+32. 性能基准测试
+33. 文档更新和部署准备
+
+### 任务分类和并行执行策略
+
+**可并行执行的任务 [P]**:
+- 不同API端点的实现和测试
+- 独立UI组件开发
+- 单元测试编写
+- 契约测试创建
+
+**顺序依赖的任务**:
+- 数据库模式 → 数据访问层 → 业务逻辑层
+- 核心检查功能 → API端点 → 用户界面
+- 基础组件 → 复合组件 → 集成测试
 
 ### 质量保证策略
 - 每个任务包含验收标准
 - 所有任务必须通过测试
 - 代码覆盖率要求 > 80%
 - 性能基准必须达标
+- 遵循TypeScript严格模式
+
+### 预估输出
+- **总任务数**: 33个
+- **并行任务**: 约20个 (标记为[P])
+- **关键路径**: 约13个顺序依赖任务
+- **预估实施时间**: 2-3周
 
 **IMPORTANT**: This phase is executed by the /tasks command, NOT by /plan
 
 ## Phase 3+: Future Implementation
 *These phases are beyond the scope of the /plan command*
 
-**Phase 3**: Task execution (/tasks command creates tasks.md)  
-**Phase 4**: Implementation (execute tasks.md following constitutional principles)  
+**Phase 3**: Task execution (/tasks command creates tasks.md)
+**Phase 4**: Implementation (execute tasks.md following constitutional principles)
 **Phase 5**: Validation (run tests, execute quickstart.md, performance validation)
 
 ## Complexity Tracking
@@ -293,6 +297,7 @@ directories captured above]
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
 
+No constitution violations identified. All design decisions align with existing constitutional principles.
 
 ## Progress Tracking
 *This checklist is updated during execution flow*
