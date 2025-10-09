@@ -146,16 +146,16 @@ export class EnhancedGroqClient {
       console.log('增强转录成功完成:', {
         fileName: file.name,
         textLength: transcription.text?.length || 0,
-        duration: transcription.duration,
-        language: transcription.language,
-        segmentsCount: transcription.segments?.length || 0,
+        duration: (transcription as any).duration,
+        language: (transcription as any).language,
+        segmentsCount: (transcription as any).segments?.length || 0,
       });
 
       return {
         text: transcription.text,
-        language: transcription.language || options.language || 'en',
-        duration: transcription.duration,
-        segments: transcription.segments,
+        language: (transcription as any).language || options.language || 'en',
+        duration: (transcription as any).duration,
+        segments: (transcription as any).segments,
       };
     } catch (error) {
       // 详细错误日志

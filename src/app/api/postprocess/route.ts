@@ -4,7 +4,7 @@ import { z } from "zod";
 import { apiError, apiFromError, apiSuccess } from "@/lib/api-response";
 import { validationError } from "@/lib/error-handler";
 
-const GROQ_MODEL = "moonshotai/kimi-k2-instruct-0905";
+const GROQ_MODEL = "openai/gpt-oss-20b";
 
 const postProcessSchema = z.object({
   segments: z.array(
