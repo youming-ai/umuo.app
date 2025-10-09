@@ -36,13 +36,7 @@ export default function Navigation() {
       icon: "folder",
       href: ROUTES.HOME,
     },
-    {
-      id: "health-check",
-      label: "健康检查",
-      icon: "health_and_safety",
-      href: ROUTES.HEALTH_CHECK,
-    },
-    {
+      {
       id: "account",
       label: "用户中心",
       icon: "account_circle",
