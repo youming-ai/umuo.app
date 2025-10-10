@@ -138,11 +138,24 @@ const defaultOptions = {
   enableFurigana: true,
 };
 
+// 性能优化的Groq客户端配置
 let groqChatClient: Groq | null = null;
 
 function getGroqChatClient(): Groq {
   if (!groqChatClient) {
-    groqChatClient = new Groq({ apiKey: process.env.GROQ_API_KEY || "" });
+    groqChatClient = new Groq({
+      apiKey: process.env.GROQ_API_KEY || "",
+      // 性能优化配置
+      timeout: 10000, // 10秒超时，比原来的15秒更激进
+      maxRetries: 1, // 减少重试次数，加快失败响应
+      // 在生产环境中可以考虑添加HTTP Agent配置
+      // httpAgent: new https.Agent({
+      //   keepAlive: true,
+      //   maxSockets: 5,
+      //   maxFreeSockets: 2,
+      //   timeout: 10000,
+      // })
+    });
   }
   return groqChatClient;
 }
@@ -219,43 +232,226 @@ async function postProcessSegmentWithGroq(
     enableFurigana?: boolean;
   },
 ) {
-  const prompt = buildPrompt(
-    segment.text,
-    sourceLanguage,
-    options.targetLanguage,
-    options.enableAnnotations,
-    options.enableFurigana,
-  );
+  const startTime = Date.now();
 
-  const client = getGroqChatClient();
-  const completion = await client.chat.completions.create({
-    model: GROQ_MODEL,
-    temperature: 0.3,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are a professional language teacher specializing in Japanese language learning and shadowing practice. Provide accurate, educational responses that help learners understand and practice the language.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
+  try {
+    const prompt = buildPrompt(
+      segment.text,
+      sourceLanguage,
+      options.targetLanguage,
+      options.enableAnnotations,
+      options.enableFurigana,
+    );
 
-  const responseText = completion.choices?.[0]?.message?.content ?? "";
-  const parsed = parseGroqResponse(responseText);
+    const client = getGroqChatClient();
 
-  return {
-    originalText: segment.text,
-    normalizedText: parsed.normalizedText,
-    translation: parsed.translation,
-    annotations: parsed.annotations,
-    furigana: parsed.furigana,
-    start: segment.start,
-    end: segment.end,
-  };
+    // 使用流式响应优化性能
+    const completion = await client.chat.completions.create({
+      model: GROQ_MODEL,
+      temperature: 0.3,
+      stream: true, // 启用流式响应
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional language teacher specializing in Japanese language learning and shadowing practice. Provide accurate, educational responses that help learners understand and practice the language. Respond with valid JSON.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
+
+    let responseText = "";
+    // 优化超时时间，与客户端配置保持一致
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Segment processing timeout")), 10000);
+    });
+
+    // 处理流式响应
+    const streamProcessPromise = (async () => {
+      for await (const chunk of completion) {
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) {
+          responseText += delta;
+        }
+      }
+      return responseText;
+    })();
+
+    // 使用Promise.race防止超时
+    const finalResponseText = (await Promise.race([
+      streamProcessPromise,
+      timeoutPromise,
+    ])) as string;
+    const parsed = parseGroqResponse(finalResponseText);
+
+    const processingTime = Date.now() - startTime;
+    console.log(`单个segment流式处理完成，耗时: ${processingTime}ms`);
+
+    return {
+      originalText: segment.text,
+      normalizedText: parsed.normalizedText,
+      translation: parsed.translation,
+      annotations: parsed.annotations,
+      furigana: parsed.furigana,
+      start: segment.start,
+      end: segment.end,
+    };
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error(`单个segment流式处理失败，耗时: ${processingTime}ms，错误:`, error);
+
+    // 抛出错误让上层处理fallback
+    throw error;
+  }
+}
+
+// 批量处理短文本以减少API调用次数，使用流式响应
+async function postProcessShortTextsBatch(
+  shortTextSegments: Array<{ text: string; start: number; end: number }>,
+  sourceLanguage: string,
+  options: {
+    targetLanguage?: string;
+    enableAnnotations?: boolean;
+    enableFurigana?: boolean;
+  },
+) {
+  if (shortTextSegments.length === 0) return [];
+
+  console.log(`流式批量处理 ${shortTextSegments.length} 个短文本segments`);
+  const startTime = Date.now();
+
+  try {
+    // 合并所有短文本为一个批次
+    const combinedText = shortTextSegments
+      .map((seg, index) => `[SEGMENT_${index}] ${seg.text}`)
+      .join("\n");
+
+    const prompt = `You are processing multiple short text segments for Japanese language learning.
+
+Process the following segments and return results in the specified format:
+
+${combinedText}
+
+Return format (JSON):
+{
+  "segments": [
+    {
+      "id": 0,
+      "normalizedText": "normalized text",
+      "translation": "translation",
+      "annotations": ["annotation1", "annotation2"],
+      "furigana": "text with furigana"
+    }
+  ]
+}`;
+
+    const client = getGroqChatClient();
+
+    // 使用流式响应优化批量处理
+    const completion = await client.chat.completions.create({
+      model: GROQ_MODEL,
+      temperature: 0.3,
+      stream: true, // 启用流式响应
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a professional language teacher specializing in Japanese language learning. Process multiple text segments efficiently. Respond with valid JSON.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
+
+    let responseText = "";
+
+    // 处理流式响应 - 优化超时时间
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Batch processing timeout")), 15000); // 批量处理15秒超时
+    });
+
+    const streamProcessPromise = (async () => {
+      for await (const chunk of completion) {
+        const delta = chunk.choices?.[0]?.delta?.content;
+        if (delta) {
+          responseText += delta;
+        }
+      }
+      return responseText;
+    })();
+
+    // 使用Promise.race防止超时
+    const finalResponseText = (await Promise.race([
+      streamProcessPromise,
+      timeoutPromise,
+    ])) as string;
+
+    // 清理流式响应中的markdown代码块标记
+    let cleanedText = finalResponseText.trim();
+    if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7);
+    if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3);
+    if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3);
+
+    const jsonStart = cleanedText.indexOf("{");
+    const jsonEnd = cleanedText.lastIndexOf("}");
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      cleanedText = cleanedText.substring(jsonStart, jsonEnd + 1);
+    }
+
+    const response = JSON.parse(cleanedText);
+
+    // 将批量处理结果映射回各个segment
+    if (response.segments && Array.isArray(response.segments)) {
+      const processingTime = Date.now() - startTime;
+      console.log(`批量流式处理完成，耗时: ${processingTime}ms`);
+
+      return shortTextSegments.map((originalSegment, index) => {
+        const processedSegment = response.segments.find((s: any) => s.id === index);
+        return {
+          originalText: originalSegment.text,
+          normalizedText: processedSegment?.normalizedText || originalSegment.text,
+          translation: processedSegment?.translation || "",
+          annotations: processedSegment?.annotations || [],
+          furigana: processedSegment?.furigana || "",
+          start: originalSegment.start,
+          end: originalSegment.end,
+        };
+      });
+    }
+
+    // Fallback: 如果解析失败，返回原始文本
+    const processingTime = Date.now() - startTime;
+    console.warn(`批量流式处理解析失败，使用fallback，耗时: ${processingTime}ms`);
+
+    return shortTextSegments.map((segment) => ({
+      originalText: segment.text,
+      normalizedText: segment.text,
+      translation: "",
+      annotations: [],
+      furigana: "",
+      start: segment.start,
+      end: segment.end,
+    }));
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error(`批量流式处理失败，耗时: ${processingTime}ms，错误:`, error);
+
+    // 返回fallback结果
+    return shortTextSegments.map((segment) => ({
+      originalText: segment.text,
+      normalizedText: segment.text,
+      translation: "",
+      annotations: [],
+      furigana: "",
+      start: segment.start,
+      end: segment.end,
+    }));
+  }
 }
 
 async function postProcessSegmentsWithGroq(
@@ -268,16 +464,117 @@ async function postProcessSegmentsWithGroq(
   },
 ) {
   const finalOptions = { ...defaultOptions, ...options };
-  const results = [];
 
-  for (const segment of segments) {
-    const processed = await postProcessSegmentWithGroq(segment, sourceLanguage, finalOptions);
-    results.push(processed);
-    // Delay slightly to respect rate limits
-    await new Promise((resolve) => setTimeout(resolve, 200));
+  // 智能性能优化：动态调整并发参数
+  const SHORT_TEXT_THRESHOLD = 50; // 50个字符以下认为是短文本
+
+  // 根据segments数量动态调整并发数和批次大小
+  const segmentCount = segments.length;
+  let MAX_CONCURRENT = 3;
+  let BATCH_SIZE = 5;
+
+  if (segmentCount <= 3) {
+    MAX_CONCURRENT = 2;
+    BATCH_SIZE = 3;
+  } else if (segmentCount <= 10) {
+    MAX_CONCURRENT = 3;
+    BATCH_SIZE = 4;
+  } else if (segmentCount <= 20) {
+    MAX_CONCURRENT = 4;
+    BATCH_SIZE = 5;
+  } else {
+    MAX_CONCURRENT = 5;
+    BATCH_SIZE = 6;
   }
 
-  return results;
+  console.log(`开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`);
+  const startTime = Date.now();
+
+  // 分离短文本和长文本
+  const shortTextSegments = segments.filter((seg) => seg.text.length <= SHORT_TEXT_THRESHOLD);
+  const longTextSegments = segments.filter((seg) => seg.text.length > SHORT_TEXT_THRESHOLD);
+
+  console.log(`短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`);
+
+  const allResults: any[] = [];
+
+  // 批量处理短文本
+  if (shortTextSegments.length > 0) {
+    const shortTextResults = await postProcessShortTextsBatch(
+      shortTextSegments,
+      sourceLanguage,
+      finalOptions,
+    );
+    allResults.push(...shortTextResults);
+    console.log(`短文本批量处理完成: ${shortTextResults.length} 个`);
+  }
+
+  // 逐个处理长文本（保持原有的并发逻辑）
+  if (longTextSegments.length > 0) {
+    const batches: Array<typeof longTextSegments> = [];
+    for (let i = 0; i < longTextSegments.length; i += BATCH_SIZE) {
+      batches.push(longTextSegments.slice(i, i + BATCH_SIZE));
+    }
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      console.log(
+        `处理长文本第 ${batchIndex + 1}/${batches.length} 批，包含 ${batch.length} 个segments`,
+      );
+
+      const batchPromises = batch.map(async (segment, segmentIndex) => {
+        try {
+          const processed = await postProcessSegmentWithGroq(segment, sourceLanguage, finalOptions);
+          console.log(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`);
+          return processed;
+        } catch (error) {
+          console.error(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`, error);
+          return {
+            originalText: segment.text,
+            normalizedText: segment.text,
+            translation: "",
+            annotations: [],
+            furigana: "",
+            start: segment.start,
+            end: segment.end,
+          };
+        }
+      });
+
+      const batchResults = await Promise.allSettled(batchPromises);
+
+      for (const result of batchResults) {
+        if (result.status === "fulfilled") {
+          allResults.push(result.value);
+        } else {
+          console.warn("Long text batch result rejected:", result.reason);
+          allResults.push({
+            originalText: "",
+            normalizedText: "",
+            translation: "",
+            annotations: [],
+            furigana: "",
+            start: 0,
+            end: 0,
+          });
+        }
+      }
+
+      if (batchIndex < batches.length - 1) {
+        // 优化批次间延迟策略：根据并发数动态调整，更激进
+        const delay = Math.min(200, Math.max(50, MAX_CONCURRENT * 50)); // 进一步减少延迟
+        console.log(`长文本批次间延迟 ${delay}ms`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  const endTime = Date.now();
+  console.log(
+    `后处理完成，总耗时: ${endTime - startTime}ms，处理了 ${allResults.length} 个segments`,
+  );
+
+  return allResults;
 }
 
 export async function POST(request: NextRequest) {

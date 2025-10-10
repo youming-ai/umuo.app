@@ -266,8 +266,8 @@ export interface CSSCustomProperties {
   "--shadow-xl": string;
 }
 
-// Theme mode type
-export type ThemeMode = "light" | "dark";
+// Theme mode type - dark only
+export type ThemeMode = "dark";
 
 // Theme context value interface
 export interface ThemeContextValue {

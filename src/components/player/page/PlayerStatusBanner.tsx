@@ -4,9 +4,36 @@ import type { TranscriptRow } from "@/types/database";
 
 interface PlayerStatusBannerProps {
   transcript?: TranscriptRow | null;
+  isTranscribing?: boolean;
+  transcriptionProgress?: number;
 }
 
-export function PlayerStatusBanner({ transcript }: PlayerStatusBannerProps) {
+export function PlayerStatusBanner({
+  transcript,
+  isTranscribing,
+  transcriptionProgress,
+}: PlayerStatusBannerProps) {
+  // 显示转录进度
+  if (isTranscribing) {
+    return (
+      <div
+        className="player-card bg-[var(--state-info-surface)] text-[var(--state-info-text)]"
+        style={{ borderColor: "var(--state-info-border)" }}
+      >
+        <div className="flex items-center gap-3 text-sm mb-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>正在转录音频... {transcriptionProgress || 0}%</span>
+        </div>
+        <div className="w-full bg-[var(--border-muted)] rounded-full h-2">
+          <div
+            className="bg-[var(--button-color)] h-2 rounded-full transition-all duration-300"
+            style={{ width: `${transcriptionProgress || 0}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (!transcript || transcript.status === "completed") {
     return null;
   }

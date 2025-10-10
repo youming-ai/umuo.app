@@ -30,7 +30,9 @@ export interface TranscriptRow {
   fileId: number;
   status: "pending" | "processing" | "completed" | "failed";
   rawText?: string;
+  text?: string;
   language?: string;
+  duration?: number;
   error?: string;
   processingTime?: number;
   createdAt: Date;
@@ -60,6 +62,7 @@ export interface Segment {
   text: string;
   normalizedText?: string;
   translation?: string;
+  romaji?: string;
   annotations?: string[];
   furigana?: string;
   wordTimestamps?: WordTimestamp[];

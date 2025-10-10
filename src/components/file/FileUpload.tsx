@@ -94,7 +94,7 @@ export default function FileUpload({
           type="button"
           className="btn-primary"
           onClick={handleFileInputClick}
-          aria-describedby="upload-description"
+          aria-describedby={uploadDescriptionId}
         >
           <span>选择文件</span>
         </button>

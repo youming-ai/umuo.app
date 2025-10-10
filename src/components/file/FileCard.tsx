@@ -1,46 +1,49 @@
 "use client";
 
-import type { TranscriptionProgress } from "@/lib/transcription-service";
 import type { FileRow, TranscriptRow } from "@/types/database";
+import { useTranscriptionStatus } from "@/hooks/useTranscription";
 
 interface FileCardProps {
   file: FileRow;
-  transcript?: TranscriptRow;
-  transcriptionProgress?: TranscriptionProgress;
   onPlay: (fileId: string) => void;
   onDelete: (fileId: string) => void;
-  onRetry: (fileId: string) => void;
   isPlaying?: boolean;
   isCurrentFile?: boolean;
 }
 
 export default function FileCard({
   file,
-  transcript,
-  transcriptionProgress,
   onPlay,
   onDelete,
-  onRetry,
   isPlaying = false,
   isCurrentFile = false,
 }: FileCardProps) {
+  // 使用 TanStack Query 获取转录状态
+  const { data: transcriptionData, isLoading: isLoadingTranscript } = useTranscriptionStatus(
+    file.id!,
+  );
+  const transcript = transcriptionData?.transcript || null;
+
   const getStatus = () => {
-    if (!transcript) {
-      return { icon: "hourglass_empty", color: "status-processing" };
+    if (isLoadingTranscript) {
+      return { icon: "pending", color: "status-loading", text: "检查转录状态..." };
     }
 
-    switch (transcript.status) {
-      case "completed":
-        return { icon: "check_circle", color: "status-success" };
-      case "processing":
-        return { icon: "pending", color: "status-processing" };
-      case "failed":
-        return { icon: "warning", color: "status-warning" };
-      case "pending":
-        return { icon: "hourglass_empty", color: "status-processing" };
-      default:
-        return { icon: "help", color: "text-[var(--text-muted)]" };
+    if (transcript) {
+      switch (transcript.status) {
+        case "completed":
+          return { icon: "check_circle", color: "status-success", text: "转录完成" };
+        case "processing":
+          return { icon: "pending", color: "status-processing", text: "转录中..." };
+        case "failed":
+          return { icon: "error", color: "status-error", text: "转录失败" };
+        default:
+          return { icon: "audio_file", color: "status-ready", text: "就绪" };
+      }
     }
+
+    // 文件已上传，等待播放时转录
+    return { icon: "audio_file", color: "status-ready", text: "点击播放开始转录" };
   };
 
   const status = getStatus();
@@ -54,10 +57,6 @@ export default function FileCard({
 
   const handlePlay = () => {
     onPlay(getFileId());
-  };
-
-  const handleRetry = () => {
-    onRetry(getFileId());
   };
 
   const handleDelete = () => {
@@ -77,49 +76,11 @@ export default function FileCard({
 
         <div>
           <p className="text-file-name break-words">{file.name}</p>
-          {(transcriptionProgress?.status === "processing" ||
-            transcriptionProgress?.status === "pending") && (
-            <div className="mt-2 flex items-center gap-2 text-sm text-[var(--player-accent-color)]">
-              <span className="material-symbols-outlined animate-spin text-base">
-                progress_activity
-              </span>
-              <span>
-                {transcriptionProgress.status === "processing" ? "正在转录..." : "排队中"}
-              </span>
-            </div>
-          )}
+          <p className="text-sm text-[var(--text-muted)]">{status.text}</p>
         </div>
       </div>
 
       <div className="file-card-actions">
-        {(transcript?.status === "failed" || transcript?.status === "pending") && (
-          <button
-            type="button"
-            className="file-card-action file-card-action--retry"
-            onClick={handleRetry}
-            title={transcript.status === "pending" ? "开始转录" : "重试"}
-          >
-            <span className="material-symbols-outlined">
-              {transcript.status === "pending" ? "play_arrow" : "replay"}
-            </span>
-          </button>
-        )}
-
-        {transcript?.status === "completed" && (
-          <button
-            type="button"
-            className={`file-card-action file-card-action--play ${
-              isPlaying && isCurrentFile ? "is-active" : ""
-            }`}
-            onClick={handlePlay}
-            title="播放"
-          >
-            <span className="material-symbols-outlined text-3xl">
-              {isPlaying && isCurrentFile ? "pause" : "play_arrow"}
-            </span>
-          </button>
-        )}
-
         <button
           type="button"
           className="file-card-action file-card-action--delete"
@@ -127,6 +88,19 @@ export default function FileCard({
           title="删除"
         >
           <span className="material-symbols-outlined">delete</span>
+        </button>
+
+        <button
+          type="button"
+          className={`file-card-action file-card-action--play ${
+            isPlaying && isCurrentFile ? "is-active" : ""
+          }`}
+          onClick={handlePlay}
+          title="播放"
+        >
+          <span className="material-symbols-outlined text-3xl">
+            {isPlaying && isCurrentFile ? "pause" : "play_arrow"}
+          </span>
         </button>
       </div>
     </div>

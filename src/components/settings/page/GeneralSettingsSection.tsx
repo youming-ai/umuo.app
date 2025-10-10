@@ -1,27 +1,13 @@
-import { ChevronRightIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import {
   SettingsCard,
   SettingsRow,
   SettingsRowContent,
   SettingsSection,
 } from "@/components/settings/SettingsCard";
-import { SettingsButtonGroup } from "@/components/settings/SettingsControls";
 
-interface GeneralSettingsSectionProps {
-  fontSize: string;
-  loopCount: number;
-  showTranslation: boolean;
-  onFontSizeChange: (size: string) => void;
-  onLoopCountChange: (count: number) => void;
-  onToggleTranslation: (checked: boolean) => void;
-}
 
-export function GeneralSettingsSection({
-  fontSize,
-  loopCount,
-  onFontSizeChange,
-  onLoopCountChange,
-}: GeneralSettingsSectionProps) {
+export function GeneralSettingsSection() {
   return (
     <SettingsSection title="通用">
       <SettingsCard>
@@ -41,39 +27,8 @@ export function GeneralSettingsSection({
           </div>
         </SettingsRow>
 
-        <SettingsRow>
-          <SettingsRowContent title="字幕大小" />
-          <SettingsButtonGroup
-            options={[
-              { value: "small", label: "小" },
-              { value: "medium", label: "中" },
-              { value: "large", label: "大" },
-            ]}
-            value={fontSize}
-            onChange={onFontSizeChange}
-          />
-        </SettingsRow>
-
-        <SettingsRow>
-          <SettingsRowContent title="跟读循环" />
-          <div className="settings-number-adjuster">
-            <button
-              type="button"
-              className="settings-number-button"
-              onClick={() => onLoopCountChange(Math.max(1, loopCount - 1))}
-            >
-              <MinusIcon className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className="settings-number-button"
-              onClick={() => onLoopCountChange(Math.min(10, loopCount + 1))}
-            >
-              <PlusIcon className="h-4 w-4" />
-            </button>
-          </div>
-        </SettingsRow>
-      </SettingsCard>
+        
+              </SettingsCard>
     </SettingsSection>
   );
 }

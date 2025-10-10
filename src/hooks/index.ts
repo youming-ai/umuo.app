@@ -8,10 +8,3 @@ export { useAudioPlayer } from "./useAudioPlayer";
 export type { UseFilesReturn } from "./useFiles";
 export { useFiles } from "./useFiles";
 export { useTranscriptionManager } from "./useTranscriptionManager";
-export type {
-  TranscriptionProgress,
-  UseTranscriptionProgressReturn,
-} from "./useTranscriptionProgress";
-export { useTranscriptionProgress } from "./useTranscriptionProgress";
-export type { UseTranscriptsReturn } from "./useTranscripts";
-export { useTranscripts } from "./useTranscripts";

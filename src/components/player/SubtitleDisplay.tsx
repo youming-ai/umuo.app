@@ -141,7 +141,9 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
     // Memoize subtitle word rendering to prevent unnecessary re-renders
     const renderSubtitleWords = useCallback(
       (subtitle: Subtitle, isActive: boolean = false) => {
-        const words = subtitle.text.split(" ");
+        // 优先使用标准化文本，否则使用原始文本
+        const displayText = subtitle.normalizedText || subtitle.text;
+        const words = displayText.split(" ");
 
         return words.map((word, index) => {
           const isCurrentWord = currentWord?.index === index;
@@ -173,6 +175,44 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
         });
       },
       [currentWord, fontSize, lineHeight, handleWordClick, handleWordKeyDown],
+    );
+
+    // 渲染带有假名读音的字幕
+    const renderFuriganaText = useCallback(
+      (subtitle: Subtitle, isActive: boolean = false) => {
+        // 如果有假名读音数据，使用它
+        if (subtitle.furigana) {
+          return (
+            <div className="mb-2">
+              <ruby
+                className={`text-lg ${isActive ? "text-[var(--color-primary)] font-bold" : "text-foreground"}`}
+                style={{
+                  fontSize: isActive ? `${fontSize[0]}px` : `${fontSize[0] - 2}px`,
+                  lineHeight: `${lineHeight[0]}`,
+                  rubyAlign: "center",
+                }}
+              >
+                {subtitle.text}
+                <rt className="text-xs text-muted-foreground">{subtitle.furigana}</rt>
+              </ruby>
+            </div>
+          );
+        }
+
+        // 没有假名时显示普通文本
+        return (
+          <div
+            className={`mb-2 ${isActive ? "text-[var(--color-primary)] font-bold" : "text-foreground"}`}
+            style={{
+              fontSize: isActive ? `${fontSize[0]}px` : `${fontSize[0] - 2}px`,
+              lineHeight: `${lineHeight[0]}`,
+            }}
+          >
+            {subtitle.normalizedText || subtitle.text}
+          </div>
+        );
+      },
+      [fontSize, lineHeight],
     );
 
     if (segments.length === 0) {
@@ -298,12 +338,16 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
                   {formatTime(subtitle.start)}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1">{renderSubtitleWords(subtitle, false)}</div>
+              <div className="mb-2">
+                {renderFuriganaText(subtitle, false)}
+                <div className="flex flex-wrap gap-1">{renderSubtitleWords(subtitle, false)}</div>
+              </div>
               {showTranslation && subtitle.translation && (
                 <div
-                  className="mt-2 text-muted-foreground text-sm"
+                  className="mt-2 text-muted-foreground text-sm border-t border-border/50 pt-2"
                   aria-label={`翻译: ${subtitle.translation}`}
                 >
+                  <span className="text-xs text-muted-foreground mr-2">🌐</span>
                   {subtitle.translation}
                 </div>
               )}
@@ -342,14 +386,19 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
                   title="正在播放"
                 />
               </div>
-              <div className="mb-3 flex flex-wrap gap-1" aria-label="字幕内容">
-                {renderSubtitleWords(subtitleState.currentSubtitle, true)}
+              <div className="mb-3" aria-label="字幕内容">
+                {renderFuriganaText(subtitleState.currentSubtitle, true)}
+                {/* 保留单词级点击功能 */}
+                <div className="flex flex-wrap gap-1">
+                  {renderSubtitleWords(subtitleState.currentSubtitle, true)}
+                </div>
               </div>
               {showTranslation && subtitleState.currentSubtitle.translation && (
                 <div
-                  className="font-medium text-[var(--color-primary)] text-sm"
+                  className="font-medium text-[var(--color-primary)] text-sm border-t border-primary/20 pt-2"
                   aria-label={`翻译: ${subtitleState.currentSubtitle.translation}`}
                 >
+                  <span className="text-xs text-muted-foreground mr-2">🌐</span>
                   {subtitleState.currentSubtitle.translation}
                 </div>
               )}
@@ -380,14 +429,18 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
                   {formatTime(subtitle.start)}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1" aria-label="字幕内容">
-                {renderSubtitleWords(subtitle, false)}
+              <div className="mb-2">
+                {renderFuriganaText(subtitle, false)}
+                <div className="flex flex-wrap gap-1" aria-label="字幕内容">
+                  {renderSubtitleWords(subtitle, false)}
+                </div>
               </div>
               {showTranslation && subtitle.translation && (
                 <div
-                  className="mt-2 text-muted-foreground text-sm"
+                  className="mt-2 text-muted-foreground text-sm border-t border-border/50 pt-2"
                   aria-label={`翻译: ${subtitle.translation}`}
                 >
+                  <span className="text-xs text-muted-foreground mr-2">🌐</span>
                   {subtitle.translation}
                 </div>
               )}

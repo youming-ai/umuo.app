@@ -13,6 +13,7 @@ interface PlayerMissingFileStateProps {
 
 interface PlayerNoTranscriptStateProps {
   onBack: () => void;
+  onStartTranscription?: () => void;
 }
 
 export function PlayerLoadingState() {
@@ -61,13 +62,23 @@ export function PlayerMissingFileState({ onBack }: PlayerMissingFileStateProps) 
   );
 }
 
-export function PlayerNoTranscriptState({ onBack }: PlayerNoTranscriptStateProps) {
+export function PlayerNoTranscriptState({
+  onBack,
+  onStartTranscription,
+}: PlayerNoTranscriptStateProps) {
   return (
     <div className="player-card flex flex-col items-center gap-4 py-12 text-center text-sm text-[var(--secondary-text-color)] dark:text-[var(--text-color)]/70">
-      <p>该文件尚未转录，请在主页进行转录处理</p>
-      <PlayerStateButton onClick={onBack} variant="primary" fullWidth>
-        返回主页
-      </PlayerStateButton>
+      <p>该文件尚未转录，点击下方按钮开始转录处理</p>
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        {onStartTranscription && (
+          <PlayerStateButton onClick={onStartTranscription} variant="primary" fullWidth>
+            开始转录
+          </PlayerStateButton>
+        )}
+        <PlayerStateButton onClick={onBack} variant="outline" fullWidth>
+          返回主页
+        </PlayerStateButton>
+      </div>
     </div>
   );
 }

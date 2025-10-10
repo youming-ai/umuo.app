@@ -13,20 +13,26 @@ Oumu.ai is a language learning application focused on shadowing practice with AI
 - **Language**: TypeScript with strict mode
 - **UI**: React 19 + shadcn/ui components + Radix UI primitives
 - **Styling**: Tailwind CSS with custom design tokens
-- **State Management**: React hooks + custom hooks
+- **State Management**: React hooks + TanStack Query for server state
 - **Database**: IndexedDB via Dexie (client-side)
 
 ### AI Integration
 - **Primary**: Groq SDK (Whisper-large-v3-turbo for transcription)
-- **Text Processing**: Groq openai/gpt-oss-20b for text normalization
-- **Processing**: Direct Groq SDK integration
+- **Text Processing**: Groq models for text normalization and enhancement
+- **Processing**: Server-side API routes with client-side state management
 
 ### Data Flow
 ```
-Audio Upload → File Chunking → Transcription API → Post-processing → IndexedDB Storage
+Audio Upload → Transcription API → Post-processing → IndexedDB Storage → UI State Sync
     ↓              ↓              ↓               ↓              ↓
-File Management   Chunk Processing   AI Services   Text Normalization   Player Interface
+File Management   AI Services   Text Normalization   Persistent Storage   Real-time Updates
 ```
+
+### State Management Architecture
+- **TanStack Query**: Server state management, caching, and synchronization
+- **React Hooks**: Component-level state management
+- **IndexedDB**: Persistent client-side storage
+- **Real-time Updates**: Automatic UI sync with database changes
 
 ## Available Commands
 
@@ -41,10 +47,8 @@ pnpm lint             # Run Biome.js linter
 pnpm format           # Format code with Biome.js
 pnpm type-check       # TypeScript type checking
 
-# Testing
-pnpm test             # Run Jest tests
-pnpm test:watch       # Run tests in watch mode
-pnpm test:coverage    # Run tests with coverage report
+# Testing (currently no test suite)
+# Test framework has been removed in favor of integration testing
 ```
 
 ## Key Directories
@@ -54,73 +58,80 @@ pnpm test:coverage    # Run tests with coverage report
 - `/src/hooks` - Custom React hooks for state management
 - `/src/lib` - Utility functions, database operations, and API clients
 - `/src/types` - TypeScript type definitions
-- `/specs` - Feature specifications and implementation plans
+- `/src/components/providers` - React providers (QueryProvider, etc.)
 
 ## Database Schema
 
 The application uses Dexie (IndexedDB) with the following main tables:
 - `files` - Audio file metadata and storage
-- `fileChunks` - Large file split into chunks
 - `transcripts` - Transcription status and metadata
 - `segments` - Time-coded transcript segments with word timestamps
 
+**Database Version**: Currently at version 3 with migration support for word timestamps and enhanced metadata.
+
 ## API Routes Structure
 
-- `/api/transcribe-ai` - Main transcription endpoint using Groq
+- `/api/transcribe` - Main transcription endpoint using Groq
 - `/api/postprocess` - Text normalization and enhancement
 - `/api/progress/[fileId]` - Real-time progress tracking
-- `/api/health-check/*` - System health monitoring endpoints
 
 ## Component Architecture
 
 ### Player Components
-- `AudioPlayer` - Main audio playback with time synchronization
-- `SubtitleDisplay` - Time-synced subtitle display with highlighting
-- `ScrollableSubtitleDisplay` - Scrollable subtitle list with active highlighting
+- `PlayerPage` - Main player interface with automatic transcription
+- `ScrollableSubtitleDisplay` - Time-synced subtitle display with highlighting
+- `PlayerFooter` - Audio controls with playback rate and volume
 
 ### File Management
 - `FileUpload` - Drag-and-drop file upload with validation
 - `FileList` - Grid/list view of uploaded files
-- `FileCard` - Individual file display with status
+- `FileCard` - Individual file display with real-time transcription status
 
-### Settings & Configuration
-- `SettingsPage` - Application configuration
-- `AccountPage` - User account and subscription management
+### Data Management Components
+- `QueryProvider` - TanStack Query provider with caching configuration
+- `ApiKeyError` - Error handling for missing API keys
+
+## State Management with TanStack Query
+
+### Query Keys Structure
+```typescript
+export const transcriptionKeys = {
+  all: ["transcription"] as const,
+  forFile: (fileId: number) => [...transcriptionKeys.all, "file", fileId] as const,
+  progress: (fileId: number) => [...transcriptionKeys.forFile(fileId), "progress"] as const,
+};
+```
+
+### Key Hooks
+- `useTranscriptionStatus(fileId)` - Query transcription status for a file
+- `useTranscription()` - Mutation for starting transcription
+- `usePlayerDataQuery(fileId)` - Complete player data management
+- `useTranscriptionSummary(fileIds)` - Batch status for multiple files
+
+### Automatic Transcription Flow
+1. User navigates to player page
+2. `usePlayerDataQuery` automatically detects missing transcription
+3. Auto-starts transcription via `useTranscription` mutation
+4. Real-time status updates via query invalidation
+5. UI automatically reflects new transcription status
 
 ## Key Patterns
 
 ### Error Handling
-- Unified error handling via `/src/lib/error-handler.ts`
+- Unified error handling via `/src/lib/error-utils.ts`
 - Graceful degradation for AI service failures
-- User-friendly error messages with recovery suggestions
+- API key validation with user-friendly error messages
 
 ### Performance Optimization
-- File chunking for large audio files (>50MB)
-- Batch processing for database operations
+- Intelligent caching with TanStack Query (5min staleTime, 10min gcTime)
+- File chunking for large audio files handled server-side
+- Automatic cache invalidation on data changes
 - Lazy loading of components and routes
 
-### State Management
-- Custom hooks for complex state (useAudioPlayer, useFiles, etc.)
-- Local storage for user preferences
-- IndexedDB for persistent data
-
-## Development Guidelines
-
-### Code Style
-- Use Biome.js for formatting and linting
-- Follow TypeScript strict mode requirements
-- Prefer composition over inheritance
-- Implement proper error boundaries
-
-### Testing
-- Jest with React Testing Library
-- Mock external dependencies (API calls, IndexedDB)
-- Test user behavior rather than implementation details
-
-### Database Operations
-- Always use transactional operations for data consistency
-- Implement proper error handling for database failures
-- Use batch operations for performance
+### Development vs Production Configuration
+- **Development**: Standard Next.js mode with hot reload
+- **Production**: Standalone output mode for PWA deployment
+- MIME type headers configured for both environments
 
 ## Environment Configuration
 
@@ -129,30 +140,79 @@ Required environment variables:
 GROQ_API_KEY=your_groq_api_key          # Primary AI service
 ```
 
-## Health Check System
+Optional configuration:
+```env
+TRANSCRIPTION_TIMEOUT_MS=180000          # Transcription timeout
+TRANSCRIPTION_RETRY_COUNT=2             # Retry attempts
+TRANSCRIPTION_MAX_CONCURRENCY=2          # Concurrent processing
+```
 
-The application includes a comprehensive health check system (`/health-check`) that monitors:
-- AI service connectivity and performance
-- Database operations and storage usage
-- Error handling and recovery mechanisms
-- User experience metrics
+## Development Workflow
 
-## Common Development Tasks
+### Starting Development
+1. Ensure `.env.local` contains `GROQ_API_KEY`
+2. Run `pnpm dev` to start development server
+3. Application will be available at http://localhost:3000
 
-### Adding New AI Service
-1. Create client in `/src/lib/[service]-client.ts`
-2. Add endpoint to `/src/app/api/`
-3. Update error handling in `/src/lib/error-handler.ts`
-4. Add health check integration
+### Debugging State Management
+- TanStack Query Devtools available in development
+- Real-time query inspection and cache management
+- Component-level state debugging through React DevTools
 
-### Database Schema Changes
+### Common Development Patterns
+
+#### Adding New API Endpoints
+1. Create route in `/src/app/api/[endpoint]/route.ts`
+2. Use Zod for request/response validation
+3. Implement error handling with proper HTTP status codes
+4. Add corresponding TanStack Query hooks for state management
+
+#### Database Schema Changes
 1. Update version in `/src/lib/db.ts`
 2. Add migration logic in version upgrade
-3. Update TypeScript types in `/src/types/`
-4. Test with existing data
+3. Update TypeScript types in `/src/types/database.ts`
+4. Test with existing data through Dexie's migration system
 
-### Player Feature Development
-1. Add hook to `/src/hooks/useAudioPlayer*.ts`
-2. Create component in `/src/components/player/`
-3. Update `PlayerPage.tsx` to integrate
-4. Add subtitle synchronization if needed
+#### Adding New Components with State
+1. Create component in appropriate `/src/components/` subdirectory
+2. Use TanStack Query hooks for server state
+3. Implement proper loading and error states
+4. Add real-time updates through query invalidation
+
+## Styling System
+
+### Design Tokens
+- Complete CSS custom properties system in `/src/app/globals.css`
+- Dark theme optimized with semantic color variables
+- Status-based color classes (`.status-success`, `.status-error`, etc.)
+
+### Component Styling
+- Tailwind CSS utility classes with custom design tokens
+- Consistent spacing and typography scales
+- Player-specific styling variables for audio interface
+
+### Responsive Design
+- Mobile-first approach with Tailwind responsive breakpoints
+- Touch-friendly controls for mobile devices
+- Adaptive layouts for different screen sizes
+
+## Auto-Transcription Feature
+
+The application includes intelligent auto-transcription:
+- Automatically detects when files need transcription
+- Starts transcription without user intervention
+- Provides real-time progress updates
+- Maintains state synchronization across components
+- Handles errors gracefully with retry mechanisms
+
+## Testing and Quality Assurance
+
+### Type Safety
+- Strict TypeScript configuration
+- Comprehensive type definitions in `/src/types/`
+- Zod schemas for API request/response validation
+
+### Code Quality
+- Biome.js for linting and formatting
+- Automatic import sorting and cleanup
+- Consistent code style across the codebase

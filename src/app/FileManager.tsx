@@ -6,7 +6,7 @@ import FileList from "@/components/file/FileList";
 import FileUpload from "@/components/file/FileUpload";
 import StatsCards from "@/components/file/StatsCards";
 import Navigation from "@/components/ui/Navigation";
-import { useAppState, useFiles, useTranscriptionManager, useTranscripts } from "@/hooks";
+import { useAppState, useFiles } from "@/hooks";
 
 export default function FileManager() {
   const router = useRouter();
@@ -14,34 +14,21 @@ export default function FileManager() {
   // 使用 hooks 获取数据
   const { fileUploadState, updateFileUploadState } = useAppState();
   const { files, addFiles, deleteFile } = useFiles(updateFileUploadState);
-  const { transcripts } = useTranscripts();
-  const { transcriptionProgress, queueTranscription, retryTranscription } =
-    useTranscriptionManager();
   const isPlaying = false;
   const currentFileId = undefined;
 
-  // 转换 transcriptionProgress 的键从 number 到 string 以匹配组件期望
-  const progressMap = new Map(
-    Array.from(transcriptionProgress.entries()).map(([key, value]) => [key.toString(), value]),
-  );
-
-  // 适配文件处理函数
+  // 适配文件处理函数 - 只上传文件，不进行转录
   const handleFilesSelected = useCallback(
     async (selectedFiles: File[]) => {
       try {
-        const uploadedFiles = await addFiles(selectedFiles);
-
-        uploadedFiles.forEach((file) => {
-          if (file.id) {
-            queueTranscription(file);
-          }
-        });
+        await addFiles(selectedFiles);
+        // 移除自动转录排队，只存储文件
       } catch (_error) {
         const { toast } = await import("sonner");
         toast.error("文件上传失败");
       }
     },
-    [addFiles, queueTranscription],
+    [addFiles],
   );
 
   const handleDeleteFile = useCallback(
@@ -49,14 +36,6 @@ export default function FileManager() {
       deleteFile(fileId);
     },
     [deleteFile],
-  );
-
-  // 处理重试转录
-  const handleRetryTranscription = useCallback(
-    (fileId: string) => {
-      retryTranscription(parseInt(fileId, 10));
-    },
-    [retryTranscription],
   );
 
   // 处理播放文件
@@ -91,11 +70,8 @@ export default function FileManager() {
               <div>
                 <FileList
                   files={files || []}
-                  transcripts={transcripts || []}
-                  transcriptionProgress={progressMap}
                   onPlayFile={handlePlayFile}
                   onDeleteFile={handleDeleteFile}
-                  onRetryTranscription={handleRetryTranscription}
                   isPlaying={isPlaying}
                   currentFileId={currentFileId}
                 />

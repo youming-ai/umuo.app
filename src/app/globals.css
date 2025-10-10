@@ -29,7 +29,7 @@
     border-color: var(--border-primary);
   }
 
-  /* 设计令牌：统一管理光暗主题 */
+  /* 设计令牌：暗色主题 */
   :root {
     /* 品牌色（绿色系） */
     --brand-50: #f0fdf4;
@@ -66,24 +66,24 @@
 
     /* 状态语义令牌 */
     --state-success-text: var(--color-success);
-    --state-success-surface: rgba(34, 197, 94, 0.12);
-    --state-success-border: rgba(34, 197, 94, 0.35);
-    --state-success-strong: var(--brand-700);
+    --state-success-surface: rgba(34, 197, 94, 0.2);
+    --state-success-border: rgba(34, 197, 94, 0.5);
+    --state-success-strong: var(--brand-500);
 
     --state-warning-text: var(--color-warning);
-    --state-warning-surface: rgba(245, 158, 11, 0.18);
-    --state-warning-border: rgba(245, 158, 11, 0.35);
-    --state-warning-strong: #b45309;
+    --state-warning-surface: rgba(245, 158, 11, 0.22);
+    --state-warning-border: rgba(245, 158, 11, 0.45);
+    --state-warning-strong: #facc15;
 
     --state-error-text: var(--color-error);
-    --state-error-surface: rgba(239, 68, 68, 0.18);
-    --state-error-border: rgba(239, 68, 68, 0.4);
-    --state-error-strong: #b91c1c;
+    --state-error-surface: rgba(239, 68, 68, 0.22);
+    --state-error-border: rgba(239, 68, 68, 0.5);
+    --state-error-strong: #f87171;
 
     --state-info-text: var(--color-info);
-    --state-info-surface: rgba(132, 204, 22, 0.16);
-    --state-info-border: rgba(132, 204, 22, 0.35);
-    --state-info-strong: var(--brand-700);
+    --state-info-surface: rgba(132, 204, 22, 0.24);
+    --state-info-border: rgba(132, 204, 22, 0.55);
+    --state-info-strong: var(--brand-500);
 
     /* 状态色阶 */
     --success-50: var(--brand-50);
@@ -120,17 +120,17 @@
     --error-900: #7f1d1d;
 
     /* 文本色 */
-    --text-primary: var(--neutral-900);
-    --text-secondary: var(--neutral-600);
-    --text-tertiary: var(--neutral-500);
-    --text-muted: var(--neutral-500); /* Improved from #9ca3af to #6b7280 for better contrast */
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #cbd5e1; /* Improved from #94a3b8 for better WCAG AA contrast */
+    --text-muted: #cbd5e1; /* Improved from #94a3b8 to #cbd5e1 for better contrast */
     --text-inverse: #ffffff;
 
     /* 表面与背景 */
-    --surface-base: #fff7e3;
-    --surface-card: #ffffff;
-    --surface-muted: var(--neutral-50);
-    --surface-inverse: var(--neutral-900);
+    --surface-base: #0f172a;
+    --surface-card: #1e293b;
+    --surface-muted: #1e3432;
+    --surface-inverse: #f8fafc;
 
     --bg-primary: var(--surface-base);
     --bg-secondary: var(--surface-card);
@@ -163,9 +163,9 @@
     --space-section-gap: var(--space-xl);
 
     /* 边框系统 */
-    --border-default: var(--neutral-200);
-    --border-strong: var(--neutral-300);
-    --border-subtle: var(--neutral-100);
+    --border-default: #334155;
+    --border-strong: #475569;
+    --border-subtle: #1e293b;
     --border-focus: var(--color-primary);
     --border-error: var(--color-error);
 
@@ -174,17 +174,21 @@
     --border-muted: var(--border-subtle);
 
     /* 阴影系统 */
-    --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(15 23 42 / 0.08);
-    --shadow-lg: 0 18px 36px -20px rgb(15 23 42 / 0.12);
-    --shadow-xl: 0 28px 64px -32px rgb(15 23 42 / 0.16);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+    --shadow-md: 0 6px 12px -2px rgb(0 0 0 / 0.35);
+    --shadow-lg: 0 20px 40px -24px rgb(0 0 0 / 0.45);
+    --shadow-xl: 0 32px 80px -40px rgb(0 0 0 / 0.5);
 
     /* 按钮令牌 */
     --button-fill: var(--color-primary);
     --button-fill-hover: var(--color-primary-hover);
     --button-fill-active: var(--color-primary-active);
     --button-text-color: var(--text-inverse);
-    --button-shadow-color: var(--brand-700);
+    --button-text: var(--text-inverse);
+    --button-border: var(--border-default);
+    --button-color: var(--button-fill);
+    --button-hover-color: var(--button-fill-hover);
+    --button-shadow-color: var(--brand-900);
 
     /* Radix UI 兼容变量 */
     --primary: var(--color-primary);
@@ -207,91 +211,6 @@
 
     /* 播放器 */
     --player-accent-color: var(--color-primary);
-    --player-highlight-bg: rgba(132, 204, 22, 0.12);
-    --player-card-bg: var(--surface-card);
-    --player-card-border: var(--border-primary);
-    --player-card-shadow: rgba(15, 23, 42, 0.1);
-    --player-track-color: rgba(132, 204, 22, 0.18);
-    --player-thumb-fill: var(--surface-card);
-    --player-thumb-border: rgba(132, 204, 22, 0.45);
-    --player-hover-indicator: rgba(132, 204, 22, 0.3);
-    --player-tooltip-text: var(--text-primary);
-
-    /* 设置面板 */
-    --settings-shadow-color: rgba(229, 231, 235, 0.95);
-    --settings-divider-color: rgba(229, 231, 235, 0.9);
-    --settings-muted-color: rgba(107, 114, 128, 0.7);
-    --settings-border-color: rgba(229, 231, 235, 0.95);
-
-    /* 滚动条样式变量 */
-    --scrollbar-width: 6px;
-    --scrollbar-track-color: transparent;
-    --scrollbar-thumb-color: rgba(148, 163, 184, 0.4);
-    --scrollbar-thumb-hover-color: rgba(148, 163, 184, 0.6);
-    --scrollbar-border-radius: 9999px;
-
-    /* 其他辅助变量 */
-    --upload-bg-color: rgba(132, 204, 22, 0.08);
-    --inactive-icon-color: #a5d6a7;
-    --stats-text-color: #4a4a4a;
-    --secondary-text-color: var(--text-secondary);
-    --highlight-bg: rgba(132, 204, 22, 0.1);
-    --nav-container-background: rgba(255, 255, 255, 0.85);
-
-    /* 按钮样式 */
-    --button-fill: var(--color-primary);
-    --button-fill-hover: var(--color-primary-hover);
-    --button-fill-active: var(--color-primary-active);
-    --button-text: var(--text-inverse);
-    --button-border: var(--border-default);
-
-    --button-color: var(--button-fill);
-    --button-hover-color: var(--button-fill-hover);
-
-    --background-light: var(--surface-base);
-    --card-background: var(--surface-card);
-  }
-
-  .dark {
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-tertiary: #cbd5e1; /* Improved from #94a3b8 for better WCAG AA contrast */
-    --text-muted: #cbd5e1; /* Improved from #94a3b8 to #cbd5e1 for better contrast */
-
-    --surface-base: #0f172a;
-    --surface-card: #1e293b;
-    --surface-muted: #1e3432;
-    --surface-inverse: #f8fafc;
-
-    --border-default: #334155;
-    --border-strong: #475569;
-    --border-subtle: #1e293b;
-    --border-focus: var(--color-primary);
-    --border-error: var(--color-error);
-
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
-    --shadow-md: 0 6px 12px -2px rgb(0 0 0 / 0.35);
-    --shadow-lg: 0 20px 40px -24px rgb(0 0 0 / 0.45);
-    --shadow-xl: 0 32px 80px -40px rgb(0 0 0 / 0.5);
-
-    --button-shadow-color: var(--brand-900);
-
-    --state-success-surface: rgba(34, 197, 94, 0.2);
-    --state-success-border: rgba(34, 197, 94, 0.5);
-    --state-success-strong: var(--brand-500);
-
-    --state-warning-surface: rgba(245, 158, 11, 0.22);
-    --state-warning-border: rgba(245, 158, 11, 0.45);
-    --state-warning-strong: #facc15;
-
-    --state-error-surface: rgba(239, 68, 68, 0.22);
-    --state-error-border: rgba(239, 68, 68, 0.5);
-    --state-error-strong: #f87171;
-
-    --state-info-surface: rgba(132, 204, 22, 0.24);
-    --state-info-border: rgba(132, 204, 22, 0.55);
-    --state-info-strong: var(--brand-500);
-
     --player-highlight-bg: rgba(132, 204, 22, 0.18);
     --player-card-bg: var(--surface-card);
     --player-card-border: rgba(255, 255, 255, 0.12);
@@ -302,11 +221,20 @@
     --player-hover-indicator: rgba(132, 204, 22, 0.35);
     --player-tooltip-text: var(--text-primary);
 
+    /* 设置面板 */
     --settings-shadow-color: rgba(15, 23, 42, 0.55);
     --settings-divider-color: rgba(75, 85, 99, 0.6);
     --settings-muted-color: rgba(226, 232, 240, 0.65);
     --settings-border-color: rgba(148, 163, 184, 0.35);
 
+    /* 滚动条样式变量 */
+    --scrollbar-width: 6px;
+    --scrollbar-track-color: transparent;
+    --scrollbar-thumb-color: rgba(148, 163, 184, 0.5);
+    --scrollbar-thumb-hover-color: rgba(148, 163, 184, 0.7);
+    --scrollbar-border-radius: 9999px;
+
+    /* 其他辅助变量 */
     --upload-bg-color: transparent;
     --inactive-icon-color: var(--text-muted);
     --stats-text-color: #d1d5db;
@@ -314,9 +242,8 @@
     --highlight-bg: rgba(132, 204, 22, 0.18);
     --nav-container-background: rgba(30, 41, 59, 0.8);
 
-    /* 暗色模式滚动条样式 */
-    --scrollbar-thumb-color: rgba(148, 163, 184, 0.5);
-    --scrollbar-thumb-hover-color: rgba(148, 163, 184, 0.7);
+    --background-light: var(--surface-base);
+    --card-background: var(--surface-card);
   }
 
   /* 状态色工具类 */
@@ -460,66 +387,66 @@
     padding: var(--space-card-padding-sm);
   }
 
-  /* Dark theme card optimizations */
-  .dark .card-default {
+  /* Card optimizations for dark theme */
+  .card-default {
     border-color: var(--border-default);
     border-bottom-color: var(--border-default);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .card-default:hover {
+  .card-default:hover {
     box-shadow: 0 20px 40px -24px rgb(0 0 0 / 0.45);
   }
 
-  .dark .card-elevated {
+  .card-elevated {
     border-color: var(--border-default);
     border-bottom-color: var(--border-strong);
     box-shadow: 0 20px 40px -24px rgb(0 0 0 / 0.45);
   }
 
-  .dark .card-elevated:hover {
+  .card-elevated:hover {
     box-shadow: 0 32px 80px -40px rgb(0 0 0 / 0.5);
   }
 
-  .dark .card-bordered {
+  .card-bordered {
     border-color: var(--border-default);
     border-bottom-color: var(--border-strong);
     box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.25);
   }
 
-  .dark .card-bordered:hover {
+  .card-bordered:hover {
     border-color: var(--color-primary);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .card-interactive {
+  .card-interactive {
     border-color: var(--border-default);
     border-bottom-color: var(--border-default);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .card-interactive:hover {
+  .card-interactive:hover {
     border-color: var(--color-primary);
     box-shadow: 0 32px 80px -40px rgb(0 0 0 / 0.5);
   }
 
-  .dark .stats-card {
+  .stats-card {
     border-color: var(--border-default);
     border-bottom-color: var(--border-strong);
     box-shadow: 0 20px 40px -24px rgb(0 0 0 / 0.45);
   }
 
-  .dark .stats-card:hover {
+  .stats-card:hover {
     box-shadow: 0 32px 80px -40px rgb(0 0 0 / 0.5);
   }
 
-  .dark .file-card {
+  .file-card {
     border-color: var(--border-default);
     border-bottom-color: var(--border-default);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .file-card:hover {
+  .file-card:hover {
     border-color: var(--color-primary);
     box-shadow: 0 32px 80px -40px rgb(0 0 0 / 0.5);
   }
@@ -581,7 +508,7 @@
     border-radius: var(--radius-card);
   }
 
-  .dark .upload-area {
+  .upload-area {
     @apply rounded-2xl border-2 border-dashed px-6 py-16 text-center;
     border-color: var(--state-success-border);
     background-color: transparent;
@@ -756,50 +683,50 @@
   }
 
   /* Dark theme button optimizations */
-  .dark .btn-primary {
+  btn-primary {
     background-color: var(--button-fill);
     color: var(--button-text-color);
     border-bottom-color: var(--button-shadow-color);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .btn-primary:hover:not(:disabled) {
+  btn-primary:hover:not(:disabled) {
     background-color: var(--button-fill-hover);
     box-shadow: 0 20px 40px -24px rgb(0 0 0 / 0.45);
   }
 
-  .dark .btn-primary:active:not(:disabled) {
+  btn-primary:active:not(:disabled) {
     background-color: var(--button-fill-active);
     box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.25);
   }
 
-  .dark .btn-secondary {
+  btn-secondary {
     background-color: var(--surface-muted);
     border-color: var(--border-default);
     box-shadow: 0 4px 8px -2px rgb(0 0 0 / 0.25);
   }
 
-  .dark .btn-secondary:hover:not(:disabled) {
+  btn-secondary:hover:not(:disabled) {
     background-color: var(--surface-card);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .btn-outline {
+  btn-outline {
     border-color: var(--color-primary);
     box-shadow: none;
   }
 
-  .dark .btn-outline:hover:not(:disabled) {
+  btn-outline:hover:not(:disabled) {
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .btn-danger {
+  btn-danger {
     background-color: var(--color-error);
     border-bottom-color: var(--state-error-strong);
     box-shadow: 0 6px 12px -2px rgb(0 0 0 / 0.35);
   }
 
-  .dark .btn-danger:hover:not(:disabled) {
+  btn-danger:hover:not(:disabled) {
     background-color: var(--state-error-strong);
     box-shadow: 0 20px 40px -24px rgb(0 0 0 / 0.45);
   }
@@ -837,17 +764,17 @@
     background-color: var(--surface-muted);
   }
 
-  .dark .btn-delete {
+  btn-delete {
     @apply flex items-center justify-center rounded-xl h-12 w-12 transition-all;
     background-color: var(--error-color);
     border-bottom: 4px solid var(--state-error-strong);
   }
 
-  .dark .btn-delete:hover {
+  btn-delete:hover {
     background-color: var(--state-error-strong);
   }
 
-  .dark .btn-delete:active {
+  btn-delete:active {
     border-bottom: none;
     transform: translateY(4px);
   }
@@ -867,16 +794,16 @@
     color: var(--text-primary);
   }
 
-  .dark .nav-button {
+  nav-button {
     @apply flex items-center justify-center rounded-full h-12 w-12 transition-colors;
     color: var(--text-primary);
   }
 
-  .dark .nav-button:hover {
+  nav-button:hover {
     background-color: var(--surface-muted);
   }
 
-  .dark .nav-button.active {
+  nav-button.active {
     background-color: var(--surface-muted);
   }
 
@@ -889,7 +816,7 @@
     box-shadow: var(--shadow-md);
   }
 
-  .dark .nav-container {
+  nav-container {
     @apply flex items-center gap-2 rounded-full p-2 border shadow-lg backdrop-blur-sm;
     background-color: var(--nav-container-background);
     border-color: var(--border-primary);
@@ -941,7 +868,6 @@
     flex-direction: column;
     align-items: center;
     margin-right: 0.25em;
-    text-align: center;
   }
 
   .word-group ruby {
@@ -957,7 +883,7 @@
     opacity: 0.9;
   }
 
-  .dark .word-group rt {
+  word-group rt {
     color: var(--text-secondary);
     line-height: 1;
     transform: translateY(-0.2em);
@@ -970,7 +896,7 @@
     color: var(--text-primary);
   }
 
-  .dark .word-group rb {
+  word-group rb {
     font-size: 1.75rem;
     font-weight: 500;
     line-height: 1.5;
@@ -984,7 +910,7 @@
     white-space: nowrap;
   }
 
-  .dark .word-group .romaji-word {
+  word-group .romaji-word {
     font-size: 0.8rem;
     color: var(--text-tertiary);
     letter-spacing: 0.05em;
@@ -1014,7 +940,7 @@
     color: var(--text-muted);
   }
 
-  .dark .player-word-group rt {
+  player-word-group rt {
     color: var(--text-tertiary);
   }
 
@@ -1024,7 +950,7 @@
     color: var(--text-muted);
   }
 
-  .dark .player-romaji-word {
+  player-romaji-word {
     color: var(--text-tertiary);
   }
 
@@ -1037,7 +963,7 @@
     background-color: var(--player-highlight-bg);
   }
 
-  .dark .player-word-group.active {
+  player-word-group.active {
     background-color: var(--player-highlight-bg);
   }
 
@@ -1046,7 +972,7 @@
     color: var(--text-secondary);
   }
 
-  .dark .player-translation {
+  player-translation {
     color: var(--text-secondary);
   }
 
@@ -1055,7 +981,7 @@
     color: var(--stats-text-color);
   }
 
-  .dark .player-subtitle-plain {
+  player-subtitle-plain {
     color: var(--text-primary);
   }
 
@@ -1102,7 +1028,7 @@
     padding: var(--space-card-padding-sm);
   }
 
-  .dark .player-card {
+  player-card {
     box-shadow: none;
     border-color: var(--player-card-border);
     border-width: 2px;
@@ -1133,7 +1059,7 @@
     color: rgba(92, 157, 82, 0.6);
   }
 
-  .dark .settings-section-title {
+  settings-section-title {
     color: rgba(255, 247, 227, 0.6);
   }
 
@@ -1152,7 +1078,7 @@
     overflow: hidden;
   }
 
-  .dark .settings-card {
+  settings-card {
     border-bottom-width: 4px;
     box-shadow: none;
   }
@@ -1165,7 +1091,7 @@
     border-top: 2px solid var(--settings-divider-color);
   }
 
-  .dark .settings-card .settings-row + .settings-row {
+  settings-card .settings-row + .settings-row {
     border-top: 2px solid rgba(229, 231, 235, 0.5);
   }
 
@@ -1200,7 +1126,7 @@
     background-color: rgba(92, 157, 82, 0.05);
   }
 
-  .dark .settings-link:hover {
+  settings-link:hover {
     background-color: rgba(255, 247, 227, 0.05);
   }
 
@@ -1228,12 +1154,12 @@
     border-color: transparent;
   }
 
-  .dark .settings-button {
+  settings-button {
     background-color: var(--surface-card);
     color: rgba(255, 247, 227, 0.7);
   }
 
-  .dark .settings-button:hover:not(.active) {
+  settings-button:hover:not(.active) {
     background-color: rgba(255, 247, 227, 0.1);
   }
 
@@ -1251,7 +1177,7 @@
     background-color: rgba(92, 157, 82, 0.1);
   }
 
-  .dark .settings-number-button:hover {
+  settings-number-button:hover {
     background-color: rgba(255, 247, 227, 0.1);
   }
 
@@ -1292,7 +1218,7 @@
     @apply relative w-full h-4 overflow-hidden rounded-full bg-gray-200/50;
   }
 
-  .dark .settings-progress-bar {
+  settings-progress-bar {
     background-color: rgba(255, 247, 227, 0.1);
   }
 
@@ -1361,7 +1287,7 @@
     color: var(--secondary-text-color);
   }
 
-  .dark .text-stats-label {
+  text-stats-label {
     @apply text-lg font-bold;
     color: var(--text-secondary);
   }
@@ -1381,7 +1307,7 @@
     color: var(--text-muted);
   }
 
-  .dark .text-file-status {
+  text-file-status {
     @apply text-sm;
     color: var(--text-secondary);
   }
@@ -1407,6 +1333,14 @@
 
   .status-processing {
     color: var(--state-info-text);
+  }
+
+  .status-ready {
+    color: var(--text-secondary);
+  }
+
+  .status-loading {
+    color: var(--text-muted);
   }
 
   /* 统一滚动条样式 */

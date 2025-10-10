@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { ThemeProvider } from "next-themes";
 import { PageErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import PwaRegister from "@/components/ui/PwaRegister";
 
 export const metadata: Metadata = {
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh" suppressHydrationWarning>
+    <html lang="zh" className="dark" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -54,16 +54,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans antialiased">
         <MonitoringInitializer />
-        <PageErrorBoundary>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
+        <QueryProvider>
+          <PageErrorBoundary>
             <div className="relative min-h-screen">{children}</div>
-          </ThemeProvider>
-        </PageErrorBoundary>
+          </PageErrorBoundary>
+        </QueryProvider>
         <PwaRegister />
         <ToastContainer>{null}</ToastContainer>
       </body>

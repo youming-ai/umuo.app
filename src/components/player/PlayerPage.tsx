@@ -12,13 +12,26 @@ import { PlayerFooter } from "@/components/player/page/PlayerFooter";
 import { PlayerPageLayout } from "@/components/player/page/PlayerPageLayout";
 import { PlayerStatusBanner } from "@/components/player/page/PlayerStatusBanner";
 import ScrollableSubtitleDisplay from "@/components/player/ScrollableSubtitleDisplay";
-import { usePlayerData } from "@/hooks/player/usePlayerData";
+import { usePlayerDataQuery } from "@/hooks/player/usePlayerDataQuery";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { isApiKeyError } from "@/lib/error-utils";
+import ApiKeyError from "@/components/ui/ApiKeyError";
 import type { Segment } from "@/types/database";
 
 export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   const router = useRouter();
-  const { file, segments, transcript, audioUrl, loading, error, retry } = usePlayerData(fileId);
+  const {
+    file,
+    segments,
+    transcript,
+    audioUrl,
+    loading,
+    error,
+    retry,
+    isTranscribing,
+    transcriptionProgress,
+    startTranscription,
+  } = usePlayerDataQuery(fileId);
 
   const {
     audioPlayerState,
@@ -177,13 +190,18 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     router.push("/");
   }, [clearAudio, router]);
 
-  const handleTogglePlay = useCallback(() => {
+  const handleTogglePlay = useCallback(async () => {
     if (audioPlayerState.isPlaying) {
       onPause();
     } else {
-      onPlay();
+      // 如果没有转录记录，开始转录
+      if (!transcript && !isTranscribing && startTranscription) {
+        await startTranscription();
+      } else {
+        onPlay();
+      }
     }
-  }, [audioPlayerState.isPlaying, onPause, onPlay]);
+  }, [audioPlayerState.isPlaying, onPause, onPlay, transcript, isTranscribing, startTranscription]);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
@@ -218,6 +236,11 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   }
 
   if (error) {
+    // 检查是否为API密钥错误
+    if (isApiKeyError(error)) {
+      return <ApiKeyError onRetry={retry} />;
+    }
+
     return (
       <PlayerPageLayout subtitleContainerId={subtitleContainerId}>
         <PlayerErrorState message={error} onRetry={retry} onBack={handleBack} />
@@ -240,7 +263,11 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
         showFooter={Boolean(layoutFooter)}
         footer={layoutFooter ?? undefined}
       >
-        <PlayerStatusBanner transcript={transcript} />
+        <PlayerStatusBanner
+          transcript={transcript}
+          isTranscribing={isTranscribing}
+          transcriptionProgress={transcriptionProgress}
+        />
 
         {segments.length > 0 ? (
           <ScrollableSubtitleDisplay
@@ -258,7 +285,9 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
           )
         )}
 
-        {!transcript && <PlayerNoTranscriptState onBack={handleBack} />}
+        {!transcript && (
+          <PlayerNoTranscriptState onBack={handleBack} onStartTranscription={startTranscription} />
+        )}
       </PlayerPageLayout>
 
       <audio ref={audioRef} src={audioUrl ?? undefined} preload="auto" className="hidden">

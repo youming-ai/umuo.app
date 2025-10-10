@@ -1,7 +1,31 @@
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api-response";
-import { transcribeWithEnhancedGroq, handleEnhancedGroqError } from "@/lib/enhanced-groq-client";
+import Groq from "groq-sdk";
+
+// Define Transcription type for server-side
+interface Transcription {
+  text: string;
+  words?: Array<{
+    start: number;
+    end: number;
+    word: string;
+  }>;
+  segments?: Array<{
+    id: number;
+    seek: number;
+    start: number;
+    end: number;
+    text: string;
+    tokens: number;
+    temperature: number;
+    avg_logprob: number;
+    compression_ratio: number;
+    no_speech_prob: number;
+  }>;
+  language?: string;
+  duration?: number;
+}
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({
@@ -118,9 +142,12 @@ function validateFormData(formData: FormData) {
   return { success: true as const, data: validatedForm.data };
 }
 
-// Helper function to process transcription using enhanced Groq client
-async function processTranscription(uploadedFile: File, language: string) {
-  console.log("开始处理增强转录请求:", {
+// Helper function to process transcription using Groq SDK
+async function processTranscription(
+  uploadedFile: File,
+  language: string,
+): Promise<{ success: true; data: Transcription } | { success: false; error: any }> {
+  console.log("开始处理转录请求:", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
     fileType: uploadedFile.type,
@@ -128,47 +155,97 @@ async function processTranscription(uploadedFile: File, language: string) {
     timestamp: new Date().toISOString(),
   });
 
+  // 检查 API 密钥
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    return {
+      success: false as const,
+      error: apiError({
+        code: "API_KEY_MISSING",
+        message: "Groq API 密钥未配置",
+        details: {
+          fileName: uploadedFile.name,
+        },
+        statusCode: 500,
+      }),
+    };
+  }
+
+  const groq = new Groq({ apiKey });
+
   try {
-    const result = await transcribeWithEnhancedGroq(uploadedFile, {
-      language,
+    const transcription = await groq.audio.transcriptions.create({
+      file: uploadedFile,
       model: "whisper-large-v3-turbo",
-      responseFormat: "verbose_json",
+      language,
+      response_format: "verbose_json",
       temperature: 0,
     });
 
-    console.log("增强转录成功完成:", {
+    console.log("转录成功完成:", {
       fileName: uploadedFile.name,
-      textLength: result.text?.length || 0,
-      segmentsCount: result.segments?.length || 0,
-      duration: result.duration,
-      language: result.language,
+      textLength: transcription.text?.length || 0,
+      segmentsCount: (transcription as any).segments?.length || 0,
+      duration: (transcription as any).duration,
+      language: (transcription as any).language,
     });
 
-    return { success: true as const, data: result };
+    return { success: true as const, data: transcription };
   } catch (transcriptionError) {
-    console.error("增强转录处理失败:", {
+    console.error("转录处理失败:", {
       fileName: uploadedFile.name,
-      error: transcriptionError instanceof Error ? transcriptionError.message : String(transcriptionError),
-      errorType: transcriptionError instanceof Error ? transcriptionError.constructor.name : "Unknown",
+      error:
+        transcriptionError instanceof Error
+          ? transcriptionError.message
+          : String(transcriptionError),
+      errorType:
+        transcriptionError instanceof Error ? transcriptionError.constructor.name : "Unknown",
       timestamp: new Date().toISOString(),
     });
 
-    // 使用统一的错误处理
-    const errorInfo = handleEnhancedGroqError(transcriptionError);
+    // 处理不同类型的错误
+    let errorMessage = "转录失败";
+    let statusCode = 500;
+    let errorCode = "TRANSCRIPTION_ERROR";
+
+    if (transcriptionError instanceof Error) {
+      if (transcriptionError.message.includes("API key")) {
+        errorMessage = "API 密钥无效或已过期";
+        statusCode = 401;
+        errorCode = "INVALID_API_KEY";
+      } else if (transcriptionError.message.includes("quota")) {
+        errorMessage = "API 配额已用完";
+        statusCode = 429;
+        errorCode = "QUOTA_EXCEEDED";
+      } else if (transcriptionError.message.includes("file too large")) {
+        errorMessage = "音频文件过大";
+        statusCode = 400;
+        errorCode = "FILE_TOO_LARGE";
+      } else if (transcriptionError.message.includes("unsupported")) {
+        errorMessage = "不支持的音频格式";
+        statusCode = 400;
+        errorCode = "UNSUPPORTED_FORMAT";
+      } else {
+        errorMessage = transcriptionError.message;
+      }
+    }
 
     return {
       success: false as const,
       error: apiError({
-        code: errorInfo.code,
-        message: errorInfo.message,
+        code: errorCode,
+        message: errorMessage,
         details: {
-          error: transcriptionError instanceof Error ? transcriptionError.message : String(transcriptionError),
+          error:
+            transcriptionError instanceof Error
+              ? transcriptionError.message
+              : String(transcriptionError),
           fileName: uploadedFile.name,
           fileSize: uploadedFile.size,
           fileType: uploadedFile.type,
-          suggestion: errorInfo.suggestion,
+          suggestion: "请检查音频文件格式和大小，或稍后重试",
         },
-        statusCode: errorInfo.statusCode,
+        statusCode,
       }),
     };
   }
@@ -202,9 +279,9 @@ export async function POST(request: NextRequest) {
     return apiSuccess({
       status: "completed",
       text: transcriptionResult.data.text,
-      language: transcriptionResult.data.language ?? language,
-      duration: transcriptionResult.data.duration,
-      segments: transcriptionResult.data.segments,
+      language: (transcriptionResult.data as any).language ?? language,
+      duration: (transcriptionResult.data as any).duration,
+      segments: (transcriptionResult.data as any).segments,
       meta: formValidation.data.meta,
     });
   } catch (error) {

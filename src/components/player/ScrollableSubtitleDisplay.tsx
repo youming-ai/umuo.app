@@ -12,6 +12,7 @@ interface ScrollableSubtitleDisplayProps {
   className?: string;
 }
 
+
 interface FuriganaEntry {
   text: string;
   reading: string;
@@ -168,90 +169,91 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
     }, [segments]);
 
     return (
-      <div
-        ref={containerRef}
-        className={cn("player-subtitle-container", className)}
-        data-testid="subtitle-scroll-container"
-      >
-        {segments.length === 0 ? (
-          <div className="player-card flex min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
-            <p>暂无字幕内容</p>
-          </div>
-        ) : (
-          segments.map((segment, index) => {
-            const isActive = index === activeIndex;
-            const tokens = segmentTokens[index] || [];
-            const hasTokens = tokens.length > 0;
-            const lines = (segment.text || "")
-              .split(/\n+/)
-              .map((line) => line.trim())
-              .filter(Boolean);
+      <>
+        {/* 字幕容器 */}
+        <div
+          ref={containerRef}
+          className={cn("player-subtitle-container", className)}
+          data-testid="subtitle-scroll-container"
+        >
+          {segments.length === 0 ? (
+            <div className="player-card flex min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+              <p>暂无字幕内容</p>
+            </div>
+          ) : (
+            segments.map((segment, index) => {
+              const isActive = index === activeIndex;
+              const tokens = segmentTokens[index] || [];
+              const hasTokens = tokens.length > 0;
 
-            return (
-              <div
-                key={segment.id ?? `${segment.start}-${segment.end}-${index}`}
-                ref={isActive ? activeSegmentRef : null}
-                role="button"
-                tabIndex={0}
-                onClick={() => onSegmentClick?.(segment)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onSegmentClick?.(segment);
-                  }
-                }}
-                data-testid="subtitle-card"
-                data-active={isActive}
-                className={cn("subtitle-line", isActive && "highlight")}
-              >
-                {hasTokens ? (
-                  <div className="flex flex-wrap items-end">
-                    {tokens.map((token, tokenIndex) => {
-                      const isTokenActive =
-                        isActive &&
-                        typeof token.start === "number" &&
-                        typeof token.end === "number" &&
-                        safeCurrentTime >= token.start &&
-                        safeCurrentTime <= token.end;
+              // 显示文本
+              const displayText = segment.normalizedText || segment.text;
+              const lines = displayText
+                .split(/\n+/)
+                .map((line) => line.trim())
+                .filter(Boolean);
 
-                      return (
-                        <div
-                          key={`${segment.id ?? index}-token-${tokenIndex}-${token.word}`}
-                          className="word-group"
-                          data-testid={isTokenActive ? "active-word" : undefined}
-                        >
-                          <ruby>
+              return (
+                <div
+                  key={segment.id ?? `${segment.start}-${segment.end}-${index}`}
+                  ref={isActive ? activeSegmentRef : null}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => onSegmentClick?.(segment)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSegmentClick?.(segment);
+                    }
+                  }}
+                  data-testid="subtitle-card"
+                  data-active={isActive}
+                  className={cn("subtitle-line", isActive && "highlight")}
+                >
+                  {hasTokens ? (
+                    <div className="flex flex-wrap items-end">
+                      {tokens.map((token, tokenIndex) => {
+                        const isTokenActive =
+                          isActive &&
+                          typeof token.start === "number" &&
+                          typeof token.end === "number" &&
+                          safeCurrentTime >= token.start &&
+                          safeCurrentTime <= token.end;
+
+                        return (
+                          <div
+                            key={`${segment.id ?? index}-token-${tokenIndex}-${token.word}`}
+                            className="word-group"
+                            data-testid={isTokenActive ? "active-word" : undefined}
+                          >
                             <span className="player-word-surface">{token.word}</span>
-                            {token.reading && <rt>{token.reading}</rt>}
-                          </ruby>
-                          {token.romaji && <span className="romaji-word">{token.romaji}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {lines.length > 0 ? (
-                      lines.map((line, lineIndex) => (
-                        <p
-                          key={`${segment.id ?? index}-line-${lineIndex}`}
-                          className="player-subtitle-plain"
-                        >
-                          {line}
-                        </p>
-                      ))
-                    ) : (
-                      <p className="player-subtitle-plain text-base">{segment.text}</p>
-                    )}
-                  </div>
-                )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {lines.length > 0 ? (
+                        lines.map((line, lineIndex) => (
+                          <p
+                            key={`${segment.id ?? index}-line-${lineIndex}`}
+                            className="player-subtitle-plain"
+                          >
+                            {line}
+                          </p>
+                        ))
+                      ) : (
+                        <p className="player-subtitle-plain text-base">{displayText}</p>
+                      )}
+                    </div>
+                  )}
 
-                {segment.translation && <p className="player-translation">{segment.translation}</p>}
-              </div>
-            );
-          })
-        )}
-      </div>
+                                  </div>
+              );
+            })
+          )}
+        </div>
+      </>
     );
   },
 );
