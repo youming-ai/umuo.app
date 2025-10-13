@@ -51,7 +51,21 @@ jobs:
         run: npm install -g wrangler
 
       - name: Deploy to Cloudflare Pages
-        run: wrangler pages deploy .next --project-name oumu-ai --commit-dirty
+        run: |
+          echo "Checking environment variables..."
+          echo "CLOUDFLARE_API_TOKEN length: ${#CLOUDFLARE_API_TOKEN}"
+          echo "CLOUDFLARE_ACCOUNT_ID: $CLOUDFLARE_ACCOUNT_ID"
+
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "ERROR: CLOUDFLARE_API_TOKEN is not set"
+            exit 1
+          fi
+
+          export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN"
+          export CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"
+
+          echo "Environment variables set, starting deployment..."
+          wrangler pages deploy .next --project-name oumu-ai --commit-dirty
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
