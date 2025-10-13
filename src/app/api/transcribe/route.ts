@@ -35,8 +35,18 @@ const transcribeQuerySchema = z.object({
   language: z.string().optional().default("en"),
 });
 
+// Helper function to check if object is a File-like object
+function isFileLike(obj: any): obj is File {
+  return obj &&
+         typeof obj === 'object' &&
+         typeof obj.name === 'string' &&
+         typeof obj.size === 'number' &&
+         typeof obj.type === 'string' &&
+         typeof obj.arrayBuffer === 'function';
+}
+
 const transcribeFormSchema = z.object({
-  audio: z.instanceof(File, { message: "Audio file is required" }),
+  audio: z.any().refine((file) => isFileLike(file), { message: "Audio file is required" }),
   meta: z
     .object({
       fileId: z.string().optional(),
@@ -78,7 +88,7 @@ function validateQueryParams(searchParams: Record<string, string>) {
 function validateFormData(formData: FormData) {
   const uploadedFile = formData.get("audio") ?? formData.get("file");
 
-  if (!(uploadedFile instanceof File)) {
+  if (!isFileLike(uploadedFile)) {
     return {
       success: false as const,
       error: apiError({
