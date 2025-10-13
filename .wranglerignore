@@ -1,0 +1,8 @@
+cache/
+.next/cache/
+.trace/
+.next/server/
+.next/standalone/
+.env.local
+.env.development
+node_modules/

@@ -12,7 +12,12 @@
     "start": "next start",
     "lint": "biome check .",
     "format": "biome format . --write",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "cf:login": "wrangler auth login",
+    "cf:deploy:prod": "wrangler pages deploy .next --project-name oumu-ai",
+    "cf:deploy:preview": "wrangler pages deploy .next --project-name oumu-ai --preview",
+    "deploy": "pnpm build && pnpm cf:deploy:prod",
+    "deploy:preview": "pnpm build && pnpm cf:deploy:preview"
   },
   "keywords": [],
   "author": "",
