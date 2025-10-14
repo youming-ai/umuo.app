@@ -3,7 +3,40 @@ const nextConfig = {
   // PWA configuration
   // Enable static exports for PWA only in production
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
-  // Configure headers for PWA
+
+  // Performance optimizations
+  experimental: {
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      'lucide-react',
+      'sonner',
+      'recharts'
+    ],
+  },
+
+  // Image optimization
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+
+  // Bundle optimization
+  webpack: (config, { isServer }) => {
+    // Reduce bundle size by excluding unnecessary modules
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+
+    return config;
+  },
+
+  // Configure headers for PWA and security
   async headers() {
     return [
       {
@@ -38,6 +71,10 @@ const nextConfig = {
           {
             key: 'Content-Type',
             value: 'text/css'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
           }
         ],
       },
@@ -47,11 +84,18 @@ const nextConfig = {
           {
             key: 'Content-Type',
             value: 'application/javascript'
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
           }
         ],
       }
     ]
   },
+
+  // Compression
+  compress: true,
 }
 
 module.exports = nextConfig

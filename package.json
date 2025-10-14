@@ -9,15 +9,21 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "start": "next start",
     "lint": "biome check .",
     "format": "biome format . --write",
     "type-check": "tsc --noEmit",
+    "test:security": "pnpm audit --audit-level high",
+    "test:performance": "lighthouse https://umuo.app --output html --output-path ./lighthouse-report.html",
     "cf:login": "wrangler auth login",
     "cf:deploy:prod": "wrangler pages deploy .next --project-name oumu-ai",
     "cf:deploy:preview": "wrangler pages deploy .next --project-name oumu-ai --preview",
     "deploy": "pnpm build && pnpm cf:deploy:prod",
-    "deploy:preview": "pnpm build && pnpm cf:deploy:preview"
+    "deploy:preview": "pnpm build && pnpm cf:deploy:preview",
+    "ci:build": "pnpm install --frozen-lockfile && pnpm test:security && pnpm lint && pnpm type-check && pnpm build",
+    "notify:success": "node .github/notify-deploy.js success",
+    "notify:failure": "node .github/notify-deploy.js failure"
   },
   "keywords": [],
   "author": "",

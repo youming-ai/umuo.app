@@ -9,6 +9,10 @@ permissions:
   contents: read
   deployments: write
 
+concurrency:
+  group: 'deploy-production'
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -19,67 +23,96 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        id: setup-node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
+        with:
+          version: 10.17.1
 
       - name: Get pnpm store directory
         shell: bash
+        id: pnpm-cache
         run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ steps.setup-node.outputs.node-version }}-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-
+            ${{ runner.os }}-pnpm-${{ steps.setup-node.outputs.node-version }}-
+            ${{ runner.os }}-pnpm-
+
+      - name: Setup Next.js cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.js', '**/*.ts', '**/*.tsx', '**/*.jsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Run security audit
+        run: |
+          echo "🔒 Running security audit..."
+          pnpm audit --audit-level high
+          echo "✅ Security audit completed"
 
       - name: Build application
         run: pnpm build
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
-      - name: Install Wrangler globally
-        run: npm install -g wrangler
-
-      - name: Deploy to Cloudflare Pages
+      - name: Optimize build for deployment
         run: |
-          echo "Checking environment variables..."
-          echo "CLOUDFLARE_API_TOKEN length: ${#CLOUDFLARE_API_TOKEN}"
-          echo "CLOUDFLARE_ACCOUNT_ID: $CLOUDFLARE_ACCOUNT_ID"
-
-          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "ERROR: CLOUDFLARE_API_TOKEN is not set"
-            exit 1
-          fi
-
-          export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN"
-          export CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"
-
-          echo "Environment variables set, cleaning build directory..."
+          echo "Optimizing build directory for deployment..."
           # Clean up large cache files before deployment
           find .next -name "*.pack" -delete 2>/dev/null || true
           find .next -name "*.map" -delete 2>/dev/null || true
-          rm -rf .next/cache .next/static/webpack .next/server 2>/dev/null || true
+          rm -rf .next/cache .next/static/webpack .next/server/app 2>/dev/null || true
 
-          echo "Build directory cleaned, checking file sizes..."
-          find .next -type f -size +20M -exec ls -lh {} \; 2>/dev/null || echo "No files larger than 20MB found"
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: oumu-ai
+          directory: .next
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
-          echo "Starting deployment..."
-          wrangler pages deploy .next --project-name oumu-ai --commit-dirty
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Output deployment URLs
+      - name: Notify deployment success
+        if: success()
         run: |
           echo "🚀 Deployment completed!"
           echo "🌐 Live site: https://umuo.app"
+          echo "📊 Deploy URL: ${{ steps.deploy.outputs.url }}"
+          echo "📈 Deployment ID: ${{ steps.deploy.outputs.id }}"
+
+          node .github/notify-deploy.js success \
+            "${{ steps.deploy.outputs.url }}" \
+            "${{ steps.deploy.outputs.id }}"
+        env:
+          NOTIFICATION_SERVICE: ${{ secrets.NOTIFICATION_SERVICE }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed!"
+          node .github/notify-deploy.js failure
+        env:
+          NOTIFICATION_SERVICE: ${{ secrets.NOTIFICATION_SERVICE }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
