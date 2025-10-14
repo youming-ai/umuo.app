@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Cloudflare Pages compatibility
-  // For Cloudflare Pages with Functions, use standalone output
+  // Use standalone output for Cloudflare Pages Functions
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
 
   // Ensure trailing slashes for proper routing
@@ -24,6 +24,7 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
+  
   // Bundle optimization
   webpack: (config, { isServer }) => {
     // Reduce bundle size by excluding unnecessary modules

@@ -74,23 +74,39 @@ jobs:
       - name: Optimize build for deployment
         run: |
           echo "Optimizing build directory for deployment..."
-          # For standalone mode, copy to correct location
+          # For standalone mode, prepare for Cloudflare Pages Functions
           if [ -d ".next/standalone" ]; then
             echo "Using standalone build output..."
             cp -r .next/standalone/* .next/
             cp -r public/* .next/ 2>/dev/null || true
 
-            # Copy static files to root
-            if [ -d ".next/server/app" ]; then
-              cp .next/server/app/index.html .next/ 2>/dev/null || true
-              cp -r .next/server/app/_next/static/* .next/static/ 2>/dev/null || true
-            fi
+            # Create worker for Next.js routing
+            cat > .next/_worker.js << 'EOF'
+// Cloudflare Pages Functions worker for Next.js standalone output
+export default {
+  async fetch(request, env, ctx) {
+    try {
+      // Import the Next.js server
+      const { Server } = await import('./server.js');
+      const server = new Server({
+        hostname: 'localhost',
+        port: 3000,
+      });
+
+      return server.handleRequest(request);
+    } catch (error) {
+      console.error('Error handling request:', error);
+      return new Response('Internal Server Error', { status: 500 });
+    }
+  }
+};
+EOF
           fi
 
           # Clean up large cache files before deployment
           find .next -name "*.pack" -delete 2>/dev/null || true
           find .next -name "*.map" -delete 2>/dev/null || true
-          rm -rf .next/cache .next/static/webpack .next/server/app 2>/dev/null || true
+          rm -rf .next/cache .next/static/webpack 2>/dev/null || true
 
       - name: Deploy to Cloudflare Pages
         id: deploy
