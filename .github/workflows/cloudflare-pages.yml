@@ -64,7 +64,16 @@ jobs:
           export CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN"
           export CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID"
 
-          echo "Environment variables set, starting deployment..."
+          echo "Environment variables set, cleaning build directory..."
+          # Clean up large cache files before deployment
+          find .next -name "*.pack" -delete 2>/dev/null || true
+          find .next -name "*.map" -delete 2>/dev/null || true
+          rm -rf .next/cache .next/static/webpack .next/server 2>/dev/null || true
+
+          echo "Build directory cleaned, checking file sizes..."
+          find .next -type f -size +20M -exec ls -lh {} \; 2>/dev/null || echo "No files larger than 20MB found"
+
+          echo "Starting deployment..."
           wrangler pages deploy .next --project-name oumu-ai --commit-dirty
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

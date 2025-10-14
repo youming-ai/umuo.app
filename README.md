@@ -18,7 +18,7 @@
 ### ✅ 已完成功能
 - 核心架构：Next.js 15 + React 19 + TypeScript + shadcn/ui
 - 数据库层：Dexie (IndexedDB) 版本3，支持迁移和备份恢复
-- API 路由：`/api/transcribe`（Groq）、`/api/postprocess`（Groq Moonshot）、`/api/progress`
+- API 路由：`/api/transcribe`（Groq）、`/api/postprocess`（Groq）、`/api/progress`
 - UI 组件：文件管理、音频播放器、字幕显示、设置页面
 - 错误处理：统一的错误处理框架和重试机制
 - 自定义 Hooks：模块化的状态管理
@@ -27,7 +27,6 @@
 - AI 服务支持：Groq
 
 ### ⚠️ 已知问题
-- 持续的代码清理和类型定义优化
 - 部分 TypeScript 警告（未使用的变量和 any 类型）
 
 ## ✨ 核心特性
@@ -47,13 +46,13 @@
 
 - **前端**: Next.js 15, React 19, TypeScript
 - **UI 组件**: shadcn/ui, Radix UI, Tailwind CSS
-- **主题系统**: 自定义设计令牌 + next-themes（浅色/暗色/系统）
+- **主题系统**: 自定义设计令牌（浅色/暗色/系统）
 - **数据库**: IndexedDB (Dexie)
 - **AI 服务**:
   - Groq Whisper-large-v3-turbo (音频转录)
   - Groq openai/gpt-oss-20b (文本处理)
 - **样式**: Tailwind CSS
-- **开发工具**: Biome.js, Jest
+- **开发工具**: Biome.js
 - **通知**: Sonner (Toast)
 
 ### 数据流架构
@@ -108,26 +107,18 @@ pnpm start
 
 ## 📚 文档
 
-详细文档请参考 `/docs` 目录：
-
-- [项目概述](docs/OVERVIEW.md)
-- [快速开始](docs/GETTING_STARTED.md)
-- [架构设计](docs/ARCHITECTURE.md)
-- [API 文档](docs/API/README.md)
-- [开发指南](docs/DEVELOPMENT/README.md)
-- [用户指南](docs/USER_GUIDE/README.md)
+- [快速开始](QUICK_START.md) - 环境配置和安装指南
+- [部署指南](DEPLOYMENT.md) - 自动和手动部署说明
+- [开发指南](CLAUDE.md) - 详细的技术文档和架构说明
 
 ## 🧪 测试
 
+项目目前使用集成测试方法，暂无独立的测试框架配置。
+
 ```bash
-# 运行所有测试
-pnpm test
-
-# 运行测试并生成覆盖率报告
-pnpm test:coverage
-
-# 运行测试监听模式
-pnpm test:watch
+# 类型检查和代码质量检查
+pnpm type-check
+pnpm lint
 ```
 
 ## 🎯 代码质量
@@ -144,11 +135,10 @@ pnpm check
 
 ## 🔧 开发工作流
 
-1. **规划**: 在 `IMPLEMENTATION_PLAN.md` 中规划复杂工作
-2. **测试**: 编写测试先（红色）
-3. **实现**: 编写最小代码通过测试（绿色）
-4. **重构**: 在测试通过的情况下清理代码
-5. **提交**: 提交包含清晰的提交信息
+1. **规划**: 在开发前分析现有代码模式
+2. **实现**: 编写简洁、可维护的代码
+3. **验证**: 运行类型检查和代码质量检查
+4. **提交**: 提交包含清晰的提交信息
 
 ## 🤝 贡献
 
