@@ -79,6 +79,12 @@ jobs:
             echo "Using standalone build output..."
             cp -r .next/standalone/* .next/
             cp -r public/* .next/ 2>/dev/null || true
+
+            # Copy static files to root
+            if [ -d ".next/server/app" ]; then
+              cp .next/server/app/index.html .next/ 2>/dev/null || true
+              cp -r .next/server/app/_next/static/* .next/static/ 2>/dev/null || true
+            fi
           fi
 
           # Clean up large cache files before deployment
