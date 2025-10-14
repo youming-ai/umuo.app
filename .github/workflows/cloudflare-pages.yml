@@ -117,9 +117,6 @@ EOF
           projectName: oumu-ai
           directory: .next
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          # Enable compatibility mode for Next.js API routes
-          compatibility-date: 2024-01-01
-          compatibility-flags: nodejs_compat
 
       - name: Notify deployment success
         if: success()
