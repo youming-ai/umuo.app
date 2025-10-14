@@ -1,0 +1,5 @@
+Deployment test - This file should be accessible if the deployment is working correctly.
+If you can see this file, the static assets are being served properly.
+
+Deployment timestamp: 2025-10-14T17:22:00Z
+Optimization status: Successfully deployed with enhanced pipeline
