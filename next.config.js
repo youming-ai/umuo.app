@@ -1,8 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // PWA configuration
-  // Enable static exports for PWA only in production
+  // Cloudflare Pages compatibility
+  // For Cloudflare Pages with Functions, use standalone output
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+
+  // Ensure trailing slashes for proper routing
+  trailingSlash: false,
 
   // Performance optimizations
   experimental: {

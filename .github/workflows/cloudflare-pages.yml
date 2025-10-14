@@ -74,6 +74,13 @@ jobs:
       - name: Optimize build for deployment
         run: |
           echo "Optimizing build directory for deployment..."
+          # For standalone mode, copy to correct location
+          if [ -d ".next/standalone" ]; then
+            echo "Using standalone build output..."
+            cp -r .next/standalone/* .next/
+            cp -r public/* .next/ 2>/dev/null || true
+          fi
+
           # Clean up large cache files before deployment
           find .next -name "*.pack" -delete 2>/dev/null || true
           find .next -name "*.map" -delete 2>/dev/null || true
@@ -88,6 +95,9 @@ jobs:
           projectName: oumu-ai
           directory: .next
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # Enable compatibility mode for Next.js API routes
+          compatibility-date: 2024-01-01
+          compatibility-flags: nodejs_compat
 
       - name: Notify deployment success
         if: success()
