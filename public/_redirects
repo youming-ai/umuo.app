@@ -1,11 +1,7 @@
-# Cloudflare Pages redirects for Next.js App Router
+# Cloudflare Pages redirects for Next.js Static Export
 
-# API routes - handle server-side functions
-/api/*  /api/:splat  200
-
-# Static assets - keep as is
-/_next/* /_next/:splat 200
-/static/* /static/:splat 200
-
-# Client-side routing - serve index.html for all non-API routes
+# Client-side routing - serve index.html for all routes
 /* /index.html 200
+
+# API routes - redirect to index.html (will show API not available message)
+/api/* /index.html 200

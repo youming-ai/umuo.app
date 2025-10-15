@@ -77,22 +77,20 @@ jobs:
           echo "Build directory size before optimization:"
           du -sh .next || true
 
-          # Handle standalone build for Cloudflare Pages Functions
-          if [ -d ".next/standalone" ]; then
-            echo "📦 Processing standalone build..."
-            cp -r .next/standalone/* .next/
-
-            # Copy public files including worker
-            cp -r public/* .next/ 2>/dev/null || true
-
-            # Copy static assets to root for proper routing
-            if [ -d ".next/server/app" ]; then
-              cp .next/server/app/index.html .next/ 2>/dev/null || true
-            fi
+          # Handle static export build
+          if [ -d "out" ]; then
+            echo "📦 Using static export output..."
+            # Copy static export to .next for Cloudflare Pages
+            cp -r out/* .next/
           else
             echo "📁 Copying public files..."
             cp -r public/* .next/ 2>/dev/null || true
           fi
+
+          # Copy _worker.js and _redirects if they exist
+          cp public/_worker.js .next/ 2>/dev/null || true
+          cp public/_redirects .next/ 2>/dev/null || true
+          cp public/_headers .next/ 2>/dev/null || true
 
           # Remove large cache files that exceed Cloudflare's 26.2MB limit
           echo "🗑️ Removing large webpack cache files..."
@@ -101,7 +99,6 @@ jobs:
 
           # Remove entire cache directories
           rm -rf .next/cache 2>/dev/null || true
-          rm -rf .next/server/cache 2>/dev/null || true
           rm -rf .next/static/webpack 2>/dev/null || true
 
           # Remove development-only files
