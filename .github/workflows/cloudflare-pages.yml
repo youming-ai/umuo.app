@@ -77,8 +77,25 @@ jobs:
           echo "Build directory size before optimization:"
           du -sh .next || true
 
+          # Handle standalone build for Cloudflare Pages Functions
+          if [ -d ".next/standalone" ]; then
+            echo "📦 Processing standalone build..."
+            cp -r .next/standalone/* .next/
+
+            # Copy public files including worker
+            cp -r public/* .next/ 2>/dev/null || true
+
+            # Copy static assets to root for proper routing
+            if [ -d ".next/server/app" ]; then
+              cp .next/server/app/index.html .next/ 2>/dev/null || true
+            fi
+          else
+            echo "📁 Copying public files..."
+            cp -r public/* .next/ 2>/dev/null || true
+          fi
+
           # Remove large cache files that exceed Cloudflare's 26.2MB limit
-          echo "Removing large webpack cache files..."
+          echo "🗑️ Removing large webpack cache files..."
           find .next -name "*.pack" -size +20M -delete 2>/dev/null || true
           find .next -name "*.map" -size +5M -delete 2>/dev/null || true
 

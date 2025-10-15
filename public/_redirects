@@ -1,3 +1,11 @@
-# Next.js App Router compatibility
+# Cloudflare Pages redirects for Next.js App Router
+
+# API routes - handle server-side functions
 /api/*  /api/:splat  200
-/*     /index.html  200
+
+# Static assets - keep as is
+/_next/* /_next/:splat 200
+/static/* /static/:splat 200
+
+# Client-side routing - serve index.html for all non-API routes
+/* /index.html 200
