@@ -71,6 +71,31 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
+      - name: Optimize build for Cloudflare Pages
+        run: |
+          echo "🔧 Optimizing build for Cloudflare Pages..."
+          echo "Build directory size before optimization:"
+          du -sh .next || true
+
+          # Remove large cache files that exceed Cloudflare's 26.2MB limit
+          echo "Removing large webpack cache files..."
+          find .next -name "*.pack" -size +20M -delete 2>/dev/null || true
+          find .next -name "*.map" -size +5M -delete 2>/dev/null || true
+
+          # Remove entire cache directories
+          rm -rf .next/cache 2>/dev/null || true
+          rm -rf .next/server/cache 2>/dev/null || true
+          rm -rf .next/static/webpack 2>/dev/null || true
+
+          # Remove development-only files
+          find .next -name "*.hot-update.js" -delete 2>/dev/null || true
+          find .next -name "*.hot-update.json" -delete 2>/dev/null || true
+
+          echo "Build directory size after optimization:"
+          du -sh .next || true
+
+          echo "✅ Build optimization completed"
+
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/pages-action@v1
