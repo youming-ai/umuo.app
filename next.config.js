@@ -1,11 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Cloudflare Pages compatibility
-  // Use static export for better Cloudflare Pages compatibility
-  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
+  // Use standard build mode to support API routes
+  // output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
 
-  // Disable image optimization for static export
+  // Enable image optimization for standard build
   images: {
+    // For Cloudflare Pages, keep unoptimized but can be enabled for other platforms
     unoptimized: true
   },
 

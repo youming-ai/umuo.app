@@ -77,29 +77,19 @@ jobs:
           echo "Build directory size before optimization:"
           du -sh .next || true
 
-          # Handle static export build
-          if [ -d "out" ]; then
-            echo "📦 Using static export output..."
-            # Copy static export to .next for Cloudflare Pages
-            cp -r out/* .next/
-          else
-            echo "📁 Copying public files..."
-            cp -r public/* .next/ 2>/dev/null || true
-          fi
+          # For standard Next.js build with API routes
+          echo "📁 Copying public files..."
+          cp -r public/* .next/ 2>/dev/null || true
 
-          # Copy _worker.js and _redirects if they exist
+          # Copy worker configuration files if they exist
           cp public/_worker.js .next/ 2>/dev/null || true
           cp public/_redirects .next/ 2>/dev/null || true
           cp public/_headers .next/ 2>/dev/null || true
 
-          # Remove large cache files that exceed Cloudflare's 26.2MB limit
-          echo "🗑️ Removing large webpack cache files..."
+          # Remove large cache files that exceed Cloudflare's size limit
+          echo "🗑️ Removing large cache files..."
           find .next -name "*.pack" -size +20M -delete 2>/dev/null || true
           find .next -name "*.map" -size +5M -delete 2>/dev/null || true
-
-          # Remove entire cache directories
-          rm -rf .next/cache 2>/dev/null || true
-          rm -rf .next/static/webpack 2>/dev/null || true
 
           # Remove development-only files
           find .next -name "*.hot-update.js" -delete 2>/dev/null || true

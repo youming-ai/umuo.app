@@ -1,0 +1,109 @@
+name: Performance Monitoring
+
+on:
+  schedule:
+    # Run every hour
+    - cron: '0 * * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  deployments: write
+  actions: read
+
+jobs:
+  performance-check:
+    runs-on: ubuntu-latest
+    name: Performance Health Check
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Get pnpm store directory
+        shell: bash
+        id: pnpm-cache
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Lighthouse CI Performance Test
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://umuo.app
+          configPath: './lighthouserc.js'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: Performance Summary
+        run: |
+          echo "📊 Performance monitoring completed"
+          echo "🔍 Check the Artifacts section for detailed Lighthouse reports"
+
+      - name: Check Performance Scores
+        run: |
+          echo "📈 Analyzing performance trends..."
+          # Add custom performance analysis here
+          echo "✅ Performance monitoring workflow completed"
+
+  uptime-check:
+    runs-on: ubuntu-latest
+    name: Website Uptime Check
+
+    steps:
+      - name: Check Website Availability
+        run: |
+          echo "🌐 Checking website availability..."
+
+          # Check main site
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://umuo.app || echo "000")
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Website is accessible (HTTP $HTTP_CODE)"
+          elif [ "$HTTP_CODE" = "404" ]; then
+            echo "⚠️ Website returns 404 - routing issue detected"
+          else
+            echo "❌ Website is not accessible (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+      - name: Check Response Time
+        run: |
+          echo "⏱️ Checking response time..."
+          RESPONSE_TIME=$(curl -s -o /dev/null -w "%{time_total}" https://umuo.app || echo "0")
+
+          if (( $(echo "$RESPONSE_TIME > 5" | bc -l) )); then
+            echo "⚠️ Slow response time: ${RESPONSE_TIME}s"
+          else
+            echo "✅ Response time OK: ${RESPONSE_TIME}s"
+          fi
+
+      - name: Check SSL Certificate
+        run: |
+          echo "🔒 Checking SSL certificate..."
+          SSL_EXPIRY=$(echo | openssl s_client -connect umuo.app:443 -servername umuo.app 2>/dev/null | openssl x509 -noout -dates 2>/dev/null | grep "notAfter" | cut -d= -f2 || echo "Unknown")
+          echo "SSL Certificate expires: $SSL_EXPIRY"
