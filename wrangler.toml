@@ -1,11 +1,7 @@
-name = "oumu-ai"
+name = "umuo"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = ".next"
-
-# For standard Next.js build with API routes
-[build]
-command = "npm run build"
 
 # Environment variables for Cloudflare Pages
 [env.production.vars]

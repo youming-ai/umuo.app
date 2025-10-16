@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Cloudflare Pages compatibility
-  // Use standard build mode to support API routes
+  // Cloudflare Pages compatibility - use standard build for API routes support
   // output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
 
   // Enable image optimization for standard build
