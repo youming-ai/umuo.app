@@ -152,7 +152,7 @@ export class StorageManager {
    * 检查是否需要清理存储空间
    */
   static async needsCleanup(): Promise<boolean> {
-    const usage = await this.getStorageUsage();
+    const usage = await StorageManager.getStorageUsage();
     return usage.usagePercentage >= CLEANUP_THRESHOLD;
   }
 

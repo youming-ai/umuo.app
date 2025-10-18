@@ -199,7 +199,7 @@ export async function withRetry<T>(
       }
 
       // 等待后重试
-      await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, attempt)));
+      await new Promise((resolve) => setTimeout(resolve, delay * 2 ** attempt));
     }
   }
 

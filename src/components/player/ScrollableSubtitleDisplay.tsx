@@ -112,35 +112,38 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
       }
 
       // 延迟滚动以确保DOM更新完成
-      scrollTimeoutRef.current = setTimeout(() => {
-        if (!containerRef.current || !activeSegmentRef.current) {
-          return;
-        }
+      scrollTimeoutRef.current = setTimeout(
+        () => {
+          if (!containerRef.current || !activeSegmentRef.current) {
+            return;
+          }
 
-        const container = containerRef.current;
-        const activeElement = activeSegmentRef.current;
+          const container = containerRef.current;
+          const activeElement = activeSegmentRef.current;
 
-        const containerRect = container.getBoundingClientRect();
-        const activeRect = activeElement.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const activeRect = activeElement.getBoundingClientRect();
 
-        const relativeTop = activeRect.top - containerRect.top;
-        const containerHeight = containerRect.height;
-        const elementHeight = activeRect.height;
+          const relativeTop = activeRect.top - containerRect.top;
+          const containerHeight = containerRect.height;
+          const elementHeight = activeRect.height;
 
-        const targetScrollTop = relativeTop - containerHeight / 2 + elementHeight / 2;
+          const targetScrollTop = relativeTop - containerHeight / 2 + elementHeight / 2;
 
-        const currentScrollTop = container.scrollTop;
-        const isVisible =
-          targetScrollTop >= currentScrollTop &&
-          targetScrollTop + elementHeight <= currentScrollTop + containerHeight;
+          const currentScrollTop = container.scrollTop;
+          const isVisible =
+            targetScrollTop >= currentScrollTop &&
+            targetScrollTop + elementHeight <= currentScrollTop + containerHeight;
 
-        if (!isVisible) {
-          container.scrollTo({
-            top: Math.max(0, targetScrollTop),
-            behavior: isPlaying ? "smooth" : "auto",
-          });
-        }
-      }, isPlaying ? 100 : 0); // 播放时稍微延迟以确保平滑
+          if (!isVisible) {
+            container.scrollTo({
+              top: Math.max(0, targetScrollTop),
+              behavior: isPlaying ? "smooth" : "auto",
+            });
+          }
+        },
+        isPlaying ? 100 : 0,
+      ); // 播放时稍微延迟以确保平滑
 
       return () => {
         if (scrollTimeoutRef.current) {
@@ -225,8 +228,15 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                   }}
                   data-testid="subtitle-card"
                   data-active={isActive}
-                  className={cn("subtitle-line mb-[var(--space-subtitle-gap)]", isActive && "highlight")}
-                  style={{ marginBottom: isActive ? 'var(--space-status-gap)' : 'var(--space-subtitle-gap)' }}
+                  className={cn(
+                    "subtitle-line mb-[var(--space-subtitle-gap)]",
+                    isActive && "highlight",
+                  )}
+                  style={{
+                    marginBottom: isActive
+                      ? "var(--space-status-gap)"
+                      : "var(--space-subtitle-gap)",
+                  }}
                 >
                   {hasTokens ? (
                     <div className="flex flex-wrap items-end">

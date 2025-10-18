@@ -783,7 +783,7 @@ function sanitizeAttributes(
  * 编码 HTML 实体
  */
 export function encodeHtmlEntities(text: string): string {
-  return text.replace(/[&<>"'\/]/g, (char) => HTML_ENTITIES[char] || char);
+  return text.replace(/[&<>"'/]/g, (char) => HTML_ENTITIES[char] || char);
 }
 
 /**

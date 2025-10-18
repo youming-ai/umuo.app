@@ -182,7 +182,7 @@ function parseRubyFormat(furiganaString: string): FuriganaToken[] {
  */
 function parseBracketsFormat(furiganaString: string, originalText: string): FuriganaToken[] {
   const tokens: FuriganaToken[] = [];
-  const bracketRegex = /([^\(]+)\(([^)]+)\)/g;
+  const bracketRegex = /([^(]+)\(([^)]+)\)/g;
   let remainingText = originalText;
   let match;
 

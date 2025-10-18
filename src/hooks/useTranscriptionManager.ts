@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DbUtils } from "@/lib/db";
+import { getConcurrencyManager } from "@/lib/transcription-concurrency";
 import type { TranscriptionProgress } from "@/lib/transcription-service";
 import { TranscriptionService } from "@/lib/transcription-service";
-import { getConcurrencyManager } from "@/lib/transcription-concurrency";
 import type { FileRow, ProcessingStatus } from "@/types/database";
 
 interface TranscriptionManagerState {

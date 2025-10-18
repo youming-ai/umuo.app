@@ -1,11 +1,11 @@
 import Dexie, { type Table } from "dexie";
 import {
-  handleError,
-  handleSilently,
   createErrorContext,
   databaseError,
+  handleError,
+  handleSilently,
 } from "@/lib/error-handler";
-import type { FileRow, FileChunkRow, Segment, TranscriptRow } from "@/types/database";
+import type { FileChunkRow, FileRow, Segment, TranscriptRow } from "@/types/database";
 
 class ShadowingLearningDb extends Dexie {
   files!: Table<FileRow>;
@@ -487,7 +487,7 @@ export async function restoreFromBackup(
 
     const totalItems =
       backupData.files.length + backupData.transcripts.length + backupData.segments.length;
-    let processedItems = 0;
+    const processedItems = 0;
 
     // 对于小批量数据，直接使用 Promise.all
     if (totalItems <= 150) {

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db";
-import type { FileRow, TranscriptRow, Segment } from "@/types/database";
+import type { FileRow, Segment, TranscriptRow } from "@/types/database";
 
 // 转录响应类型
 interface TranscriptionResponse {

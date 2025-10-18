@@ -181,7 +181,7 @@
     --spacing-md: var(--space-md);
 
     /* 组件间距令牌 */
-    --space-2xl: 3rem;      /* 48px */
+    --space-2xl: 3rem; /* 48px */
     --space-player-content: var(--space-lg);
     --space-player-controls: var(--space-md);
     --space-subtitle-gap: var(--space-sm);
@@ -391,7 +391,7 @@
     --spacing-md: var(--space-md);
 
     /* 组件间距令牌 */
-    --space-2xl: 3rem;      /* 48px */
+    --space-2xl: 3rem; /* 48px */
     --space-player-content: var(--space-lg);
     --space-player-controls: var(--space-md);
     --space-subtitle-gap: var(--space-sm);
@@ -540,7 +540,7 @@
     --space-section-gap: var(--space-xl);
 
     /* 组件间距令牌 */
-    --space-2xl: 3rem;      /* 48px */
+    --space-2xl: 3rem; /* 48px */
     --space-player-content: var(--space-lg);
     --space-player-controls: var(--space-md);
     --space-subtitle-gap: var(--space-sm);

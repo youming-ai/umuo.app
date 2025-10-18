@@ -1,16 +1,16 @@
 import type { FileRow } from "@/types/database";
 import { DbUtils } from "./db";
-import { URLManager } from "./url-manager";
 import {
   CHUNK_SIZE,
   CHUNK_THRESHOLD,
   calculateChunkCount,
   createFileChunks,
+  formatFileSize,
   needsChunking,
   validateFileSize,
-  formatFileSize,
 } from "./file-chunk";
-import { validateFileWithSecurity, ValidationResult } from "./file-validation";
+import { type ValidationResult, validateFileWithSecurity } from "./file-validation";
+import { URLManager } from "./url-manager";
 
 export async function uploadFile(
   file: File,

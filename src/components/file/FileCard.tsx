@@ -1,7 +1,7 @@
 "use client";
 
-import type { FileRow, TranscriptRow } from "@/types/database";
 import { useTranscriptionStatus } from "@/hooks/useTranscription";
+import type { FileRow, TranscriptRow } from "@/types/database";
 
 interface FileCardProps {
   file: FileRow;

@@ -1,5 +1,5 @@
-import { handleError, databaseError } from "./error-handler";
 import type { AppError } from "@/types/errors";
+import { databaseError, handleError } from "./error-handler";
 
 /**
  * 批量处理配置接口
@@ -15,18 +15,16 @@ export interface BatchProcessorConfig {
 /**
  * 进度回调接口
  */
-export interface ProgressCallback {
-  (progress: {
-    processed: number;
-    total: number;
-    percentage: number;
-    currentBatch?: number;
-    totalBatches?: number;
-    status: "started" | "processing" | "completed" | "failed" | "retrying";
-    message?: string;
-    error?: string;
-  }): void;
-}
+export type ProgressCallback = (progress: {
+  processed: number;
+  total: number;
+  percentage: number;
+  currentBatch?: number;
+  totalBatches?: number;
+  status: "started" | "processing" | "completed" | "failed" | "retrying";
+  message?: string;
+  error?: string;
+}) => void;
 
 /**
  * 批量处理结果接口
@@ -170,7 +168,7 @@ export class BatchProcessor<T, R = T> {
   ): Promise<{ results: R[]; errors: AppError[] }> {
     const startTime = performance.now();
     let results: R[] = [];
-    let errors: AppError[] = [];
+    const errors: AppError[] = [];
     let lastError: AppError | null = null;
 
     for (let attempt = 1; attempt <= this.config.maxRetries + 1; attempt++) {
@@ -210,7 +208,7 @@ export class BatchProcessor<T, R = T> {
           );
 
           // 指数退避
-          const delay = this.config.retryDelay * Math.pow(2, attempt - 1);
+          const delay = this.config.retryDelay * 2 ** (attempt - 1);
           await this.delay(delay);
         }
       }

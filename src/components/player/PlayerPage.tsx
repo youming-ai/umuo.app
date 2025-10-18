@@ -12,10 +12,10 @@ import { PlayerFooter } from "@/components/player/page/PlayerFooter";
 import { PlayerPageLayout } from "@/components/player/page/PlayerPageLayout";
 import { PlayerStatusBanner } from "@/components/player/page/PlayerStatusBanner";
 import ScrollableSubtitleDisplay from "@/components/player/ScrollableSubtitleDisplay";
+import ApiKeyError from "@/components/ui/ApiKeyError";
 import { usePlayerDataQuery } from "@/hooks/player/usePlayerDataQuery";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { isApiKeyError } from "@/lib/error-utils";
-import ApiKeyError from "@/components/ui/ApiKeyError";
 import type { Segment } from "@/types/database";
 
 export default function PlayerPageComponent({ fileId }: { fileId: string }) {
@@ -163,7 +163,6 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     };
   }, [updatePlayerState, sanitizeNumber, file?.duration, audioPlayerState.duration, onClearLoop]);
 
-  
   const handleSegmentClick = (segment: Segment) => {
     handleSeek(segment.start);
     if (!audioPlayerState.isPlaying) {

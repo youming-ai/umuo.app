@@ -6,6 +6,29 @@ import { validationError } from "@/lib/error-handler";
 
 const GROQ_MODEL = "openai/gpt-oss-20b";
 
+// Type definitions for processed segments
+interface ProcessedSegment {
+  id: number;
+  normalizedText: string;
+  translation?: string;
+  annotations?: Array<{
+    text: string;
+    type: string;
+    reading?: string;
+  }>;
+}
+
+interface PostProcessResult {
+  originalText: string;
+  normalizedText: string;
+  translation: string;
+  annotations: Array<{
+    text: string;
+    type: string;
+    reading?: string;
+  }>;
+}
+
 const postProcessSchema = z.object({
   segments: z.array(
     z.object({
@@ -311,8 +334,8 @@ async function postProcessSegmentWithGroq(
 // 批量处理短文本以减少API调用次数，使用流式响应
 async function postProcessShortTextsBatch(
   shortTextSegments: Array<{ text: string; start: number; end: number }>,
-  sourceLanguage: string,
-  options: {
+  _sourceLanguage: string,
+  _options: {
     targetLanguage?: string;
     enableAnnotations?: boolean;
     enableFurigana?: boolean;
@@ -411,7 +434,7 @@ Return format (JSON):
       console.log(`批量流式处理完成，耗时: ${processingTime}ms`);
 
       return shortTextSegments.map((originalSegment, index) => {
-        const processedSegment = response.segments.find((s: any) => s.id === index);
+        const processedSegment = response.segments.find((s: ProcessedSegment) => s.id === index);
         return {
           originalText: originalSegment.text,
           normalizedText: processedSegment?.normalizedText || originalSegment.text,
@@ -496,7 +519,7 @@ async function postProcessSegmentsWithGroq(
 
   console.log(`短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`);
 
-  const allResults: any[] = [];
+  const allResults: PostProcessResult[] = [];
 
   // 批量处理短文本
   if (shortTextSegments.length > 0) {

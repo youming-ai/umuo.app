@@ -3,8 +3,8 @@
  * 专门监控数据库操作的性能指标，包括查询、插入、更新、删除等操作
  */
 
-import { PerformanceMonitoring, MetricCategory } from "./performance-monitoring";
-import type { FileRow, FileChunkRow, TranscriptRow, Segment } from "@/types/database";
+import type { FileChunkRow, FileRow, Segment, TranscriptRow } from "@/types/database";
+import { MetricCategory, PerformanceMonitoring } from "./performance-monitoring";
 
 // 数据库操作类型
 export enum DatabaseOperation {

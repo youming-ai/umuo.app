@@ -1,14 +1,14 @@
-import type { Segment } from "@/types/database";
-import { parseFuriganaAuto, type ParsedFurigana } from "@/lib/furigana";
+import { type ParsedFurigana, parseFuriganaAuto } from "@/lib/furigana";
 import {
   checkSecurity,
-  sanitizeHtml,
   createSafeSubtitleElement,
   renderSafeFurigana,
-  setElementContent,
-  type SecurityCheckResult,
   type SanitizeOptions,
+  type SecurityCheckResult,
+  sanitizeHtml,
+  setElementContent,
 } from "@/lib/security";
+import type { Segment } from "@/types/database";
 
 export interface Subtitle {
   id: number;

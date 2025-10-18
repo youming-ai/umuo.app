@@ -1,7 +1,7 @@
+import Groq from "groq-sdk";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api-response";
-import Groq from "groq-sdk";
 
 // Define Transcription type for server-side
 interface Transcription {
@@ -36,7 +36,7 @@ const transcribeQuerySchema = z.object({
 });
 
 // Helper function to check if object is a File-like object
-function isFileLike(obj: any): obj is File {
+function isFileLike(obj: unknown): obj is File {
   return (
     obj &&
     typeof obj === "object" &&
@@ -158,7 +158,7 @@ function validateFormData(formData: FormData) {
 async function processTranscription(
   uploadedFile: File,
   language: string,
-): Promise<{ success: true; data: Transcription } | { success: false; error: any }> {
+): Promise<{ success: true; data: Transcription } | { success: false; error: Error | string }> {
   console.log("开始处理转录请求:", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
@@ -197,9 +197,9 @@ async function processTranscription(
     console.log("转录成功完成:", {
       fileName: uploadedFile.name,
       textLength: transcription.text?.length || 0,
-      segmentsCount: (transcription as any).segments?.length || 0,
-      duration: (transcription as any).duration,
-      language: (transcription as any).language,
+      segmentsCount: transcription.segments?.length || 0,
+      duration: transcription.duration,
+      language: transcription.language,
     });
 
     return { success: true as const, data: transcription };
@@ -291,9 +291,9 @@ export async function POST(request: NextRequest) {
     return apiSuccess({
       status: "completed",
       text: transcriptionResult.data.text,
-      language: (transcriptionResult.data as any).language ?? language,
-      duration: (transcriptionResult.data as any).duration,
-      segments: (transcriptionResult.data as any).segments,
+      language: transcriptionResult.data.language ?? language,
+      duration: transcriptionResult.data.duration,
+      segments: transcriptionResult.data.segments,
       meta: formValidation.data.meta,
     });
   } catch (error) {

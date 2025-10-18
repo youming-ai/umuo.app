@@ -1,17 +1,17 @@
 import { FileUploadUtils } from "./file-upload";
-import { createObjectUrl, revokeObjectUrl } from "./url-manager";
 import {
-  MAX_FILE_SIZE,
-  MAX_AUDIO_DURATION,
-  MAX_CHUNKS,
+  API_TIMEOUT,
   DEFAULT_CHUNK_DURATION,
   DEFAULT_OVERLAP,
-  API_TIMEOUT,
-  validateFileSize,
+  ERROR_MESSAGES,
+  MAX_AUDIO_DURATION,
+  MAX_CHUNKS,
+  MAX_FILE_SIZE,
   validateAudioDuration,
   validateChunkCount,
-  ERROR_MESSAGES,
+  validateFileSize,
 } from "./transcription-config";
+import { createObjectUrl, revokeObjectUrl } from "./url-manager";
 
 export interface AudioChunk {
   blob: Blob;

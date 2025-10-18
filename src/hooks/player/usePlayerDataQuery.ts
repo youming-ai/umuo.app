@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { db } from "@/lib/db";
-import { postProcessText } from "@/lib/text-postprocessor";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  transcriptionKeys,
   useTranscription,
   useTranscriptionStatus,
-  transcriptionKeys,
 } from "@/hooks/useTranscription";
+import { db } from "@/lib/db";
+import { postProcessText } from "@/lib/text-postprocessor";
 import type { FileRow, Segment, TranscriptRow } from "@/types/database";
 
 // 查询键

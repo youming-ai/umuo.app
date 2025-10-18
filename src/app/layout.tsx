@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import { PageErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
-import { QueryProvider } from "@/components/providers/QueryProvider";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import { ThemeDebuggerToggle } from "@/components/ui/ThemeDebugger";
 import PwaRegister from "@/components/ui/PwaRegister";
+import { ThemeDebuggerToggle } from "@/components/ui/ThemeDebugger";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 export const metadata: Metadata = {
   title: "影子跟读",

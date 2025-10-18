@@ -24,7 +24,9 @@ export function PlayerPageLayout({
         id={subtitleContainerId}
         className="flex-1 overflow-y-auto safe-area-inset-top"
         style={{
-          paddingBottom: showFooter ? 'var(--space-player-controls)' : 'var(--space-player-content)',
+          paddingBottom: showFooter
+            ? "var(--space-player-controls)"
+            : "var(--space-player-content)",
         }}
       >
         <div className="flex-1 px-4 py-8 sm:px-6 lg:px-8 mt-24">
@@ -36,9 +38,7 @@ export function PlayerPageLayout({
       </main>
 
       {showFooter && footer && (
-        <footer className="flex-shrink-0 safe-area-inset-bottom">
-          {footer}
-        </footer>
+        <footer className="flex-shrink-0 safe-area-inset-bottom">{footer}</footer>
       )}
     </div>
   );
