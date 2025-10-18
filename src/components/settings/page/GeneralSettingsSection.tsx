@@ -6,7 +6,6 @@ import {
   SettingsSection,
 } from "@/components/settings/SettingsCard";
 
-
 export function GeneralSettingsSection() {
   return (
     <SettingsSection title="通用">
@@ -26,9 +25,7 @@ export function GeneralSettingsSection() {
             <ChevronRightIcon className="h-4 w-4 text-gray-400" />
           </div>
         </SettingsRow>
-
-        
-              </SettingsCard>
+      </SettingsCard>
     </SettingsSection>
   );
 }

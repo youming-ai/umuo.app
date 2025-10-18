@@ -4,6 +4,8 @@ import { PageErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ThemeDebuggerToggle } from "@/components/ui/ThemeDebugger";
 import PwaRegister from "@/components/ui/PwaRegister";
 
 export const metadata: Metadata = {
@@ -25,7 +27,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="zh" className="dark" suppressHydrationWarning>
+    <html lang="zh" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -53,14 +55,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen font-sans antialiased">
-        <MonitoringInitializer />
-        <QueryProvider>
-          <PageErrorBoundary>
-            <div className="relative min-h-screen">{children}</div>
-          </PageErrorBoundary>
-        </QueryProvider>
-        <PwaRegister />
-        <ToastContainer>{null}</ToastContainer>
+        <ThemeProvider defaultTheme="dark">
+          <MonitoringInitializer />
+          <QueryProvider>
+            <PageErrorBoundary>
+              <div className="relative min-h-screen">{children}</div>
+            </PageErrorBoundary>
+          </QueryProvider>
+          <ThemeDebuggerToggle />
+          <PwaRegister />
+          <ToastContainer>{null}</ToastContainer>
+        </ThemeProvider>
       </body>
     </html>
   );

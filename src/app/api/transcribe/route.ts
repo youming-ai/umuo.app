@@ -37,12 +37,14 @@ const transcribeQuerySchema = z.object({
 
 // Helper function to check if object is a File-like object
 function isFileLike(obj: any): obj is File {
-  return obj &&
-         typeof obj === 'object' &&
-         typeof obj.name === 'string' &&
-         typeof obj.size === 'number' &&
-         typeof obj.type === 'string' &&
-         typeof obj.arrayBuffer === 'function';
+  return (
+    obj &&
+    typeof obj === "object" &&
+    typeof obj.name === "string" &&
+    typeof obj.size === "number" &&
+    typeof obj.type === "string" &&
+    typeof obj.arrayBuffer === "function"
+  );
 }
 
 const transcribeFormSchema = z.object({

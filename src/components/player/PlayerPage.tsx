@@ -51,7 +51,6 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   } = useAudioPlayer();
 
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [currentSegmentIndex, setCurrentSegmentIndex] = useState<number>(-1);
   const [volume, setVolume] = useState(1);
   const subtitleContainerId = useId();
 
@@ -164,20 +163,7 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     };
   }, [updatePlayerState, sanitizeNumber, file?.duration, audioPlayerState.duration, onClearLoop]);
 
-  useEffect(() => {
-    if (!segments.length || !audioPlayerState.isPlaying) return;
-
-    const currentIndex = segments.findIndex(
-      (segment) =>
-        audioPlayerState.currentTime >= segment.start &&
-        audioPlayerState.currentTime <= segment.end,
-    );
-
-    if (currentIndex !== currentSegmentIndex) {
-      setCurrentSegmentIndex(currentIndex);
-    }
-  }, [audioPlayerState.currentTime, segments, audioPlayerState.isPlaying, currentSegmentIndex]);
-
+  
   const handleSegmentClick = (segment: Segment) => {
     handleSeek(segment.start);
     if (!audioPlayerState.isPlaying) {
@@ -275,11 +261,10 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
             currentTime={audioPlayerState.currentTime}
             isPlaying={audioPlayerState.isPlaying}
             onSegmentClick={handleSegmentClick}
-            className="player-card"
           />
         ) : (
           transcript?.status === "completed" && (
-            <div className="player-card flex flex-col items-center gap-3 py-12 text-center text-sm text-[var(--secondary-text-color)] dark:text-[var(--text-color)]/70">
+            <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-[var(--secondary-text-color)] dark:text-[var(--text-color)]/70">
               <p>暂无字幕内容</p>
             </div>
           )

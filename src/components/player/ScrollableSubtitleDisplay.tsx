@@ -12,7 +12,6 @@ interface ScrollableSubtitleDisplayProps {
   className?: string;
 }
 
-
 interface FuriganaEntry {
   text: string;
   reading: string;
@@ -85,6 +84,8 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
   ({ segments, currentTime, isPlaying, onSegmentClick, className }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const activeSegmentRef = useRef<HTMLDivElement>(null);
+    const previousActiveIndex = useRef<number>(-1);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     const safeCurrentTime =
       Number.isFinite(currentTime) && !Number.isNaN(currentTime) ? currentTime : 0;
@@ -96,40 +97,56 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
     }, [segments, safeCurrentTime]);
 
     useEffect(() => {
-      if (!isPlaying) {
-        return;
-      }
-
-      if (!containerRef.current || !activeSegmentRef.current) {
-        return;
-      }
-
       const activeIndex = findActiveSegmentIndex();
-      if (activeIndex === -1) return;
 
-      const container = containerRef.current;
-      const activeElement = activeSegmentRef.current;
-
-      const containerRect = container.getBoundingClientRect();
-      const activeRect = activeElement.getBoundingClientRect();
-
-      const relativeTop = activeRect.top - containerRect.top;
-      const containerHeight = containerRect.height;
-      const elementHeight = activeRect.height;
-
-      const targetScrollTop = relativeTop - containerHeight / 2 + elementHeight / 2;
-
-      const currentScrollTop = container.scrollTop;
-      const isVisible =
-        targetScrollTop >= currentScrollTop &&
-        targetScrollTop + elementHeight <= currentScrollTop + containerHeight;
-
-      if (!isVisible) {
-        container.scrollTo({
-          top: Math.max(0, targetScrollTop),
-          behavior: "smooth",
-        });
+      // 只有当active segment发生变化时才滚动
+      if (activeIndex === previousActiveIndex.current || activeIndex === -1) {
+        return;
       }
+
+      previousActiveIndex.current = activeIndex;
+
+      // 清除之前的超时
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+
+      // 延迟滚动以确保DOM更新完成
+      scrollTimeoutRef.current = setTimeout(() => {
+        if (!containerRef.current || !activeSegmentRef.current) {
+          return;
+        }
+
+        const container = containerRef.current;
+        const activeElement = activeSegmentRef.current;
+
+        const containerRect = container.getBoundingClientRect();
+        const activeRect = activeElement.getBoundingClientRect();
+
+        const relativeTop = activeRect.top - containerRect.top;
+        const containerHeight = containerRect.height;
+        const elementHeight = activeRect.height;
+
+        const targetScrollTop = relativeTop - containerHeight / 2 + elementHeight / 2;
+
+        const currentScrollTop = container.scrollTop;
+        const isVisible =
+          targetScrollTop >= currentScrollTop &&
+          targetScrollTop + elementHeight <= currentScrollTop + containerHeight;
+
+        if (!isVisible) {
+          container.scrollTo({
+            top: Math.max(0, targetScrollTop),
+            behavior: isPlaying ? "smooth" : "auto",
+          });
+        }
+      }, isPlaying ? 100 : 0); // 播放时稍微延迟以确保平滑
+
+      return () => {
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+      };
     }, [findActiveSegmentIndex, isPlaying]);
 
     const activeIndex = findActiveSegmentIndex();
@@ -173,11 +190,11 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
         {/* 字幕容器 */}
         <div
           ref={containerRef}
-          className={cn("player-subtitle-container", className)}
+          className={cn("player-subtitle-container space-y-[var(--space-subtitle-gap)]", className)}
           data-testid="subtitle-scroll-container"
         >
           {segments.length === 0 ? (
-            <div className="player-card flex min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
+            <div className="flex min-h-[12rem] items-center justify-center text-sm text-muted-foreground">
               <p>暂无字幕内容</p>
             </div>
           ) : (
@@ -208,7 +225,8 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                   }}
                   data-testid="subtitle-card"
                   data-active={isActive}
-                  className={cn("subtitle-line", isActive && "highlight")}
+                  className={cn("subtitle-line mb-[var(--space-subtitle-gap)]", isActive && "highlight")}
+                  style={{ marginBottom: isActive ? 'var(--space-status-gap)' : 'var(--space-subtitle-gap)' }}
                 >
                   {hasTokens ? (
                     <div className="flex flex-wrap items-end">
@@ -247,8 +265,7 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                       )}
                     </div>
                   )}
-
-                                  </div>
+                </div>
               );
             })
           )}

@@ -46,8 +46,8 @@ export function PlayerFooter({
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-[var(--background-color)] via-[var(--background-color)] to-transparent">
-      <div className="mx-auto max-w-4xl p-4 pt-12">
-        <div className="player-card flex flex-col gap-4 p-4 !rounded-2xl">
+      <div className="mx-auto max-w-4xl">
+        <div className="player-card flex flex-col gap-4 !rounded-2xl">
           <div className="flex items-center gap-3">
             <p className="text-xs font-medium text-[var(--text-color)]/70">
               {formatTime(audioPlayerState.currentTime)}

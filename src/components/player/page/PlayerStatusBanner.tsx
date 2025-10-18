@@ -17,7 +17,7 @@ export function PlayerStatusBanner({
   if (isTranscribing) {
     return (
       <div
-        className="player-card bg-[var(--state-info-surface)] text-[var(--state-info-text)]"
+        className="player-card bg-[var(--state-info-surface)] text-[var(--state-info-text)] mb-4"
         style={{ borderColor: "var(--state-info-border)" }}
       >
         <div className="flex items-center gap-3 text-sm mb-2">
@@ -44,7 +44,7 @@ export function PlayerStatusBanner({
   return (
     <div
       className={cn(
-        "player-card flex items-center gap-3 text-sm",
+        "player-card flex items-center gap-3 text-sm mb-4",
         isFailed
           ? "bg-[var(--state-error-surface)] text-[var(--state-error-text)]"
           : "bg-[var(--state-info-surface)] text-[var(--state-info-text)]",

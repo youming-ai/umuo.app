@@ -1,7 +1,9 @@
-# Cloudflare Pages redirects for Next.js Static Export
+# Cloudflare Pages redirects for Next.js standard build
 
-# Client-side routing - serve index.html for all routes
-/* /index.html 200
+# API routes handled by worker (will return 404)
+# No redirect needed for /api/* routes
 
-# API routes - redirect to index.html (will show API not available message)
-/api/* /index.html 200
+# Client-side routing - handle SPA routes that need client-side rendering
+/player/* /index.html 200
+/account/* /index.html 200
+/settings/* /index.html 200

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ROUTES } from "@/lib/routes";
+import { ThemeToggleIcon } from "./ThemeToggle";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -50,6 +51,11 @@ export default function Navigation() {
             </Link>
           );
         })}
+
+        {/* 主题切换按钮 */}
+        <div className="flex items-center">
+          <ThemeToggleIcon />
+        </div>
       </div>
     </nav>
   );

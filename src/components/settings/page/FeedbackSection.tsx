@@ -9,10 +9,10 @@ export function FeedbackSection() {
   return (
     <SettingsSection title="意见反馈">
       <SettingsCard>
-        <a href="mailto:feedback@oumu.com" className="settings-link">
+        <a href="mailto:feedback@umuo.app" className="settings-link">
           <SettingsRowContent title="电子邮件" />
           <div className="flex items-center gap-2">
-            <span className="settings-value">feedback@oumu.ai</span>
+            <span className="settings-value">feedback@umuo.app</span>
             <ExternalLinkIcon className="h-4 w-4 text-gray-400" />
           </div>
         </a>

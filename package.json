@@ -1,7 +1,7 @@
 {
-  "name": "shadowing-learning",
+  "name": "umuo-app",
   "version": "1.0.0",
-  "description": "",
+  "description": "A language learning application focused on shadowing practice with AI-powered audio transcription",
   "main": "index.js",
   "directories": {
     "doc": "docs"
@@ -14,49 +14,52 @@
     "lint": "biome check .",
     "format": "biome format . --write",
     "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
     "test:security": "pnpm audit --audit-level high",
     "test:performance": "lighthouse https://umuo.app --output html --output-path ./lighthouse-report.html",
     "cf:login": "wrangler auth login",
-    "cf:deploy:prod": "wrangler pages deploy .next --project-name oumu-ai",
-    "cf:deploy:preview": "wrangler pages deploy .next --project-name oumu-ai --preview",
+    "cf:deploy:prod": "wrangler pages deploy .next --project-name umuo",
+    "cf:deploy:preview": "wrangler pages deploy .next --project-name umuo --preview",
     "deploy": "pnpm build && pnpm cf:deploy:prod",
     "deploy:preview": "pnpm build && pnpm cf:deploy:preview",
     "ci:build": "pnpm install --frozen-lockfile && pnpm test:security && pnpm lint && pnpm type-check && pnpm build",
-    "notify:success": "node .github/notify-deploy.js success",
-    "notify:failure": "node .github/notify-deploy.js failure"
+    "prepare": "husky"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "language-learning",
+    "transcription",
+    "audio",
+    "ai",
+    "education"
+  ],
+  "author": "Oumu.ai Team",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
   "dependencies": {
-    "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.15",
-    "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-progress": "^1.1.7",
-    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slider": "^1.3.6",
     "@radix-ui/react-slot": "^1.2.3",
-    "@radix-ui/react-switch": "^1.2.6",
-    "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
-    "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
-    "ai": "^5.0.60",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.2.0",
     "groq-sdk": "^0.33.0",
     "lucide-react": "^0.543.0",
     "next": "^15.5.3",
-    "next-themes": "^0.4.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-dropzone": "^14.3.8",
-    "recharts": "^3.2.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "typescript": "^5.9.2",
@@ -64,10 +67,17 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.21",
+    "husky": "^9.1.7",
+    "jsdom": "^27.0.0",
     "postcss": "^8.5.6",
     "sharp": "^0.34.4",
-    "tailwindcss": "3.4.0"
+    "tailwindcss": "3.4.0",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.43.0"
   },
-  "packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a"
+  "packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d"
 }
