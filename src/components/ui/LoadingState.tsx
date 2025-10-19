@@ -26,7 +26,7 @@ export function LoadingState({
 
   if (variant === "dots") {
     return (
-      <div className={containerClasses} role="status" aria-label={text || "加载中"}>
+      <output className={containerClasses} aria-label={text || "加载中"}>
         <div className="flex space-x-1">
           <div
             className={cn(
@@ -51,7 +51,7 @@ export function LoadingState({
           />
         </div>
         {text && <p className="mt-2 text-sm text-muted-foreground">{text}</p>}
-      </div>
+      </output>
     );
   }
 
@@ -70,10 +70,10 @@ export function LoadingState({
 
   // Default spinner variant
   return (
-    <div className={containerClasses} role="status" aria-label={text || "加载中"}>
+    <output className={containerClasses} aria-label={text || "加载中"}>
       <Loader2 className={cn("animate-spin text-[var(--color-primary)]", sizeClasses[size])} />
       {text && <p className="mt-2 text-sm text-muted-foreground">{text}</p>}
-    </div>
+    </output>
   );
 }
 
@@ -100,7 +100,7 @@ export function ListLoadingState({ count = 3 }: { count?: number }) {
   return (
     <div className="space-y-4">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="animate-pulse space-y-3">
+        <div key={`skeleton-${index}`} className="animate-pulse space-y-3">
           <div className="h-32 bg-muted rounded-lg"></div>
           <div className="space-y-2">
             <div className="h-4 bg-muted rounded w-3/4"></div>

@@ -214,11 +214,10 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                 .filter(Boolean);
 
               return (
-                <div
+                <button
+                  type="button"
                   key={segment.id ?? `${segment.start}-${segment.end}-${index}`}
                   ref={isActive ? activeSegmentRef : null}
-                  role="button"
-                  tabIndex={0}
                   onClick={() => onSegmentClick?.(segment)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -275,7 +274,7 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                       )}
                     </div>
                   )}
-                </div>
+                </button>
               );
             })
           )}

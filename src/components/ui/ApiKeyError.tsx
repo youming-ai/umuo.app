@@ -50,6 +50,7 @@ export default function ApiKeyError({ onRetry }: ApiKeyErrorProps) {
 
         <div className="flex gap-3 mt-6">
           <button
+            type="button"
             onClick={handleRefresh}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-[var(--button-color)] text-[var(--button-text)] rounded hover:opacity-90 transition-opacity"
           >
@@ -58,6 +59,7 @@ export default function ApiKeyError({ onRetry }: ApiKeyErrorProps) {
           </button>
           {onRetry && (
             <button
+              type="button"
               onClick={onRetry}
               className="flex-1 px-4 py-2 bg-[var(--border-color)] text-[var(--text-primary)] rounded hover:opacity-90 transition-opacity"
             >

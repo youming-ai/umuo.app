@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranscriptionStatus } from "@/hooks/useTranscription";
-import type { FileRow, TranscriptRow } from "@/types/database";
+import type { FileRow } from "@/types/database";
 
 interface FileCardProps {
   file: FileRow;
@@ -20,7 +20,7 @@ export default function FileCard({
 }: FileCardProps) {
   // 使用 TanStack Query 获取转录状态
   const { data: transcriptionData, isLoading: isLoadingTranscript } = useTranscriptionStatus(
-    file.id!,
+    file.id ?? 0,
   );
   const transcript = transcriptionData?.transcript || null;
 

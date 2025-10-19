@@ -271,13 +271,12 @@ export default function PlayerDrawer({
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* 背景遮罩 */}
-      <div
+      <button
+        type="button"
         className={cn(
           "absolute inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300",
           isClosing ? "opacity-0" : "opacity-100",
         )}
-        role="button"
-        tabIndex={0}
         aria-label="关闭播放器抽屉"
         onClick={handleDrawerClose}
         onKeyDown={(event) => {

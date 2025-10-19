@@ -217,9 +217,8 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
 
     if (segments.length === 0) {
       return (
-        <div
-          className={`rounded-lg bg-muted/20 p-8 text-center ${className}`}
-          role="status"
+        <output
+          className={`rounded-lg bg-muted/20 p-8 text-center block ${className}`}
           aria-live="polite"
         >
           <div className="text-muted-foreground">
@@ -228,14 +227,13 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
             </p>
             <p className="text-sm">上传音频文件并转录以在此处查看字幕。</p>
           </div>
-        </div>
+        </output>
       );
     }
 
     return (
-      <div
+      <section
         className={`space-y-4 rounded-lg bg-background p-6 shadow-lg ${className}`}
-        role="region"
         aria-label="字幕显示和控制面板"
       >
         {/* 顶部控制栏 */}
@@ -268,7 +266,7 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
             )}
           </div>
 
-          <div className="flex items-center space-x-1" role="group" aria-label="字幕导航控制">
+          <fieldset className="flex items-center space-x-1 border-0 p-0 m-0" aria-label="字幕导航控制">
             <Button
               variant="ghost"
               size="sm"
@@ -305,13 +303,12 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
               <SkipForward className="h-4 w-4" aria-hidden="true" />
               <span className="sr-only">下一个字幕</span>
             </Button>
-          </div>
+          </fieldset>
         </div>
 
         {/* 字幕列表 - 平铺显示 */}
-        <div
-          className="max-h-96 space-y-3 overflow-y-auto rounded-lg border bg-muted/5 p-4"
-          role="list"
+        <ul
+          className="max-h-96 space-y-3 overflow-y-auto rounded-lg border bg-muted/5 p-4 list-none m-0"
           aria-label="字幕列表"
         >
           {subtitleState.previousSubtitles.map((subtitle, _index) => (
@@ -446,7 +443,7 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
               )}
             </button>
           ))}
-        </div>
+        </ul>
 
         {/* 设置面板 */}
         {showSettings && (
@@ -510,7 +507,7 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
             </div>
           </Card>
         )}
-      </div>
+      </section>
     );
   },
 );

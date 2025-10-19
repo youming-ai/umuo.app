@@ -58,10 +58,9 @@ export default function FileUpload({
 
   return (
     <div className={className}>
-      <div
+      <section
         {...getRootProps()}
         className="upload-area cursor-pointer"
-        role="region"
         aria-label="文件上传区域"
         aria-describedby={uploadDescriptionId}
       >
@@ -98,7 +97,7 @@ export default function FileUpload({
         >
           <span>选择文件</span>
         </button>
-      </div>
+      </section>
 
       {/* 上传进度指示器 */}
       {isUploading && (
