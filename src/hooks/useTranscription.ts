@@ -106,8 +106,8 @@ export function useTranscription() {
         }
 
         const errorMessage =
-          errorData?.error?.message ||
-          errorData?.message ||
+          (errorData as any)?.error?.message ||
+          (errorData as any)?.message ||
           (response.status
             ? `转录失败: ${response.status} ${response.statusText}`
             : "转录失败: 未知网络错误");

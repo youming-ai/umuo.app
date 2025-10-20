@@ -522,7 +522,14 @@ export class DatabasePerformanceMonitoring {
   // 获取数据库性能报告
   getDatabasePerformanceReport(): {
     stats: DatabaseStats;
-    realTimeMetrics: DatabasePerformanceMetric[];
+    realTimeMetrics: {
+      currentOperations: number;
+      averageExecutionTime: number;
+      successRate: number;
+      throughput: number;
+      slowQueryRate: number;
+      connectionStatus: DatabaseConnectionStatus;
+    };
     slowQueries: DatabasePerformanceMetric[];
     performanceAlerts: string[];
     recommendations: string[];

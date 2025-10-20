@@ -16,7 +16,7 @@ export interface QueuedTask<T> {
 
 export class ConcurrencyController {
   private runningTasks = new Set<string>();
-  private taskQueue: QueuedTask<unknown>[] = [];
+  private taskQueue: QueuedTask<any>[] = [];
   private config = getTranscriptionConfig();
 
   /**
@@ -66,7 +66,7 @@ export class ConcurrencyController {
   /**
    * 按优先级插入任务
    */
-  private insertTaskByPriority(task: QueuedTask<unknown>): void {
+  private insertTaskByPriority(task: QueuedTask<any>): void {
     let insertIndex = this.taskQueue.length;
 
     for (let i = 0; i < this.taskQueue.length; i++) {

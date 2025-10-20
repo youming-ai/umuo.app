@@ -205,8 +205,8 @@ export function usePlayerData(fileId: string) {
         });
 
         const errorMessage =
-          errorData?.error?.message ||
-          errorData?.message ||
+          (errorData as any)?.error?.message ||
+          (errorData as any)?.message ||
           `转录失败: ${response.status} ${response.statusText}`;
         throw new Error(errorMessage);
       }
@@ -217,10 +217,10 @@ export function usePlayerData(fileId: string) {
         console.log("API 响应原文:", responseText);
         transcriptionResult = JSON.parse(responseText);
         console.log("转录结果解析成功:", {
-          status: transcriptionResult.success,
-          hasData: !!transcriptionResult.data,
-          textLength: transcriptionResult.data?.text?.length || 0,
-          segmentsCount: transcriptionResult.data?.segments?.length || 0,
+          status: (transcriptionResult as any).success,
+          hasData: !!(transcriptionResult as any).data,
+          textLength: (transcriptionResult as any).data?.text?.length || 0,
+          segmentsCount: (transcriptionResult as any).data?.segments?.length || 0,
         });
       } catch (parseError) {
         console.error("解析成功响应失败:", parseError);
@@ -235,10 +235,10 @@ export function usePlayerData(fileId: string) {
       const transcriptRecord: TranscriptRow = {
         fileId: file.id ?? 0,
         status: "processing",
-        text: transcriptionResult.data.text,
-        rawText: transcriptionResult.data.text,
-        language: transcriptionResult.data.language || "ja",
-        duration: transcriptionResult.data.duration,
+        text: (transcriptionResult as any).data.text,
+        rawText: (transcriptionResult as any).data.text,
+        language: (transcriptionResult as any).data.language || "ja",
+        duration: (transcriptionResult as any).data.duration,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -246,8 +246,11 @@ export function usePlayerData(fileId: string) {
       const transcriptId = await db.transcripts.add(transcriptRecord);
 
       // 保存字幕段
-      if (transcriptionResult.data.segments && transcriptionResult.data.segments.length > 0) {
-        const segmentRecords: Segment[] = transcriptionResult.data.segments.map(
+      if (
+        (transcriptionResult as any).data.segments &&
+        (transcriptionResult as any).data.segments.length > 0
+      ) {
+        const segmentRecords: Segment[] = (transcriptionResult as any).data.segments.map(
           (segment: TranscriptionSegment) => ({
             transcriptId,
             start: segment.start,
@@ -265,7 +268,7 @@ export function usePlayerData(fileId: string) {
       setData((prev) => ({ ...prev, transcriptionProgress: 80 }));
 
       // 进行文本后处理，添加罗马音和中文翻译
-      const textSegments = transcriptionResult.data.segments || [];
+      const textSegments = (transcriptionResult as any).data.segments || [];
       if (textSegments.length > 0) {
         const fullText = textSegments.map((seg: TranscriptionSegment) => seg.text).join("\n");
 
