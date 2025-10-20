@@ -3,7 +3,6 @@
  * 专门监控API调用的性能指标，包括请求时间、成功率、错误率等
  */
 
-import type { AppError } from "@/types/errors";
 import { MetricCategory, PerformanceMonitoring } from "./performance-monitoring";
 
 // API操作类型
@@ -326,7 +325,13 @@ export class ApiPerformanceMonitoring {
     const successRate = totalRequests > 0 ? (successfulMetrics.length / totalRequests) * 100 : 0;
 
     // 错误分类统计
-    const errorBreakdown: Record<ApiErrorType, number> = {} as any;
+    const errorBreakdown: Record<ApiErrorType, number> = Object.values(ApiErrorType).reduce(
+      (acc, errorType) => {
+        acc[errorType] = 0;
+        return acc;
+      },
+      {} as Record<ApiErrorType, number>,
+    );
     Object.values(ApiErrorType).forEach((errorType) => {
       errorBreakdown[errorType] = failedMetrics.filter((m) => m.errorType === errorType).length;
     });
@@ -340,7 +345,21 @@ export class ApiPerformanceMonitoring {
         successRate: number;
         errorRate: number;
       }
-    > = {} as any;
+    > = Object.values(ApiOperation).reduce(
+      (acc, operation) => {
+        acc[operation] = {
+          count: 0,
+          averageTime: 0,
+          successRate: 0,
+          errorRate: 0,
+        };
+        return acc;
+      },
+      {} as Record<
+        ApiOperation,
+        { count: number; averageTime: number; successRate: number; errorRate: number }
+      >,
+    );
 
     Object.values(ApiOperation).forEach((operation) => {
       const operationMetrics = this.metrics.filter((m) => m.operation === operation);
@@ -373,7 +392,17 @@ export class ApiPerformanceMonitoring {
         averageTime: number;
         successRate: number;
       }
-    > = {} as any;
+    > = Object.values(HttpMethod).reduce(
+      (acc, method) => {
+        acc[method] = {
+          count: 0,
+          averageTime: 0,
+          successRate: 0,
+        };
+        return acc;
+      },
+      {} as Record<HttpMethod, { count: number; averageTime: number; successRate: number }>,
+    );
 
     Object.values(HttpMethod).forEach((method) => {
       const methodMetrics = this.metrics.filter((m) => m.method === method);
@@ -425,7 +454,7 @@ export class ApiPerformanceMonitoring {
   // 获取实时API性能指标
   getRealTimeMetrics(timeWindow: number = 60000): {
     activeRequests: number;
-    averageResponseTime: number;
+    averageTime: number;
     successRate: number;
     errorRate: number;
     throughput: number;
@@ -444,7 +473,7 @@ export class ApiPerformanceMonitoring {
 
     return {
       activeRequests: this.activeRequests.size,
-      averageResponseTime:
+      averageTime:
         recentMetrics.length > 0
           ? recentMetrics.reduce((sum, m) => sum + m.duration, 0) / recentMetrics.length
           : 0,
@@ -463,7 +492,15 @@ export class ApiPerformanceMonitoring {
   // 获取API性能报告
   getApiPerformanceReport(): {
     stats: ApiStats;
-    realTimeMetrics: any;
+    realTimeMetrics: {
+      averageTime: number;
+      successRate: number;
+      errorRate: number;
+      throughput: number;
+      slowRequestRate: number;
+      rateLimitHitRate: number;
+      cacheHitRate: number;
+    };
     slowRequests: ApiPerformanceMetric[];
     rateLimitHits: ApiPerformanceMetric[];
     performanceAlerts: string[];
@@ -741,8 +778,8 @@ export function getApiPerformanceMonitoring(): ApiPerformanceMonitoring {
 }
 
 // 初始化全局API性能监控
-export function initializeApiPerformanceMonitoring(config?: Partial<ApiMonitoringConfig>): void {
-  const monitoring = getApiPerformanceMonitoring();
+export function initializeApiPerformanceMonitoring(_config?: Partial<ApiMonitoringConfig>): void {
+  const _monitoring = getApiPerformanceMonitoring();
   // 配置已经通过构造函数设置
 }
 

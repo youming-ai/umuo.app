@@ -218,8 +218,8 @@ export function createSecureGroqConfig(apiKey: string): {
   return {
     apiKey,
     baseURL: process.env.GROQ_BASE_URL || "https://api.groq.com/openai/v1",
-    timeout: parseInt(process.env.GROQ_TIMEOUT_MS || "30000"),
-    maxRetries: parseInt(process.env.GROQ_MAX_RETRIES || "3"),
+    timeout: parseInt(process.env.GROQ_TIMEOUT_MS || "30000", 10),
+    maxRetries: parseInt(process.env.GROQ_MAX_RETRIES || "3", 10),
   };
 }
 
@@ -346,8 +346,8 @@ export function validateEnvironmentConfiguration(): {
 
   // 验证超时配置
   if (timeout) {
-    const timeoutMs = parseInt(timeout);
-    if (isNaN(timeoutMs) || timeoutMs < 1000 || timeoutMs > 300000) {
+    const timeoutMs = parseInt(timeout, 10);
+    if (Number.isNaN(timeoutMs) || timeoutMs < 1000 || timeoutMs > 300000) {
       warnings.push("GROQ_TIMEOUT_MS 应在 1000-300000 毫秒之间");
     }
   } else {
@@ -356,8 +356,8 @@ export function validateEnvironmentConfiguration(): {
 
   // 验证重试配置
   if (maxRetries) {
-    const retryCount = parseInt(maxRetries);
-    if (isNaN(retryCount) || retryCount < 0 || retryCount > 10) {
+    const retryCount = parseInt(maxRetries, 10);
+    if (Number.isNaN(retryCount) || retryCount < 0 || retryCount > 10) {
       warnings.push("GROQ_MAX_RETRIES 应在 0-10 之间");
     }
   } else {

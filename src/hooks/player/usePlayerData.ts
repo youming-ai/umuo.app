@@ -3,6 +3,27 @@ import { db } from "@/lib/db";
 import { postProcessText } from "@/lib/text-postprocessor";
 import type { FileRow, Segment, TranscriptRow } from "@/types/database";
 
+// Type for transcription segments from Groq API
+interface TranscriptionSegment {
+  id: number;
+  seek: number;
+  start: number;
+  end: number;
+  text: string;
+  tokens: number;
+  temperature: number;
+  avg_logprob: number;
+  compression_ratio: number;
+  no_speech_prob: number;
+}
+
+// Type for processed segments with additional fields
+interface ProcessedTranscriptionSegment extends TranscriptionSegment {
+  romaji?: string;
+  translation?: string;
+  furigana?: string;
+}
+
 interface PlayerData {
   file: FileRow | null;
   segments: Segment[];
@@ -212,7 +233,7 @@ export function usePlayerData(fileId: string) {
 
       // 创建转录记录
       const transcriptRecord: TranscriptRow = {
-        fileId: file.id!,
+        fileId: file.id ?? 0,
         status: "processing",
         text: transcriptionResult.data.text,
         rawText: transcriptionResult.data.text,
@@ -226,15 +247,17 @@ export function usePlayerData(fileId: string) {
 
       // 保存字幕段
       if (transcriptionResult.data.segments && transcriptionResult.data.segments.length > 0) {
-        const segmentRecords: Segment[] = transcriptionResult.data.segments.map((segment: any) => ({
-          transcriptId,
-          start: segment.start,
-          end: segment.end,
-          text: segment.text,
-          wordTimestamps: [], // 暂时为空，后续可以添加词级时间戳
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }));
+        const segmentRecords: Segment[] = transcriptionResult.data.segments.map(
+          (segment: TranscriptionSegment) => ({
+            transcriptId,
+            start: segment.start,
+            end: segment.end,
+            text: segment.text,
+            wordTimestamps: [], // 暂时为空，后续可以添加词级时间戳
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }),
+        );
 
         await db.segments.bulkAdd(segmentRecords);
       }
@@ -244,7 +267,7 @@ export function usePlayerData(fileId: string) {
       // 进行文本后处理，添加罗马音和中文翻译
       const textSegments = transcriptionResult.data.segments || [];
       if (textSegments.length > 0) {
-        const fullText = textSegments.map((seg: any) => seg.text).join("\n");
+        const fullText = textSegments.map((seg: TranscriptionSegment) => seg.text).join("\n");
 
         try {
           const processedResult = await postProcessText(fullText, { language: "ja" });
@@ -259,8 +282,10 @@ export function usePlayerData(fileId: string) {
               .where("[transcriptId+start]")
               .equals([transcriptId, originalSegment.start])
               .modify((segment) => {
-                segment.romaji = (processedSegment as any)?.romaji;
-                segment.translation = (processedSegment as any)?.translation;
+                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
+                segment.translation = (
+                  processedSegment as ProcessedTranscriptionSegment
+                )?.translation;
               });
           }
         } catch (processError) {

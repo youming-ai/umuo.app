@@ -138,7 +138,7 @@ export function useTranscription() {
 
       // 创建转录记录
       const transcriptRecord: Omit<TranscriptRow, "id"> = {
-        fileId: file.id!,
+        fileId: file.id ?? 0,
         status: "processing",
         text: result.data.text,
         rawText: result.data.text,
@@ -234,12 +234,14 @@ export function useTranscription() {
       console.log("转录流程全部完成:", { fileId: file.id, transcriptId });
 
       // 使查询缓存失效，触发重新查询
-      queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(file.id!) });
+      queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(file.id ?? 0) });
     },
     onError: (error, variables) => {
       console.error("转录失败:", error);
       // 即使失败也要刷新查询状态
-      queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(variables.file.id!) });
+      queryClient.invalidateQueries({
+        queryKey: transcriptionKeys.forFile(variables.file.id ?? 0),
+      });
     },
   });
 }

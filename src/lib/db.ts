@@ -1,10 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import {
-  createErrorContext,
-  databaseError,
-  handleError,
-  handleSilently,
-} from "@/lib/error-handler";
+import { createErrorContext, handleError, handleSilently } from "@/lib/error-handler";
 import type { FileChunkRow, FileRow, Segment, TranscriptRow } from "@/types/database";
 
 class ShadowingLearningDb extends Dexie {
@@ -70,7 +65,7 @@ class ShadowingLearningDb extends Dexie {
         transcripts: "++id, fileId, status, createdAt, updatedAt",
         segments: "++id, transcriptId, start, end, createdAt, wordTimestamps",
       })
-      .upgrade(async (tx) => {
+      .upgrade(async (_tx) => {
         try {
           // Migration to version 4: Add file chunk support
           // Existing files will continue to work as before (non-chunked)
@@ -487,7 +482,7 @@ export async function restoreFromBackup(
 
     const totalItems =
       backupData.files.length + backupData.transcripts.length + backupData.segments.length;
-    const processedItems = 0;
+    const _processedItems = 0;
 
     // 对于小批量数据，直接使用 Promise.all
     if (totalItems <= 150) {

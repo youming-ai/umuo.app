@@ -3,7 +3,7 @@
  * 提供全面的性能指标收集、分析和监控功能
  */
 
-import type { AppError, ErrorContext } from "@/types/errors";
+import type { AppError } from "@/types/errors";
 import { MonitoringService } from "./monitoring-service";
 
 // 性能指标类型
@@ -453,25 +453,6 @@ export class PerformanceMonitoring {
     });
   }
 
-  // 内部measurePerformance方法
-  private measurePerformance<T>(
-    name: string,
-    category: MetricCategory,
-    fn: () => T,
-    metadata?: Record<string, unknown>,
-  ): T {
-    const timerId = this.startTimer(name, category, metadata);
-
-    try {
-      const result = fn();
-      this.endTimer(timerId, true);
-      return result;
-    } catch (error) {
-      this.endTimer(timerId, false, error as AppError);
-      throw error;
-    }
-  }
-
   // 私有方法
 
   private shouldSample(): boolean {
@@ -755,7 +736,7 @@ export function getPerformanceMonitoring(): PerformanceMonitoring {
 
 // 初始化全局性能监控
 export function initializePerformanceMonitoring(
-  config?: Partial<PerformanceMonitoringConfig>,
+  _config?: Partial<PerformanceMonitoringConfig>,
 ): void {
   const monitoring = getPerformanceMonitoring();
   monitoring.start();

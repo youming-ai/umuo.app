@@ -3,12 +3,8 @@ import {
   API_TIMEOUT,
   DEFAULT_CHUNK_DURATION,
   DEFAULT_OVERLAP,
-  ERROR_MESSAGES,
-  MAX_AUDIO_DURATION,
   MAX_CHUNKS,
-  MAX_FILE_SIZE,
   validateAudioDuration,
-  validateChunkCount,
   validateFileSize,
 } from "./transcription-config";
 import { createObjectUrl, revokeObjectUrl } from "./url-manager";

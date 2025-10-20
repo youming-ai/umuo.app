@@ -170,7 +170,6 @@ export function ThemeProvider({
           return "system";
         case "system":
           return "high-contrast";
-        case "high-contrast":
         default:
           return "dark";
       }

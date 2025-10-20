@@ -266,7 +266,10 @@ const SubtitleDisplay = React.memo<SubtitleDisplayProps>(
             )}
           </div>
 
-          <fieldset className="flex items-center space-x-1 border-0 p-0 m-0" aria-label="字幕导航控制">
+          <fieldset
+            className="flex items-center space-x-1 border-0 p-0 m-0"
+            aria-label="字幕导航控制"
+          >
             <Button
               variant="ghost"
               size="sm"

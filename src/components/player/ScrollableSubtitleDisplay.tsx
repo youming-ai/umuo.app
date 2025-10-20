@@ -83,7 +83,7 @@ function normalizeFurigana(rawFurigana: unknown): FuriganaEntry[] {
 const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
   ({ segments, currentTime, isPlaying, onSegmentClick, className }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const activeSegmentRef = useRef<HTMLDivElement>(null);
+    const activeSegmentRef = useRef<HTMLButtonElement>(null);
     const previousActiveIndex = useRef<number>(-1);
     const scrollTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 

@@ -7,7 +7,6 @@ import {
   ErrorCodes,
   type ErrorContext,
   type ErrorMonitor,
-  ErrorSeverity,
   getDefaultErrorMessage,
   getErrorCategory,
   getErrorCodeConfig,

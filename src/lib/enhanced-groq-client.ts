@@ -1,5 +1,4 @@
 import Groq from "groq-sdk";
-import { z } from "zod";
 
 // 错误类型定义
 export class EnhancedGroqError extends Error {
@@ -308,7 +307,7 @@ export class EnhancedGroqClient {
       console.log("开始发送转录请求到Groq API:", {
         originalSize: file.size,
         optimizedSize: optimizedFile.size,
-        compressionRatio: (((file.size - optimizedFile.size) / file.size) * 100).toFixed(1) + "%",
+        compressionRatio: `${(((file.size - optimizedFile.size) / file.size) * 100).toFixed(1)}%`,
         ...optimizedOptions,
       });
 

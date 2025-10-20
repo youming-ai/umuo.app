@@ -2,11 +2,8 @@ import { type ParsedFurigana, parseFuriganaAuto } from "@/lib/furigana";
 import {
   checkSecurity,
   createSafeSubtitleElement,
-  renderSafeFurigana,
   type SanitizeOptions,
-  type SecurityCheckResult,
   sanitizeHtml,
-  setElementContent,
 } from "@/lib/security";
 import type { Segment } from "@/types/database";
 
@@ -307,7 +304,7 @@ function addSafeFurigana(text: string, furigana: string): string {
 }
 
 // 保留原有的 addFurigana 函数用于向后兼容
-function addFurigana(text: string, furigana: string): string {
+function _addFurigana(text: string, furigana: string): string {
   return addSafeFurigana(text, furigana);
 }
 
@@ -407,7 +404,7 @@ export function parseTime(timeString: string): number {
   const parts = timeString.split(":");
 
   // 验证所有部分都是有效的数字
-  if (parts.some((part) => isNaN(parseFloat(part)))) return 0;
+  if (parts.some((part) => Number.isNaN(parseFloat(part)))) return 0;
 
   if (parts.length === 2) {
     const minutes = parseInt(parts[0], 10);

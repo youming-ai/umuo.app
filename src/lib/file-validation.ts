@@ -213,7 +213,7 @@ export async function detectFileType(file: File): Promise<{ type: string; confid
     }
 
     return { type: "unknown", confidence: 0.5 };
-  } catch (error) {
+  } catch (_error) {
     return { type: "error", confidence: 0 };
   }
 }
@@ -532,7 +532,7 @@ async function checkFileContentSecurity(file: File): Promise<ValidationError[]> 
         break;
       }
     }
-  } catch (error) {
+  } catch (_error) {
     issues.push({
       code: "CONTENT_SCAN_ERROR",
       message: "无法扫描文件内容",

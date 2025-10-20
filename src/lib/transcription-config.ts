@@ -64,9 +64,9 @@ export function getTranscriptionConfig(): TranscriptionConfig {
   const maxConcurrency = parseInt(process.env.TRANSCRIPTION_MAX_CONCURRENCY || "", 10);
 
   return {
-    timeoutMs: isNaN(timeoutMs) ? defaultConfig.timeoutMs : timeoutMs,
-    retryCount: isNaN(retryCount) ? defaultConfig.retryCount : retryCount,
-    maxConcurrency: isNaN(maxConcurrency) ? defaultConfig.maxConcurrency : maxConcurrency,
+    timeoutMs: Number.isNaN(timeoutMs) ? defaultConfig.timeoutMs : timeoutMs,
+    retryCount: Number.isNaN(retryCount) ? defaultConfig.retryCount : retryCount,
+    maxConcurrency: Number.isNaN(maxConcurrency) ? defaultConfig.maxConcurrency : maxConcurrency,
   };
 }
 

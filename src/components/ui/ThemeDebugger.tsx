@@ -16,7 +16,7 @@ interface ThemeInfo {
 }
 
 export function ThemeDebugger() {
-  const { theme, resolvedTheme } = useTheme();
+  const { theme } = useTheme();
   const [themeInfo, setThemeInfo] = useState<ThemeInfo | null>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -121,6 +121,7 @@ export function ThemeDebugger() {
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-foreground">🎨 Theme Debugger</h3>
           <button
+            type="button"
             onClick={() => setIsVisible(false)}
             className="text-muted-foreground hover:text-foreground"
           >
@@ -175,12 +176,14 @@ export function ThemeDebugger() {
           <h4 className="font-medium text-foreground">Debug Actions:</h4>
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => copyToClipboard(JSON.stringify(themeInfo, null, 2))}
               className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded"
             >
               Copy Info
             </button>
             <button
+              type="button"
               onClick={() => {
                 if (themeInfo) {
                   console.log("Theme Debug Info:", themeInfo);
@@ -191,6 +194,7 @@ export function ThemeDebugger() {
               Log to Console
             </button>
             <button
+              type="button"
               onClick={() => {
                 // 强制重新应用当前主题
                 const root = document.documentElement;
@@ -237,6 +241,7 @@ export function ThemeDebuggerToggle() {
       {isVisible && <ThemeDebugger />}
       <div className="fixed bottom-4 right-4 z-40">
         <button
+          type="button"
           onClick={() => setIsVisible(!isVisible)}
           className="px-2 py-1 text-xs bg-muted/80 hover:bg-muted text-muted-foreground rounded"
           title="Toggle Theme Debugger (Ctrl+Shift+T)"

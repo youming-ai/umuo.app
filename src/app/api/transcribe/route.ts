@@ -1,31 +1,9 @@
 import Groq from "groq-sdk";
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api-response";
-
-// Define Transcription type for server-side
-interface Transcription {
-  text: string;
-  words?: Array<{
-    start: number;
-    end: number;
-    word: string;
-  }>;
-  segments?: Array<{
-    id: number;
-    seek: number;
-    start: number;
-    end: number;
-    text: string;
-    tokens: number;
-    temperature: number;
-    avg_logprob: number;
-    compression_ratio: number;
-    no_speech_prob: number;
-  }>;
-  language?: string;
-  duration?: number;
-}
+import type { TranscriptionResponse } from "@/lib/enhanced-groq-client";
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({
@@ -38,11 +16,15 @@ const transcribeQuerySchema = z.object({
 // Helper function to check if object is a File-like object
 function isFileLike(obj: unknown): obj is File {
   return (
-    obj &&
+    obj !== null &&
     typeof obj === "object" &&
+    "name" in obj &&
     typeof obj.name === "string" &&
+    "size" in obj &&
     typeof obj.size === "number" &&
+    "type" in obj &&
     typeof obj.type === "string" &&
+    "arrayBuffer" in obj &&
     typeof obj.arrayBuffer === "function"
   );
 }
@@ -158,7 +140,7 @@ function validateFormData(formData: FormData) {
 async function processTranscription(
   uploadedFile: File,
   language: string,
-): Promise<{ success: true; data: Transcription } | { success: false; error: Error | string }> {
+): Promise<{ success: true; data: TranscriptionResponse } | { success: false; error: NextResponse }> {
   console.log("开始处理转录请求:", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
@@ -192,7 +174,7 @@ async function processTranscription(
       language,
       response_format: "verbose_json",
       temperature: 0,
-    });
+    }) as TranscriptionResponse;
 
     console.log("转录成功完成:", {
       fileName: uploadedFile.name,

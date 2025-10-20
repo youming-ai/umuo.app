@@ -40,7 +40,7 @@ function getGroqClient(): Groq {
  */
 export async function postProcessText(
   text: string,
-  options: PostProcessOptions = {},
+  _options: PostProcessOptions = {},
 ): Promise<ProcessedText> {
   // 检查是否在浏览器环境中
   if (typeof window === "undefined") {

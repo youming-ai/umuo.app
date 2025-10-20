@@ -1,5 +1,5 @@
 import type { AppError } from "@/types/errors";
-import { databaseError, handleError } from "./error-handler";
+import { handleError } from "./error-handler";
 
 /**
  * 批量处理配置接口
@@ -78,7 +78,11 @@ export function getMemoryStats(): MemoryStats {
     };
   }
 
-  const memory = (performance as any).memory as {
+  const memory = (
+    performance as typeof performance & {
+      memory?: { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number };
+    }
+  ).memory as {
     usedJSHeapSize: number;
     totalJSHeapSize: number;
     jsHeapSizeLimit: number;
@@ -215,7 +219,7 @@ export class BatchProcessor<T, R = T> {
     }
 
     const endTime = performance.now();
-    const batchTime = endTime - startTime;
+    const _batchTime = endTime - startTime;
 
     return { results, errors };
   }
@@ -400,7 +404,7 @@ export class BatchProcessor<T, R = T> {
  * 创建优化的数据库批量操作处理器
  */
 export function createDatabaseBatchProcessor<T extends { id?: number }, R = T>(
-  dbOperation: (items: T[]) => Promise<R[]>,
+  _dbOperation: (items: T[]) => Promise<R[]>,
   config?: Partial<BatchProcessorConfig>,
 ): BatchProcessor<T, R> {
   // 数据库操作的特殊配置
@@ -418,7 +422,7 @@ export function createDatabaseBatchProcessor<T extends { id?: number }, R = T>(
  */
 export function createSmartBatchProcessor<T, R = T>(
   items: T[],
-  processor: (items: T[]) => Promise<R[]>,
+  _processor: (items: T[]) => Promise<R[]>,
   baseConfig?: Partial<BatchProcessorConfig>,
 ): BatchProcessor<T, R> {
   // 根据项目数量智能调整配置

@@ -9,6 +9,27 @@ import { db } from "@/lib/db";
 import { postProcessText } from "@/lib/text-postprocessor";
 import type { FileRow, Segment, TranscriptRow } from "@/types/database";
 
+// Type for transcription segments from Groq API
+interface TranscriptionSegment {
+  id: number;
+  seek: number;
+  start: number;
+  end: number;
+  text: string;
+  tokens: number;
+  temperature: number;
+  avg_logprob: number;
+  compression_ratio: number;
+  no_speech_prob: number;
+}
+
+// Type for processed segments with additional fields
+interface ProcessedTranscriptionSegment extends TranscriptionSegment {
+  romaji?: string;
+  translation?: string;
+  furigana?: string;
+}
+
 // 查询键
 export const playerKeys = {
   all: ["player"] as const,
@@ -97,6 +118,79 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
     };
   }, [audioUrl]);
 
+  // 开始转录函数
+  const startTranscription = useCallback(async () => {
+    if (!file || transcript || transcriptionMutation.isPending) {
+      return;
+    }
+
+    setTranscriptionProgress(0);
+
+    try {
+      await transcriptionMutation.mutateAsync({ file, language: "ja" });
+      setTranscriptionProgress(100);
+
+      // 重新获取转录数据以获得新的 transcript ID
+      await queryClient.invalidateQueries({
+        queryKey: transcriptionKeys.forFile(parsedFileId)
+      });
+      const freshData = await queryClient.fetchQuery({
+        queryKey: transcriptionKeys.forFile(parsedFileId),
+        queryFn: async () => {
+          const transcripts = await db.transcripts.where("fileId").equals(parsedFileId).toArray();
+          const transcript = transcripts.length > 0 ? transcripts[0] : null;
+
+          if (transcript && typeof transcript.id === "number") {
+            const segments = await db.segments.where("transcriptId").equals(transcript.id).toArray();
+            return {
+              transcript,
+              segments,
+            };
+          }
+
+          return {
+            transcript: null,
+            segments: [],
+          };
+        },
+      });
+
+      const newTranscript = freshData.transcript;
+
+      // 进行文本后处理
+      if (segments.length > 0 && newTranscript) {
+        const fullText = segments.map((seg: Segment) => seg.text).join("\n");
+        try {
+          const processedResult = await postProcessText(fullText, { language: "ja" });
+
+          // 更新字幕段，添加处理后的信息
+          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
+            const originalSegment = segments[i];
+            const processedSegment = processedResult.segments[i];
+
+            await db.segments
+              .where("[transcriptId+start]")
+              .equals([newTranscript.id!, originalSegment.start])
+              .modify((segment) => {
+                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
+                segment.translation = (
+                  processedSegment as ProcessedTranscriptionSegment
+                )?.translation;
+              });
+          }
+
+          // 刷新查询缓存
+          queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(parsedFileId) });
+        } catch (processError) {
+          console.error("文本后处理失败:", processError);
+        }
+      }
+    } catch (error) {
+      console.error("转录失败:", error);
+      setTranscriptionProgress(0);
+    }
+  }, [file, transcript, transcriptionMutation, segments, queryClient, parsedFileId]);
+
   // 自动转录逻辑
   useEffect(() => {
     if (shouldAutoTranscribe && file && !transcript && !loading && !isTranscribing) {
@@ -114,7 +208,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
       return () => clearTimeout(timer);
     }
-  }, [shouldAutoTranscribe, file, transcript, loading, isTranscribing]);
+  }, [shouldAutoTranscribe, file, transcript, loading, isTranscribing, startTranscription]);
 
   // 当数据加载完成后检查是否需要自动转录
   useEffect(() => {
@@ -145,50 +239,6 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       return () => clearTimeout(timer);
     }
   }, [isTranscribing, transcript?.status]);
-
-  // 开始转录函数
-  const startTranscription = useCallback(async () => {
-    if (!file || transcript || transcriptionMutation.isPending) {
-      return;
-    }
-
-    setTranscriptionProgress(0);
-
-    try {
-      await transcriptionMutation.mutateAsync({ file, language: "ja" });
-      setTranscriptionProgress(100);
-
-      // 进行文本后处理
-      if (segments.length > 0) {
-        const fullText = segments.map((seg: Segment) => seg.text).join("\n");
-        try {
-          const processedResult = await postProcessText(fullText, { language: "ja" });
-
-          // 更新字幕段，添加处理后的信息
-          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
-            const originalSegment = segments[i];
-            const processedSegment = processedResult.segments[i];
-
-            await db.segments
-              .where("[transcriptId+start]")
-              .equals([transcript!.id!, originalSegment.start])
-              .modify((segment) => {
-                segment.romaji = (processedSegment as any)?.romaji;
-                segment.translation = (processedSegment as any)?.translation;
-              });
-          }
-
-          // 刷新查询缓存
-          queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(parsedFileId) });
-        } catch (processError) {
-          console.error("文本后处理失败:", processError);
-        }
-      }
-    } catch (error) {
-      console.error("转录失败:", error);
-      setTranscriptionProgress(0);
-    }
-  }, [file, transcript, transcriptionMutation, segments, queryClient, parsedFileId]);
 
   // 重试函数
   const retry = useCallback(() => {

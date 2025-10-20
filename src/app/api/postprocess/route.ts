@@ -21,12 +21,11 @@ interface ProcessedSegment {
 interface PostProcessResult {
   originalText: string;
   normalizedText: string;
-  translation: string;
-  annotations: Array<{
-    text: string;
-    type: string;
-    reading?: string;
-  }>;
+  translation: string | undefined;
+  annotations: string[] | undefined;
+  furigana?: string;
+  start: number;
+  end: number;
 }
 
 const postProcessSchema = z.object({
@@ -575,7 +574,7 @@ async function postProcessSegmentsWithGroq(
             originalText: "",
             normalizedText: "",
             translation: "",
-            annotations: [],
+            annotations: undefined,
             furigana: "",
             start: 0,
             end: 0,

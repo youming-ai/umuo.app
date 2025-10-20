@@ -3,12 +3,7 @@
  * 专门监控文件上传、分块、验证等操作的性能指标
  */
 
-import type { FileChunkRow } from "@/types/database";
-import {
-  MetricCategory,
-  type PerformanceMetric,
-  PerformanceMonitoring,
-} from "./performance-monitoring";
+import { MetricCategory, PerformanceMonitoring } from "./performance-monitoring";
 
 // 文件处理操作类型
 export enum FileOperation {
@@ -429,8 +424,8 @@ export class FilePerformanceMonitoring {
     throughput: number; // files per minute
     errorRate: number;
   } {
-    const cutoff = Date.now() - timeWindow;
-    const recentMetrics = this.metrics.filter((m) => {
+    const _cutoff = Date.now() - timeWindow;
+    const recentMetrics = this.metrics.filter((_m) => {
       // 假设metric有timestamp字段，如果没有需要调整
       return true; // 暂时返回所有指标
     });
@@ -584,8 +579,8 @@ export function getFilePerformanceMonitoring(): FilePerformanceMonitoring {
 }
 
 // 初始化全局文件性能监控
-export function initializeFilePerformanceMonitoring(config?: Partial<FileMonitoringConfig>): void {
-  const monitoring = getFilePerformanceMonitoring();
+export function initializeFilePerformanceMonitoring(_config?: Partial<FileMonitoringConfig>): void {
+  const _monitoring = getFilePerformanceMonitoring();
   // 配置已经通过构造函数设置
 }
 

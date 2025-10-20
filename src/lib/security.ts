@@ -503,7 +503,7 @@ export function sanitizeHtml(content: string, options: SanitizeOptions = {}): st
   });
 
   // 处理结束标签
-  sanitized = sanitized.replace(closingTagsRegex, (match, tag, offset) => {
+  sanitized = sanitized.replace(closingTagsRegex, (match, _tag, offset) => {
     closingTagMatches.push({
       match,
       start: offset,
@@ -624,7 +624,7 @@ function findDangerousTags(
 
   DANGEROUS_TAGS.forEach((tag) => {
     const regex = new RegExp(`<${tag}\\b[^>]*>`, "gi");
-    let match;
+    let match: RegExpExecArray | null;
 
     while ((match = regex.exec(content)) !== null) {
       results.push({
@@ -651,15 +651,17 @@ function findDangerousAttributes(
 
   DANGEROUS_ATTRIBUTES.forEach((attr) => {
     const regex = new RegExp(`${attr}\\s*=\\s*["']([^"']*?)["']`, "gi");
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      results.push({
-        attr,
-        value: match[1],
-        position: getLineColumn(content, match.index),
-      });
-    }
+    let match: RegExpExecArray | null;
+    do {
+      match = regex.exec(content);
+      if (match !== null) {
+        results.push({
+          attr,
+          value: match[1],
+          position: getLineColumn(content, match.index),
+        });
+      }
+    } while (match !== null);
   });
 
   return results;
@@ -674,14 +676,16 @@ function findCssInjection(
   const results: Array<{ pattern: string; position?: { line: number; column: number } }> = [];
 
   CSS_INJECTION_PATTERNS.forEach((pattern) => {
-    let match;
-
-    while ((match = pattern.exec(content)) !== null) {
-      results.push({
-        pattern: match[0],
-        position: getLineColumn(content, match.index),
-      });
-    }
+    let match: RegExpExecArray | null;
+    do {
+      match = pattern.exec(content);
+      if (match !== null) {
+        results.push({
+          pattern: match[0],
+          position: getLineColumn(content, match.index),
+        });
+      }
+    } while (match !== null);
   });
 
   return results;
@@ -697,23 +701,29 @@ function findScriptInjection(
 
   // 查找 script 标签
   const scriptRegex = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
-  let match;
+  let match: RegExpExecArray | null;
 
-  while ((match = scriptRegex.exec(content)) !== null) {
-    results.push({
-      snippet: match[0],
-      position: getLineColumn(content, match.index),
-    });
-  }
+  do {
+    match = scriptRegex.exec(content);
+    if (match !== null) {
+      results.push({
+        snippet: match[0],
+        position: getLineColumn(content, match.index),
+      });
+    }
+  } while (match !== null);
 
   // 查找 JavaScript 协议
   const jsProtocolRegex = /javascript:[^"'\s]*/gi;
-  while ((match = jsProtocolRegex.exec(content)) !== null) {
-    results.push({
-      snippet: match[0],
-      position: getLineColumn(content, match.index),
-    });
-  }
+  do {
+    match = jsProtocolRegex.exec(content);
+    if (match !== null) {
+      results.push({
+        snippet: match[0],
+        position: getLineColumn(content, match.index),
+      });
+    }
+  } while (match !== null);
 
   return results;
 }
@@ -755,28 +765,31 @@ function sanitizeAttributes(
 
   const result: string[] = [];
   const attrRegex = /([^\s=]+)\s*=\s*["']([^"']*?)["']/g;
-  let match;
+  let match: RegExpExecArray | null;
 
-  while ((match = attrRegex.exec(attrs)) !== null) {
-    const [fullMatch, attrName, attrValue] = match;
+  do {
+    match = attrRegex.exec(attrs);
+    if (match !== null) {
+      const [_fullMatch, attrName, attrValue] = match;
 
-    // 检查是否允许此属性
-    const allowedForTag = allowedAttributes[tagName] || allowedAttributes["*"] || [];
-    const allowedForAll = allowedAttributes["*"] || [];
+      // 检查是否允许此属性
+      const allowedForTag = allowedAttributes[tagName] || allowedAttributes["*"] || [];
+      const allowedForAll = allowedAttributes["*"] || [];
 
-    if (
-      allowedForTag.includes(attrName) ||
-      allowedForAll.includes(attrName) ||
-      attrName.startsWith("data-")
-    ) {
-      // 额外检查属性值的安全性
-      if (isSafeAttribute(attrName, attrValue)) {
-        result.push(`${attrName}="${encodeHtmlEntities(attrValue)}"`);
+      if (
+        allowedForTag.includes(attrName) ||
+        allowedForAll.includes(attrName) ||
+        attrName.startsWith("data-")
+      ) {
+        // 额外检查属性值的安全性
+        if (isSafeAttribute(attrName, attrValue)) {
+          result.push(`${attrName}="${encodeHtmlEntities(attrValue)}"`);
+        }
       }
     }
-  }
+  } while (match !== null);
 
-  return result.length > 0 ? " " + result.join(" ") : "";
+  return result.length > 0 ? ` ${result.join(" ")}` : "";
 }
 
 /**
@@ -848,7 +861,7 @@ export function renderSafeFurigana(text: string, furigana: string): string {
     let result = text;
 
     // 替换 Furigana 括号格式为安全的 HTML
-    result = result.replace(furiganaRegex, (match, word, reading) => {
+    result = result.replace(furiganaRegex, (_match, word, reading) => {
       return `<ruby>${encodeHtmlEntities(word)}<rt>${encodeHtmlEntities(reading)}</rt></ruby>`;
     });
 

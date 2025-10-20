@@ -188,7 +188,7 @@ function parseBracketsFormat(furiganaString: string, originalText: string): Furi
 
   // 从 furiganaString 中提取匹配的部分
   while ((match = bracketRegex.exec(furiganaString)) !== null) {
-    const [fullMatch, text, reading] = match;
+    const [_fullMatch, text, reading] = match;
     const index = remainingText.indexOf(text);
 
     if (index !== -1) {
@@ -219,7 +219,7 @@ function parseBracketsFormat(furiganaString: string, originalText: string): Furi
 /**
  * 解析空格分隔格式: 日本語 にほんご
  */
-function parseSpacedFormat(furiganaString: string, originalText: string): FuriganaToken[] {
+function parseSpacedFormat(furiganaString: string, _originalText: string): FuriganaToken[] {
   const parts = furiganaString.split(/\s+/);
   const tokens: FuriganaToken[] = [];
 
@@ -301,10 +301,10 @@ function parseAlternativeFormats(furiganaString: string, originalText: string): 
   const kvRegex = /([^:,\s]+):([^,\s]+)/g;
   const tokens: FuriganaToken[] = [];
   let remainingText = originalText;
-  let match;
+  let match: RegExpExecArray | null;
 
   while ((match = kvRegex.exec(furiganaString)) !== null) {
-    const [fullMatch, text, reading] = match;
+    const [_fullMatch, text, reading] = match;
     const index = remainingText.indexOf(text);
 
     if (index !== -1) {

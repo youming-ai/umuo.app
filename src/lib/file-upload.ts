@@ -2,7 +2,6 @@ import type { FileRow } from "@/types/database";
 import { DbUtils } from "./db";
 import {
   CHUNK_SIZE,
-  CHUNK_THRESHOLD,
   calculateChunkCount,
   createFileChunks,
   formatFileSize,

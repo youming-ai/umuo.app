@@ -3,7 +3,6 @@
  * 专门监控数据库操作的性能指标，包括查询、插入、更新、删除等操作
  */
 
-import type { FileChunkRow, FileRow, Segment, TranscriptRow } from "@/types/database";
 import { MetricCategory, PerformanceMonitoring } from "./performance-monitoring";
 
 // 数据库操作类型
@@ -367,7 +366,7 @@ export class DatabasePerformanceMonitoring {
   // 获取数据库统计信息
   getDatabaseStats(): DatabaseStats {
     const successfulMetrics = this.metrics.filter((m) => m.success);
-    const failedMetrics = this.metrics.filter((m) => !m.success);
+    const _failedMetrics = this.metrics.filter((m) => !m.success);
 
     const totalOperations = this.metrics.length;
     const averageExecutionTime =
@@ -486,7 +485,7 @@ export class DatabasePerformanceMonitoring {
     });
 
     const successfulRecent = recentMetrics.filter((m) => m.success);
-    const failedRecent = recentMetrics.filter((m) => !m.success);
+    const _failedRecent = recentMetrics.filter((m) => !m.success);
     const slowQueries = recentMetrics.filter(
       (m) => m.executionTime > this.config.slowQueryThreshold,
     );
@@ -682,9 +681,9 @@ export function getDatabasePerformanceMonitoring(): DatabasePerformanceMonitorin
 
 // 初始化全局数据库性能监控
 export function initializeDatabasePerformanceMonitoring(
-  config?: Partial<DatabaseMonitoringConfig>,
+  _config?: Partial<DatabaseMonitoringConfig>,
 ): void {
-  const monitoring = getDatabasePerformanceMonitoring();
+  const _monitoring = getDatabasePerformanceMonitoring();
   // 配置已经通过构造函数设置
 }
 
