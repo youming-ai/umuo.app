@@ -384,7 +384,14 @@ export class DatabasePerformanceMonitoring {
         averageTime: number;
         successRate: number;
       }
-    > = {} as any;
+    > = {} as Record<
+      DatabaseOperation,
+      {
+        count: number;
+        averageTime: number;
+        successRate: number;
+      }
+    >;
 
     Object.values(DatabaseOperation).forEach((operation) => {
       const operationMetrics = this.metrics.filter((m) => m.operation === operation);
@@ -412,7 +419,14 @@ export class DatabasePerformanceMonitoring {
         recordCount: number;
         averageTime: number;
       }
-    > = {} as any;
+    > = {} as Record<
+      DatabaseTable,
+      {
+        operationCount: number;
+        recordCount: number;
+        averageTime: number;
+      }
+    >;
 
     Object.values(DatabaseTable).forEach((table) => {
       const tableMetrics = this.metrics.filter((m) => m.table === table);
@@ -508,7 +522,7 @@ export class DatabasePerformanceMonitoring {
   // 获取数据库性能报告
   getDatabasePerformanceReport(): {
     stats: DatabaseStats;
-    realTimeMetrics: any;
+    realTimeMetrics: DatabasePerformanceMetric[];
     slowQueries: DatabasePerformanceMetric[];
     performanceAlerts: string[];
     recommendations: string[];

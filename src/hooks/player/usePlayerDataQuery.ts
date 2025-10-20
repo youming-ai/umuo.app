@@ -132,7 +132,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
       // 重新获取转录数据以获得新的 transcript ID
       await queryClient.invalidateQueries({
-        queryKey: transcriptionKeys.forFile(parsedFileId)
+        queryKey: transcriptionKeys.forFile(parsedFileId),
       });
       const freshData = await queryClient.fetchQuery({
         queryKey: transcriptionKeys.forFile(parsedFileId),
@@ -141,7 +141,10 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           if (transcript && typeof transcript.id === "number") {
-            const segments = await db.segments.where("transcriptId").equals(transcript.id).toArray();
+            const segments = await db.segments
+              .where("transcriptId")
+              .equals(transcript.id)
+              .toArray();
             return {
               transcript,
               segments,
@@ -168,9 +171,11 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
             const originalSegment = segments[i];
             const processedSegment = processedResult.segments[i];
 
+            if (!newTranscript.id) continue;
+
             await db.segments
               .where("[transcriptId+start]")
-              .equals([newTranscript.id!, originalSegment.start])
+              .equals([newTranscript.id, originalSegment.start])
               .modify((segment) => {
                 segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
                 segment.translation = (

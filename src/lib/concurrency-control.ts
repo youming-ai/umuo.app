@@ -16,7 +16,7 @@ export interface QueuedTask<T> {
 
 export class ConcurrencyController {
   private runningTasks = new Set<string>();
-  private taskQueue: QueuedTask<any>[] = [];
+  private taskQueue: QueuedTask<unknown>[] = [];
   private config = getTranscriptionConfig();
 
   /**
@@ -66,7 +66,7 @@ export class ConcurrencyController {
   /**
    * 按优先级插入任务
    */
-  private insertTaskByPriority(task: QueuedTask<any>): void {
+  private insertTaskByPriority(task: QueuedTask<unknown>): void {
     let insertIndex = this.taskQueue.length;
 
     for (let i = 0; i < this.taskQueue.length; i++) {
@@ -180,7 +180,7 @@ export async function withRetry<T>(
   delay: number = 1000,
 ): Promise<T> {
   const controller = getConcurrencyController();
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -209,7 +209,7 @@ export async function withRetry<T>(
 /**
  * 判断错误是否应该重试
  */
-function shouldRetry(error: any): boolean {
+function shouldRetry(error: unknown): boolean {
   if (error instanceof Error) {
     // 网络错误或超时可以重试
     if (
@@ -222,8 +222,8 @@ function shouldRetry(error: any): boolean {
 
     // HTTP状态码
     if ("status" in error) {
-      const status = (error as any).status;
-      return status >= 500 || status === 429; // 服务器错误或限流
+      const status = (error as { status?: number }).status;
+      return typeof status === "number" && (status >= 500 || status === 429); // 服务器错误或限流
     }
   }
 
@@ -234,7 +234,7 @@ function shouldRetry(error: any): boolean {
  * 请求去重
  */
 export class RequestDeduplicator {
-  private pendingRequests = new Map<string, Promise<any>>();
+  private pendingRequests = new Map<string, Promise<unknown>>();
 
   async execute<T>(key: string, fn: () => Promise<T>): Promise<T> {
     // 如果已有相同的请求在进行中，返回其Promise

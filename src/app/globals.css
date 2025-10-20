@@ -1297,7 +1297,7 @@
     color: var(--text-muted);
   }
 
-  player-word-group rt {
+  .player-word-group rt {
     color: var(--text-tertiary);
   }
 

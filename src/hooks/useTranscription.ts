@@ -75,7 +75,7 @@ export function useTranscription() {
         fileId: file.id,
       });
 
-      let response;
+      let response: Response;
       try {
         response = await fetch(`/api/transcribe?language=${language}&fileId=${file.id}`, {
           method: "POST",
@@ -95,7 +95,7 @@ export function useTranscription() {
       });
 
       if (!response.ok) {
-        let errorData;
+        let errorData: unknown;
         try {
           const responseText = await response.text();
           console.log("错误响应原文:", responseText);

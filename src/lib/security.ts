@@ -626,7 +626,9 @@ function findDangerousTags(
     const regex = new RegExp(`<${tag}\\b[^>]*>`, "gi");
     let match: RegExpExecArray | null;
 
-    while ((match = regex.exec(content)) !== null) {
+    while (true) {
+      match = regex.exec(content);
+      if (match === null) break;
       results.push({
         tag,
         position: getLineColumn(content, match.index),

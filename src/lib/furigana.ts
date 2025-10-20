@@ -145,9 +145,11 @@ function parseRubyFormat(furiganaString: string): FuriganaToken[] {
   const tokens: FuriganaToken[] = [];
   const rubyRegex = /<ruby>([^<]+)<rt>([^<]+)<\/rt><\/ruby>/g;
   let lastIndex = 0;
-  let match;
+  let match: RegExpExecArray | null;
 
-  while ((match = rubyRegex.exec(furiganaString)) !== null) {
+  while (true) {
+    match = rubyRegex.exec(furiganaString);
+    if (match === null) break;
     // 添加前面的文本
     if (match.index > lastIndex) {
       const beforeText = furiganaString.substring(lastIndex, match.index);
@@ -184,10 +186,12 @@ function parseBracketsFormat(furiganaString: string, originalText: string): Furi
   const tokens: FuriganaToken[] = [];
   const bracketRegex = /([^(]+)\(([^)]+)\)/g;
   let remainingText = originalText;
-  let match;
+  let match: RegExpExecArray | null;
 
   // 从 furiganaString 中提取匹配的部分
-  while ((match = bracketRegex.exec(furiganaString)) !== null) {
+  while (true) {
+    match = bracketRegex.exec(furiganaString);
+    if (match === null) break;
     const [_fullMatch, text, reading] = match;
     const index = remainingText.indexOf(text);
 
@@ -303,7 +307,9 @@ function parseAlternativeFormats(furiganaString: string, originalText: string): 
   let remainingText = originalText;
   let match: RegExpExecArray | null;
 
-  while ((match = kvRegex.exec(furiganaString)) !== null) {
+  while (true) {
+    match = kvRegex.exec(furiganaString);
+    if (match === null) break;
     const [_fullMatch, text, reading] = match;
     const index = remainingText.indexOf(text);
 

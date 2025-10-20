@@ -160,7 +160,7 @@ export function usePlayerData(fileId: string) {
       });
 
       // 调用转录 API
-      let response;
+      let response: Response;
       try {
         response = await fetch(`/api/transcribe?language=ja&fileId=${file.id}`, {
           method: "POST",
@@ -180,7 +180,7 @@ export function usePlayerData(fileId: string) {
       });
 
       if (!response.ok) {
-        let errorData;
+        let errorData: unknown;
         try {
           const responseText = await response.text();
           console.log("错误响应原文:", responseText);
@@ -211,7 +211,7 @@ export function usePlayerData(fileId: string) {
         throw new Error(errorMessage);
       }
 
-      let transcriptionResult;
+      let transcriptionResult: unknown;
       try {
         const responseText = await response.text();
         console.log("API 响应原文:", responseText);

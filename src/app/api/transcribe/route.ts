@@ -1,6 +1,5 @@
 import Groq from "groq-sdk";
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/api-response";
 import type { TranscriptionResponse } from "@/lib/enhanced-groq-client";
@@ -140,7 +139,9 @@ function validateFormData(formData: FormData) {
 async function processTranscription(
   uploadedFile: File,
   language: string,
-): Promise<{ success: true; data: TranscriptionResponse } | { success: false; error: NextResponse }> {
+): Promise<
+  { success: true; data: TranscriptionResponse } | { success: false; error: NextResponse }
+> {
   console.log("开始处理转录请求:", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
@@ -168,13 +169,13 @@ async function processTranscription(
   const groq = new Groq({ apiKey });
 
   try {
-    const transcription = await groq.audio.transcriptions.create({
+    const transcription = (await groq.audio.transcriptions.create({
       file: uploadedFile,
       model: "whisper-large-v3-turbo",
       language,
       response_format: "verbose_json",
       temperature: 0,
-    }) as TranscriptionResponse;
+    })) as TranscriptionResponse;
 
     console.log("转录成功完成:", {
       fileName: uploadedFile.name,
