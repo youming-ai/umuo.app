@@ -40,6 +40,7 @@ File Management   AI Services   Text Normalization   Persistent Storage   Real-t
 # Development
 pnpm dev              # Start development server
 pnpm build            # Build for production
+pnpm build:analyze    # Build with bundle analyzer
 pnpm start            # Start production server
 
 # Code Quality
@@ -47,8 +48,22 @@ pnpm lint             # Run Biome.js linter
 pnpm format           # Format code with Biome.js
 pnpm type-check       # TypeScript type checking
 
-# Testing (currently no test suite)
-# Test framework has been removed in favor of integration testing
+# Testing
+pnpm test             # Run Vitest tests
+pnpm test:ui          # Run Vitest with UI
+pnpm test:coverage    # Run tests with coverage report
+pnpm test:security    # Run security audit
+pnpm test:performance # Run Lighthouse performance audit
+
+# Deployment (Cloudflare Pages)
+pnpm cf:login         # Login to Cloudflare
+pnpm cf:deploy:prod   # Deploy to production
+pnpm cf:deploy:preview # Deploy to preview
+pnpm deploy           # Build and deploy to production
+pnpm deploy:preview   # Build and deploy to preview
+
+# CI/Quality Pipeline
+pnpm ci:build         # Complete CI pipeline (install, security, lint, type-check, build)
 ```
 
 ## Key Directories
@@ -179,6 +194,41 @@ TRANSCRIPTION_MAX_CONCURRENCY=2          # Concurrent processing
 3. Implement proper loading and error states
 4. Add real-time updates through query invalidation
 
+## Deployment & CI
+
+### Cloudflare Pages Deployment
+The application is configured for deployment on Cloudflare Pages:
+
+```bash
+# Deploy to production
+pnpm deploy           # Build and deploy to production
+
+# Deploy to preview environment
+pnpm deploy:preview   # Build and deploy to preview
+
+# Manual deployment steps
+pnpm build && wrangler pages deploy .next --project-name umuo
+```
+
+### CI Pipeline
+The `ci:build` command runs the complete quality assurance pipeline:
+1. **Dependency Installation**: `pnpm install --frozen-lockfile`
+2. **Security Audit**: `pnpm audit --audit-level high`
+3. **Code Quality**: `pnpm lint` (Biome.js checks)
+4. **Type Safety**: `pnpm type-check` (TypeScript compilation)
+5. **Build Validation**: `pnpm build` (Production build)
+
+### Build Configuration
+- **Next.js Config**: Optimized for static export and client-side deployment
+- **Bundle Analysis**: Available via `pnpm build:analyze`
+- **Image Optimization**: Disabled (`unoptimized: true`) for static hosting
+- **Package Optimization**: Experimental package imports for Radix icons and Lucide React
+
+### Performance Monitoring
+- **Lighthouse Integration**: Automated performance audits
+- **Bundle Analysis**: Webpack bundle analyzer for optimization
+- **Production Optimization**: Standalone output mode for PWA deployment
+
 ## Styling System
 
 ### Design Tokens
@@ -216,3 +266,58 @@ The application includes intelligent auto-transcription:
 - Biome.js for linting and formatting
 - Automatic import sorting and cleanup
 - Consistent code style across the codebase
+
+## Theme System & Debugging
+
+### Theme Architecture
+The application supports 4 distinct themes with WCAG AA compliance:
+- **Dark Theme**: Default dark mode with high contrast
+- **Light Theme**: Clean light interface with optimal readability
+- **System Theme**: Automatically follows OS preference
+- **High Contrast Theme**: Enhanced contrast for accessibility
+
+### Theme Implementation
+- **CSS Custom Properties**: Complete design token system in `/src/app/globals.css`
+- **Dynamic Theme Switching**: Real-time theme changes without page reload
+- **Local Storage Persistence**: Theme preferences automatically saved
+- **Component Integration**: All shadcn/ui components theme-aware
+- **Semantic Color Variables**: Status-based colors (`.status-success`, `.status-error`, etc.)
+
+### Theme Development
+- **Theme Debugging**: Press `Ctrl+Shift+T` to open the theme debugger
+- **Design Token System**: Comprehensive CSS variable structure
+- **Component Theming**: Consistent theming across all components
+- **Responsive Theming**: Mobile-first theme breakpoints
+
+### Code Quality Tools Configuration
+
+#### Biome.js Configuration
+```json
+{
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "suspicious": {
+        "noUnknownAtRules": "off"
+      }
+    }
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": ["src/**/*"]
+  }
+}
+```
+
+#### Package Management
+- **Package Manager**: pnpm (required version >=8.0.0)
+- **Node Engine**: >=18.0.0
+- **Frozen Lockfile**: Ensures reproducible builds
+- **Husky**: Git hooks for pre-commit quality checks
