@@ -3,6 +3,9 @@
 # API routes handled by worker (will return 404)
 # No redirect needed for /api/* routes
 
+# Root path - handle Next.js index page
+/ /index.html 200
+
 # Client-side routing - handle SPA routes that need client-side rendering
 /player/* /index.html 200
 /account/* /index.html 200
