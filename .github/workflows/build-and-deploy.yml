@@ -84,38 +84,79 @@ jobs:
           echo "Build directory size before optimization:"
           du -sh .next || true
 
-          # Copy server-rendered HTML files to root (for Next.js App Router)
-          echo "📁 Copying server-rendered files..."
-          cp -r .next/server/app/* .next/ 2>/dev/null || true
+          # Ensure server directory structure is maintained for Next.js App Router
+          echo "📁 Maintaining server directory structure..."
 
-          # Create correct static asset structure for Next.js
-          echo "📁 Setting up static assets..."
-          mkdir -p .next/_next/static
-          cp -r .next/static/* .next/_next/ 2>/dev/null || true
-
-          # Copy static files from public directory
+          # Copy static files from public directory (maintaining structure)
           echo "📁 Copying public files..."
-          cp -r public/* .next/ 2>/dev/null || true
+          if [ -d "public" ]; then
+            cp -r public/* .next/ 2>/dev/null || true
+          fi
+
+          # Create _next/static structure for proper asset serving
+          echo "📁 Setting up static asset structure..."
+          mkdir -p .next/_next/static
+          if [ -d ".next/static" ]; then
+            cp -r .next/static/* .next/_next/static/ 2>/dev/null || true
+          fi
+
+          # Create proper HTML structure for static pages
+          echo "📁 Setting up HTML files..."
+          if [ -d ".next/server/app" ]; then
+            # Find all .html files in server/app and copy them to appropriate locations
+            find .next/server/app -name "*.html" -exec bash -c '
+              file="$1"
+              rel_path="${file#.next/server/app/}"
+              # Create directory structure
+              mkdir -p ".next/$(dirname "$rel_path")"
+              # Copy HTML file
+              cp "$file" ".next/$rel_path"
+            ' bash {} \;
+          fi
+
+          # Copy essential server files for Next.js App Router
+          echo "📁 Copying essential server files..."
+          if [ -f ".next/server/app/page.js" ]; then
+            mkdir -p .next/_nextServer
+            cp -r .next/server/app/page.js* .next/_nextServer/ 2>/dev/null || true
+          fi
 
           # Copy worker configuration files if they exist
-          cp public/_worker.js .next/ 2>/dev/null || true
-          cp public/_redirects .next/ 2>/dev/null || true
-          cp public/_headers .next/ 2>/dev/null || true
+          if [ -f "public/_worker.js" ]; then
+            cp public/_worker.js .next/ 2>/dev/null || true
+          fi
+          if [ -f "public/_redirects" ]; then
+            cp public/_redirects .next/ 2>/dev/null || true
+          fi
+          if [ -f "public/_headers" ]; then
+            cp public/_headers .next/ 2>/dev/null || true
+          fi
 
-          # Remove large cache files that exceed Cloudflare's size limit
+          # Clean up large cache files that exceed Cloudflare's size limit
           echo "🗑️ Removing large cache files..."
           find .next -name "*.pack" -size +20M -delete 2>/dev/null || true
           find .next -name "*.map" -size +5M -delete 2>/dev/null || true
+          find .next -name "*.nft.json" -size +2M -delete 2>/dev/null || true
           rm -rf .next/cache 2>/dev/null || true
           rm -f .next/trace 2>/dev/null || true
+          rm -rf .next/server/middleware-manifest.json 2>/dev/null || true
 
           # Remove development-only files
           find .next -name "*.hot-update.js" -delete 2>/dev/null || true
           find .next -name "*.hot-update.json" -delete 2>/dev/null || true
 
+          # Ensure proper file structure for Cloudflare Pages
+          echo "📁 Ensuring proper deployment structure..."
+
+          # Create a simple index.html at root if it doesn't exist
+          if [ ! -f ".next/index.html" ] && [ -f ".next/server/app/index.html" ]; then
+            cp .next/server/app/index.html .next/index.html
+          fi
+
           echo "Build directory size after optimization:"
           du -sh .next || true
-
+          echo "File structure after optimization:"
+          find .next -maxdepth 2 -type f | head -20
           echo "✅ Build optimization completed"
 
       - name: Deploy to Cloudflare Pages
