@@ -1,9 +1,0 @@
-# Cloudflare Pages redirects for Next.js
-
-# API routes - return 404
-/api/* /404.html 404
-
-# Handle client-side routes that need to serve the index file
-/player/* /index.html 200
-/account/* /index.html 200
-/settings/* /index.html 200

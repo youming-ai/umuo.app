@@ -1,4 +1,4 @@
-import AccountPage from "@/components/settings/AccountPage";
+import AccountPage from "@/components/features/settings/AccountPage";
 import Navigation from "@/components/ui/Navigation";
 
 export default function AccountRoute() {

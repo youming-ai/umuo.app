@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import FileList from "@/components/file/FileList";
-import FileUpload from "@/components/file/FileUpload";
-import StatsCards from "@/components/file/StatsCards";
+import FileList from "@/components/features/file/FileList";
+import FileUpload from "@/components/features/file/FileUpload";
+import StatsCards from "@/components/features/file/StatsCards";
 import Navigation from "@/components/ui/Navigation";
 import { useAppState, useFiles } from "@/hooks";
 

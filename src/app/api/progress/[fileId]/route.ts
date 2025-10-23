@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { getServerProgress } from "@/lib/server-progress";
+import { getServerProgress } from "@/lib/ai/server-progress";
 
 export async function GET(
   _request: NextRequest,

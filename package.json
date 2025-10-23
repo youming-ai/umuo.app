@@ -14,17 +14,17 @@
     "lint": "biome check .",
     "format": "biome format . --write",
     "type-check": "tsc --noEmit",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
     "test:security": "pnpm audit --audit-level high",
     "test:performance": "lighthouse https://umuo.app --output html --output-path ./lighthouse-report.html",
-    "cf:login": "wrangler auth login",
-    "cf:deploy:prod": "wrangler pages deploy .next --project-name umuo",
-    "cf:deploy:preview": "wrangler pages deploy .next --project-name umuo --preview",
-    "deploy": "pnpm build && pnpm cf:deploy:prod",
-    "deploy:preview": "pnpm build && pnpm cf:deploy:preview",
+    "cf:login": "npx wrangler login",
+    "cf:deploy:prod": "npx wrangler pages deploy .next --project-name umuo-app",
+    "cf:deploy:preview": "npx wrangler pages deploy .next --project-name umuo-app --preview",
+    "deploy": "./scripts/deploy-optimized.sh",
+    "deploy:preview": "./scripts/deploy-optimized.sh --no-env",
+    "deploy:quick": "./scripts/deploy-optimized.sh --no-clean",
+    "deploy:build": "./scripts/deploy-optimized.sh --no-deploy",
     "ci:build": "pnpm install --frozen-lockfile && pnpm test:security && pnpm lint && pnpm type-check && pnpm build",
+    "clean": "rm -rf .next node_modules/.cache",
     "prepare": "husky"
   },
   "keywords": [
@@ -34,7 +34,7 @@
     "ai",
     "education"
   ],
-  "author": "Oumu.ai Team",
+  "author": "umuo.app Team",
   "license": "ISC",
   "engines": {
     "node": ">=18.0.0",
@@ -67,16 +67,11 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.0",
-    "@vitest/ui": "^3.2.4",
     "autoprefixer": "^10.4.21",
     "husky": "^9.1.7",
-    "jsdom": "^27.0.0",
     "postcss": "^8.5.6",
     "sharp": "^0.34.4",
     "tailwindcss": "3.4.0",
-    "vitest": "^3.2.4",
     "wrangler": "^4.43.0"
   },
   "packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d"

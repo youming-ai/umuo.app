@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import type { AppError, ErrorStats } from "@/types/errors";
+import type { AppError, ErrorStats } from "@/types/api/errors";
 
 // 错误提示类型
 export type ToastType = "success" | "error" | "warning" | "info";

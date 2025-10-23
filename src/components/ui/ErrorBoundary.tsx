@@ -20,7 +20,7 @@ import {
   handleError,
   showErrorToast,
   showSuccessToast,
-} from "@/lib/error-handler";
+} from "@/lib/utils/error-handler";
 
 interface Props {
   children: ReactNode;

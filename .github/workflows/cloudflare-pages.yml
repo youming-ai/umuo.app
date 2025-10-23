@@ -10,7 +10,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: 'deploy-production'
+  group: "deploy-production"
   cancel-in-progress: true
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
         id: setup-node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -77,7 +77,16 @@ jobs:
           echo "Build directory size before optimization:"
           du -sh .next || true
 
-          # For standard Next.js build with API routes
+          # Copy server-rendered HTML files to root (for Next.js App Router)
+          echo "📁 Copying server-rendered files..."
+          cp -r .next/server/app/* .next/ 2>/dev/null || true
+
+          # Create correct static asset structure for Next.js
+          echo "📁 Setting up static assets..."
+          mkdir -p .next/_next/static
+          cp -r .next/static/* .next/_next/ 2>/dev/null || true
+
+          # Copy static files from public directory
           echo "📁 Copying public files..."
           cp -r public/* .next/ 2>/dev/null || true
 
@@ -90,6 +99,8 @@ jobs:
           echo "🗑️ Removing large cache files..."
           find .next -name "*.pack" -size +20M -delete 2>/dev/null || true
           find .next -name "*.map" -size +5M -delete 2>/dev/null || true
+          rm -rf .next/cache 2>/dev/null || true
+          rm -f .next/trace 2>/dev/null || true
 
           # Remove development-only files
           find .next -name "*.hot-update.js" -delete 2>/dev/null || true
@@ -106,7 +117,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: umuo
+          projectName: umuo-app
           directory: .next
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
@@ -114,7 +125,7 @@ jobs:
         if: success()
         run: |
           echo "🚀 Deployment completed!"
-          echo "🌐 Live site: https://umuo.app"
+          echo "🌐 Live site: https://umuo-app.pages.dev"
 
       - name: Notify deployment success
         if: success()

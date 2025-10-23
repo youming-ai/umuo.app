@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ROUTES } from "@/lib/routes";
+import { ROUTES } from "@/lib/config/routes";
 import { ThemeToggleIcon } from "./ThemeToggle";
 
 export default function Navigation() {

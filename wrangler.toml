@@ -6,3 +6,25 @@ pages_build_output_dir = ".next"
 # Environment variables for Cloudflare Pages
 [env.production.vars]
 NODE_ENV = "production"
+NEXT_PUBLIC_APP_URL = "https://umuo.app"
+
+[env.preview.vars]
+NODE_ENV = "production"
+NEXT_PUBLIC_APP_URL = "https://preview.umuo.pages.dev"
+
+# KV Namespaces for caching (optional)
+# [[kv_namespaces]]
+# binding = "TRANSCRIPTION_CACHE"
+# id = "your-kv-namespace-id"
+# preview_id = "your-preview-kv-namespace-id"
+
+# D1 Database (if needed)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "umuo-db"
+# database_id = "your-d1-database-id"
+
+# Queue producers (for background processing)
+# [[queue_producers]]
+# binding = "TRANSCRIPTION_QUEUE"
+# queue = "transcription-jobs"

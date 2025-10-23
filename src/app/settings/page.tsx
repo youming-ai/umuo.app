@@ -1,4 +1,4 @@
-import SettingsPage from "@/components/settings/SettingsPage";
+import SettingsPage from "@/components/features/settings/SettingsPage";
 import Navigation from "@/components/ui/Navigation";
 
 export default function SettingsRoute() {

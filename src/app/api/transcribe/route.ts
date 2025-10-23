@@ -1,8 +1,8 @@
 import Groq from "groq-sdk";
 import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { apiError, apiSuccess } from "@/lib/api-response";
-import type { TranscriptionResponse } from "@/lib/enhanced-groq-client";
+import type { TranscriptionResponse } from "@/lib/ai/enhanced-groq-client";
+import { apiError, apiSuccess } from "@/lib/utils/api-response";
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({

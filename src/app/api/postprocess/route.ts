@@ -1,8 +1,8 @@
 import Groq from "groq-sdk";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
-import { apiError, apiFromError, apiSuccess } from "@/lib/api-response";
-import { validationError } from "@/lib/error-handler";
+import { apiError, apiFromError, apiSuccess } from "@/lib/utils/api-response";
+import { validationError } from "@/lib/utils/error-handler";
 
 const GROQ_MODEL = "openai/gpt-oss-20b";
 

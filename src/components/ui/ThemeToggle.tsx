@@ -1,7 +1,7 @@
 "use client";
 
 import { Contrast, Monitor, Moon, Sun } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme } from "@/components/layout/contexts/ThemeContext";
 
 // 导航栏主题切换按钮（只显示图标）
 export function ThemeToggleIcon() {

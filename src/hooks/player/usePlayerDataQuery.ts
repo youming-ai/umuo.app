@@ -4,10 +4,32 @@ import {
   transcriptionKeys,
   useTranscription,
   useTranscriptionStatus,
-} from "@/hooks/useTranscription";
-import { db } from "@/lib/db";
-import { postProcessText } from "@/lib/text-postprocessor";
-import type { FileRow, Segment, TranscriptRow } from "@/types/database";
+} from "@/hooks/api/useTranscription";
+import { postProcessText } from "@/lib/ai/text-postprocessor";
+import { db } from "@/lib/db/db";
+import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
+
+/**
+ * Player Data Query Hook - umuo.app 播放器数据管理核心
+ *
+ * 功能概述：
+ * - 统一管理播放器所需的所有数据查询和状态
+ * - 实现智能自动转录：用户访问播放器页面时自动检测并启动转录
+ * - 提供完整的错误处理和状态同步机制
+ * - 支持实时进度跟踪和缓存管理
+ *
+ * 核心特性：
+ * 1. 自动转录：智能检测文件状态，自动启动转录流程
+ * 2. 状态管理：统一的加载、错误、成功状态处理
+ * 3. 缓存优化：利用 TanStack Query 进行智能缓存
+ * 4. 实时更新：转录进度和结果实时同步到UI
+ *
+ * 自动转录逻辑：
+ * - 触发条件：文件存在且有效，没有现有转录，不在转录进行中
+ * - 延迟策略：500ms延迟避免频繁触发，提升用户体验
+ * - 错误恢复：转录失败时提供重试机制
+ * - 后处理：转录完成后自动进行文本增强处理
+ */
 
 // Type for transcription segments from Groq API
 interface TranscriptionSegment {
@@ -97,7 +119,8 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 计算加载状态
   const loading = fileQuery.isLoading || transcriptionQuery.isLoading;
-  const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
+  const error =
+    fileQuery.error?.message || transcriptionQuery.error?.message || null;
   const isTranscribing = transcriptionMutation.isPending;
 
   // 清理音频URL
@@ -137,7 +160,10 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       const freshData = await queryClient.fetchQuery({
         queryKey: transcriptionKeys.forFile(parsedFileId),
         queryFn: async () => {
-          const transcripts = await db.transcripts.where("fileId").equals(parsedFileId).toArray();
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(parsedFileId)
+            .toArray();
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           if (transcript && typeof transcript.id === "number") {
@@ -164,10 +190,16 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       if (segments.length > 0 && newTranscript) {
         const fullText = segments.map((seg: Segment) => seg.text).join("\n");
         try {
-          const processedResult = await postProcessText(fullText, { language: "ja" });
+          const processedResult = await postProcessText(fullText, {
+            language: "ja",
+          });
 
           // 更新字幕段，添加处理后的信息
-          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
+          for (
+            let i = 0;
+            i < segments.length && i < processedResult.segments.length;
+            i++
+          ) {
             const originalSegment = segments[i];
             const processedSegment = processedResult.segments[i];
 
@@ -177,7 +209,9 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
               .where("[transcriptId+start]")
               .equals([newTranscript.id, originalSegment.start])
               .modify((segment) => {
-                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
+                segment.romaji = (
+                  processedSegment as ProcessedTranscriptionSegment
+                )?.romaji;
                 segment.translation = (
                   processedSegment as ProcessedTranscriptionSegment
                 )?.translation;
@@ -185,7 +219,9 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           }
 
           // 刷新查询缓存
-          queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(parsedFileId) });
+          queryClient.invalidateQueries({
+            queryKey: transcriptionKeys.forFile(parsedFileId),
+          });
         } catch (processError) {
           console.error("文本后处理失败:", processError);
         }
@@ -194,30 +230,89 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       console.error("转录失败:", error);
       setTranscriptionProgress(0);
     }
-  }, [file, transcript, transcriptionMutation, segments, queryClient, parsedFileId]);
+  }, [
+    file,
+    transcript,
+    transcriptionMutation,
+    segments,
+    queryClient,
+    parsedFileId,
+  ]);
 
-  // 自动转录逻辑
+  /**
+   * 自动转录执行逻辑
+   *
+   * 触发条件：
+   * 1. shouldAutoTranscribe 标志位为 true（由检测逻辑设置）
+   * 2. 文件存在且有效
+   * 3. 没有现有转录记录
+   * 4. 不在加载状态
+   * 5. 当前没有转录进行中
+   *
+   * 执行流程：
+   * 1. 记录日志用于调试
+   * 2. 重置自动转录标志，避免重复触发
+   * 3. 延迟500ms执行，提升用户体验（避免立即开始的突兀感）
+   * 4. 清理定时器，防止内存泄漏
+   */
   useEffect(() => {
-    if (shouldAutoTranscribe && file && !transcript && !loading && !isTranscribing) {
-      console.log("检测到文件未转录，开始自动转录:", {
+    if (
+      shouldAutoTranscribe &&
+      file &&
+      !transcript &&
+      !loading &&
+      !isTranscribing
+    ) {
+      console.log("🎵 检测到文件未转录，开始自动转录:", {
         fileId: file.id,
         fileName: file.name,
       });
 
+      // 重置标志，防止重复触发
       setShouldAutoTranscribe(false);
 
-      // 延迟开始转录
+      // 延迟执行：提供更好的用户体验
       const timer = setTimeout(() => {
         startTranscription();
-      }, 500);
+      }, 500); // 500ms延迟，让用户有准备时间
 
-      return () => clearTimeout(timer);
+      return () => clearTimeout(timer); // 清理定时器
     }
-  }, [shouldAutoTranscribe, file, transcript, loading, isTranscribing, startTranscription]);
+  }, [
+    shouldAutoTranscribe,
+    file,
+    transcript,
+    loading,
+    isTranscribing,
+    startTranscription,
+  ]);
 
-  // 当数据加载完成后检查是否需要自动转录
+  /**
+   * 自动转录检测逻辑
+   *
+   * 检测时机：
+   * - 页面加载完成后
+   * - 文件数据获取完成后
+   * - 转录状态变化后
+   *
+   * 检测条件：
+   * 1. 文件ID有效
+   * 2. 数据加载完成
+   * 3. 文件存在
+   * 4. 没有转录记录
+   * 5. 转录mutation不在进行中
+   *
+   * 满足所有条件时，设置 shouldAutoTranscribe 标志位
+   */
   useEffect(() => {
-    if (isValidId && !loading && file && !transcript && !transcriptionMutation.isPending) {
+    if (
+      isValidId &&
+      !loading &&
+      file &&
+      !transcript &&
+      !transcriptionMutation.isPending
+    ) {
+      // 所有条件满足，触发自动转录
       setShouldAutoTranscribe(true);
     }
   }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);

@@ -1,8 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import PlayerErrorBoundary from "@/components/player/PlayerErrorBoundary";
-import PlayerPageComponent from "@/components/player/PlayerPage";
+import PlayerErrorBoundary from "@/components/features/player/PlayerErrorBoundary";
+import PlayerPageComponent from "@/components/features/player/PlayerPage";
 
 export default function PlayerPage() {
   const params = useParams();

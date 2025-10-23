@@ -1,10 +1,10 @@
-// State management hooks
+// Re-export all hooks from their new locations
 
-export type { UseAppStateReturn } from "./useAppState";
-export { useAppState } from "./useAppState";
-export type { UseAudioPlayerReturn } from "./useAudioPlayer";
-export { useAudioPlayer } from "./useAudioPlayer";
-// Re-export types for convenience
-export type { UseFilesReturn } from "./useFiles";
-export { useFiles } from "./useFiles";
-export { useTranscriptionManager } from "./useTranscriptionManager";
+export { useTranscription } from "./api/useTranscription";
+export { useTranscriptionManager } from "./api/useTranscriptionManager";
+export type { UseFilesReturn } from "./db/useFiles";
+export { useFiles } from "./db/useFiles";
+export type { UseAppStateReturn } from "./ui/useAppState";
+export { useAppState } from "./ui/useAppState";
+export type { UseAudioPlayerReturn } from "./ui/useAudioPlayer";
+export { useAudioPlayer } from "./ui/useAudioPlayer";

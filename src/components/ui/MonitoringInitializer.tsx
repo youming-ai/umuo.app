@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { setErrorMonitor } from "@/lib/error-handler";
-import { getMonitoringService, initializeMonitoring } from "@/lib/monitoring-service";
+import { setErrorMonitor } from "@/lib/utils/error-handler";
+import { getMonitoringService, initializeMonitoring } from "@/lib/utils/monitoring-service";
 
 export function MonitoringInitializer() {
   useEffect(() => {

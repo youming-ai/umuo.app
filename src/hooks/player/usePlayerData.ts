@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { db } from "@/lib/db";
-import { postProcessText } from "@/lib/text-postprocessor";
-import type { FileRow, Segment, TranscriptRow } from "@/types/database";
+import { postProcessText } from "@/lib/ai/text-postprocessor";
+import { db } from "@/lib/db/db";
+import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 // Type for transcription segments from Groq API
 interface TranscriptionSegment {
