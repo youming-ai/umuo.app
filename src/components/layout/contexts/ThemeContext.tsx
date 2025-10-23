@@ -42,10 +42,7 @@ export function ThemeProvider({
 
     try {
       const stored = localStorage.getItem(storageKey) as Theme;
-      if (
-        stored &&
-        ["dark", "light", "system", "high-contrast"].includes(stored)
-      ) {
+      if (stored && ["dark", "light", "system", "high-contrast"].includes(stored)) {
         setTheme(stored);
       }
     } catch (error) {
@@ -68,9 +65,7 @@ export function ThemeProvider({
 
     if (theme === "system") {
       // 检测系统主题偏好
-      resolved = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+      resolved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       dataThemeValue = resolved;
       root.classList.add(resolved);
     } else if (theme === "high-contrast") {
@@ -95,8 +90,7 @@ export function ThemeProvider({
         dataTheme: dataThemeValue,
         resolved,
         classes: root.className,
-        systemPreference: window.matchMedia("(prefers-color-scheme: dark)")
-          .matches
+        systemPreference: window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
           : "light",
       });
@@ -202,7 +196,5 @@ export function ThemeProvider({
     toggleTheme,
   };
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

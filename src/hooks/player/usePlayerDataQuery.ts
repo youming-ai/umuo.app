@@ -119,8 +119,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 计算加载状态
   const loading = fileQuery.isLoading || transcriptionQuery.isLoading;
-  const error =
-    fileQuery.error?.message || transcriptionQuery.error?.message || null;
+  const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
   const isTranscribing = transcriptionMutation.isPending;
 
   // 清理音频URL
@@ -160,10 +159,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       const freshData = await queryClient.fetchQuery({
         queryKey: transcriptionKeys.forFile(parsedFileId),
         queryFn: async () => {
-          const transcripts = await db.transcripts
-            .where("fileId")
-            .equals(parsedFileId)
-            .toArray();
+          const transcripts = await db.transcripts.where("fileId").equals(parsedFileId).toArray();
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           if (transcript && typeof transcript.id === "number") {
@@ -195,11 +191,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           });
 
           // 更新字幕段，添加处理后的信息
-          for (
-            let i = 0;
-            i < segments.length && i < processedResult.segments.length;
-            i++
-          ) {
+          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
             const originalSegment = segments[i];
             const processedSegment = processedResult.segments[i];
 
@@ -209,9 +201,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
               .where("[transcriptId+start]")
               .equals([newTranscript.id, originalSegment.start])
               .modify((segment) => {
-                segment.romaji = (
-                  processedSegment as ProcessedTranscriptionSegment
-                )?.romaji;
+                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
                 segment.translation = (
                   processedSegment as ProcessedTranscriptionSegment
                 )?.translation;
@@ -230,14 +220,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       console.error("转录失败:", error);
       setTranscriptionProgress(0);
     }
-  }, [
-    file,
-    transcript,
-    transcriptionMutation,
-    segments,
-    queryClient,
-    parsedFileId,
-  ]);
+  }, [file, transcript, transcriptionMutation, segments, queryClient, parsedFileId]);
 
   /**
    * 自动转录执行逻辑
@@ -256,13 +239,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
    * 4. 清理定时器，防止内存泄漏
    */
   useEffect(() => {
-    if (
-      shouldAutoTranscribe &&
-      file &&
-      !transcript &&
-      !loading &&
-      !isTranscribing
-    ) {
+    if (shouldAutoTranscribe && file && !transcript && !loading && !isTranscribing) {
       console.log("🎵 检测到文件未转录，开始自动转录:", {
         fileId: file.id,
         fileName: file.name,
@@ -278,14 +255,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
       return () => clearTimeout(timer); // 清理定时器
     }
-  }, [
-    shouldAutoTranscribe,
-    file,
-    transcript,
-    loading,
-    isTranscribing,
-    startTranscription,
-  ]);
+  }, [shouldAutoTranscribe, file, transcript, loading, isTranscribing, startTranscription]);
 
   /**
    * 自动转录检测逻辑
@@ -305,13 +275,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
    * 满足所有条件时，设置 shouldAutoTranscribe 标志位
    */
   useEffect(() => {
-    if (
-      isValidId &&
-      !loading &&
-      file &&
-      !transcript &&
-      !transcriptionMutation.isPending
-    ) {
+    if (isValidId && !loading && file && !transcript && !transcriptionMutation.isPending) {
       // 所有条件满足，触发自动转录
       setShouldAutoTranscribe(true);
     }

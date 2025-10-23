@@ -1,7 +1,4 @@
-import {
-  SettingsCard,
-  SettingsSection,
-} from "@/components/features/settings/SettingsCard";
+import { SettingsCard, SettingsSection } from "@/components/features/settings/SettingsCard";
 
 export function ProUpgradeSection() {
   return (
@@ -14,9 +11,7 @@ export function ProUpgradeSection() {
             </span>
           </div>
           <h3 className="settings-pro-title">用AI解锁全部功能</h3>
-          <p className="settings-pro-description">
-            加入UMUO Pro, 使用AI增强你的语言学习体验。
-          </p>
+          <p className="settings-pro-description">加入UMUO Pro, 使用AI增强你的语言学习体验。</p>
           <button type="button" className="settings-pro-button">
             升级至UMUO Pro
           </button>

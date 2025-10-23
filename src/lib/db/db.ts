@@ -1,15 +1,6 @@
 import Dexie, { type Table } from "dexie";
-import {
-  createErrorContext,
-  handleError,
-  handleSilently,
-} from "@/lib/utils/error-handler";
-import type {
-  FileChunkRow,
-  FileRow,
-  Segment,
-  TranscriptRow,
-} from "@/types/db/database";
+import { createErrorContext, handleError, handleSilently } from "@/lib/utils/error-handler";
+import type { FileChunkRow, FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 /**
  * ShadowingLearningDB - umuo.app 项目的核心数据库
@@ -87,9 +78,7 @@ class ShadowingLearningDb extends Dexie {
           });
 
           await Promise.all(updatePromises);
-          console.log(
-            `数据库 v3 迁移完成：更新了 ${allSegments.length} 个分段`,
-          );
+          console.log(`数据库 v3 迁移完成：更新了 ${allSegments.length} 个分段`);
         } catch (error) {
           const appError = handleError(error, "db-migration-v3");
           throw appError; // 抛出错误以中止迁移
@@ -186,10 +175,7 @@ export async function updateFile(
 export async function deleteFile(id: number): Promise<void> {
   try {
     // Delete associated transcripts and segments first
-    const transcripts = await db.transcripts
-      .where("fileId")
-      .equals(id)
-      .toArray();
+    const transcripts = await db.transcripts.where("fileId").equals(id).toArray();
     const transcriptIds = transcripts
       .map((t) => t.id)
       .filter((id): id is number => id !== undefined);
@@ -227,9 +213,7 @@ export async function addTranscript(
   }
 }
 
-export async function getTranscript(
-  id: number,
-): Promise<TranscriptRow | undefined> {
+export async function getTranscript(id: number): Promise<TranscriptRow | undefined> {
   try {
     return await db.transcripts.get(id);
   } catch (error) {
@@ -238,9 +222,7 @@ export async function getTranscript(
   }
 }
 
-export async function getTranscriptsByFileId(
-  fileId: number,
-): Promise<TranscriptRow[]> {
+export async function getTranscriptsByFileId(fileId: number): Promise<TranscriptRow[]> {
   try {
     return await db.transcripts.where("fileId").equals(fileId).toArray();
   } catch (error) {
@@ -372,9 +354,7 @@ export async function addSegments(
     }
 
     // 对于大批量数据，使用优化的批量处理器
-    const { createDatabaseBatchProcessor } = await import(
-      "../ai/batch-processor"
-    );
+    const { createDatabaseBatchProcessor } = await import("../ai/batch-processor");
 
     const processor = createDatabaseBatchProcessor<Segment>(
       async (batch) => {
@@ -391,19 +371,14 @@ export async function addSegments(
       processor.setProgressCallback(options.onProgress);
     }
 
-    const result = await processor.process(
-      segmentsWithTimestamps,
-      async (batch) => {
-        await db.segments.bulkAdd(batch);
-        return batch;
-      },
-    );
+    const result = await processor.process(segmentsWithTimestamps, async (batch) => {
+      await db.segments.bulkAdd(batch);
+      return batch;
+    });
 
     if (!result.success) {
       throw handleError(
-        new Error(
-          `批量添加segments失败: ${result.errors.map((e) => e.message).join(", ")}`,
-        ),
+        new Error(`批量添加segments失败: ${result.errors.map((e) => e.message).join(", ")}`),
         "DBUtils.addSegments",
       );
     }
@@ -413,14 +388,9 @@ export async function addSegments(
   }
 }
 
-export async function getSegmentsByTranscriptId(
-  transcriptId: number,
-): Promise<Segment[]> {
+export async function getSegmentsByTranscriptId(transcriptId: number): Promise<Segment[]> {
   try {
-    return await db.segments
-      .where("transcriptId")
-      .equals(transcriptId)
-      .sortBy("start");
+    return await db.segments.where("transcriptId").equals(transcriptId).sortBy("start");
   } catch (error) {
     const appError = handleError(error, "DBUtils.getSegmentsByTranscriptId");
     throw appError;
@@ -507,10 +477,7 @@ export async function getDatabaseStats(): Promise<{
 
     // Count segments that have word timestamps
     const segmentsWithWordTimestamps = await db.segments
-      .filter(
-        (segment) =>
-          !!segment.wordTimestamps && segment.wordTimestamps.length > 0,
-      )
+      .filter((segment) => !!segment.wordTimestamps && segment.wordTimestamps.length > 0)
       .count();
 
     const dbVersion = db.verno;
@@ -550,10 +517,7 @@ export async function backupDatabase(): Promise<{
     // Store backup in localStorage for emergency recovery
     try {
       localStorage.setItem("db_backup", JSON.stringify(backup));
-      localStorage.setItem(
-        "db_backup_timestamp",
-        backup.timestamp.toISOString(),
-      );
+      localStorage.setItem("db_backup_timestamp", backup.timestamp.toISOString());
     } catch (storageError) {
       // localStorage 备份失败不影响主要数据库操作
       handleSilently(storageError, "localstorage-backup");
@@ -590,9 +554,7 @@ export async function restoreFromBackup(
     await clearDatabase();
 
     const totalItems =
-      backupData.files.length +
-      backupData.transcripts.length +
-      backupData.segments.length;
+      backupData.files.length + backupData.transcripts.length + backupData.segments.length;
     const _processedItems = 0;
 
     // 对于小批量数据，直接使用 Promise.all
@@ -606,9 +568,7 @@ export async function restoreFromBackup(
     }
 
     // 对于大批量数据，使用优化的批量处理器
-    const { createDatabaseBatchProcessor } = await import(
-      "../ai/batch-processor"
-    );
+    const { createDatabaseBatchProcessor } = await import("../ai/batch-processor");
 
     const processor = createDatabaseBatchProcessor<FileRow>(
       async (batch) => {
@@ -627,19 +587,14 @@ export async function restoreFromBackup(
 
     // 批量恢复文件
     if (backupData.files.length > 0) {
-      const fileResult = await processor.process(
-        backupData.files,
-        async (batch) => {
-          await db.files.bulkAdd(batch);
-          return batch;
-        },
-      );
+      const fileResult = await processor.process(backupData.files, async (batch) => {
+        await db.files.bulkAdd(batch);
+        return batch;
+      });
 
       if (!fileResult.success) {
         throw handleError(
-          new Error(
-            `恢复文件失败: ${fileResult.errors.map((e) => e.message).join(", ")}`,
-          ),
+          new Error(`恢复文件失败: ${fileResult.errors.map((e) => e.message).join(", ")}`),
           "DBUtils.restoreFromBackup",
         );
       }
@@ -668,9 +623,7 @@ export async function restoreFromBackup(
 
       if (!transcriptResult.success) {
         throw handleError(
-          new Error(
-            `恢复转录失败: ${transcriptResult.errors.map((e) => e.message).join(", ")}`,
-          ),
+          new Error(`恢复转录失败: ${transcriptResult.errors.map((e) => e.message).join(", ")}`),
           "DBUtils.restoreFromBackup",
         );
       }
@@ -689,19 +642,14 @@ export async function restoreFromBackup(
         },
       );
 
-      const segmentResult = await segmentProcessor.process(
-        backupData.segments,
-        async (batch) => {
-          await db.segments.bulkAdd(batch);
-          return batch;
-        },
-      );
+      const segmentResult = await segmentProcessor.process(backupData.segments, async (batch) => {
+        await db.segments.bulkAdd(batch);
+        return batch;
+      });
 
       if (!segmentResult.success) {
         throw handleError(
-          new Error(
-            `恢复片段失败: ${segmentResult.errors.map((e) => e.message).join(", ")}`,
-          ),
+          new Error(`恢复片段失败: ${segmentResult.errors.map((e) => e.message).join(", ")}`),
           "DBUtils.restoreFromBackup",
         );
       }
@@ -723,10 +671,7 @@ export async function getFileWithTranscripts(fileId: number): Promise<{
       throw new Error("File not found");
     }
 
-    const transcripts = await db.transcripts
-      .where("fileId")
-      .equals(fileId)
-      .toArray();
+    const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
     return { file, transcripts };
   } catch (error) {
     handleError(error, "DBUtils.getFileWithTranscripts");
@@ -744,10 +689,7 @@ export async function getTranscriptWithSegments(transcriptId: number): Promise<{
       throw new Error("Transcript not found");
     }
 
-    const segments = await db.segments
-      .where("transcriptId")
-      .equals(transcriptId)
-      .sortBy("start");
+    const segments = await db.segments.where("transcriptId").equals(transcriptId).sortBy("start");
 
     return { transcript, segments };
   } catch (error) {
@@ -757,15 +699,9 @@ export async function getTranscriptWithSegments(transcriptId: number): Promise<{
 }
 
 // Transaction support methods
-export async function withTransaction<T>(
-  operation: (tx: unknown) => Promise<T>,
-): Promise<T> {
+export async function withTransaction<T>(operation: (tx: unknown) => Promise<T>): Promise<T> {
   try {
-    return await db.transaction(
-      "rw",
-      [db.files, db.transcripts, db.segments],
-      operation,
-    );
+    return await db.transaction("rw", [db.files, db.transcripts, db.segments], operation);
   } catch (error) {
     const appError = handleError(error, "DBUtils.withTransaction");
     throw appError;
@@ -774,10 +710,7 @@ export async function withTransaction<T>(
 
 export async function addFileWithTranscript(
   fileData: Omit<FileRow, "id" | "createdAt" | "updatedAt">,
-  transcriptData: Omit<
-    TranscriptRow,
-    "id" | "fileId" | "createdAt" | "updatedAt"
-  >,
+  transcriptData: Omit<TranscriptRow, "id" | "fileId" | "createdAt" | "updatedAt">,
 ): Promise<{ fileId: number; transcriptId: number }> {
   return await withTransaction(async () => {
     const fileId = await addFile(fileData);
@@ -809,15 +742,10 @@ export async function addTranscriptWithSegments(
   });
 }
 
-export async function deleteFileWithDependencies(
-  fileId: number,
-): Promise<void> {
+export async function deleteFileWithDependencies(fileId: number): Promise<void> {
   return await withTransaction(async () => {
     // Delete all segments that belong to transcripts of this file
-    const transcripts = await db.transcripts
-      .where("fileId")
-      .equals(fileId)
-      .toArray();
+    const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
 
     for (const transcript of transcripts) {
       if (transcript.id) {
@@ -833,9 +761,7 @@ export async function deleteFileWithDependencies(
   });
 }
 
-export async function deleteTranscriptWithSegments(
-  transcriptId: number,
-): Promise<void> {
+export async function deleteTranscriptWithSegments(transcriptId: number): Promise<void> {
   return await withTransaction(async () => {
     // Delete all segments for this transcript
     await db.segments.where("transcriptId").equals(transcriptId).delete();
@@ -944,10 +870,7 @@ export async function getStorageStats(): Promise<{
   usagePercentage: number;
 }> {
   try {
-    const [files, chunks] = await Promise.all([
-      db.files.toArray(),
-      db.fileChunks.toArray(),
-    ]);
+    const [files, chunks] = await Promise.all([db.files.toArray(), db.fileChunks.toArray()]);
 
     const chunkedFiles = files.filter((f) => f.isChunked).length;
     const regularFiles = files.filter((f) => !f.isChunked).length;
