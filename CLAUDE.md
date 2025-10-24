@@ -17,8 +17,8 @@ umuo.app is a language learning application focused on shadowing practice with A
 - **Database**: IndexedDB via Dexie (client-side)
 
 ### AI Integration
-- **Primary**: Groq SDK (Whisper-large-v3-turbo for transcription)
-- **Text Processing**: Groq models for text normalization and enhancement
+- **Primary**: AI SDK with Groq provider (Whisper-large-v3-turbo for transcription)
+- **Text Processing**: AI SDK + Groq models for text normalization and enhancement
 - **Processing**: Server-side API routes with client-side state management
 
 ### Data Flow
