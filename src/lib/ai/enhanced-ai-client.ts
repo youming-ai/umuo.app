@@ -3,7 +3,7 @@ import { groq } from "@ai-sdk/groq";
 
 /**
  * Enhanced AI Client - umuo.app 项目的AI音频转录核心模块
- * 使用 AI SDK 替代原生 groq-sdk
+ * 基于 AI SDK 和 Groq provider
  *
  * 功能概述：
  * - 基于 AI SDK 和 Groq API 的音频转录服务，支持 Whisper 模型

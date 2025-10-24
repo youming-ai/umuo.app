@@ -29,9 +29,7 @@ function isFileLike(obj: unknown): obj is File {
 }
 
 const transcribeFormSchema = z.object({
-  audio: z
-    .any()
-    .refine((file) => isFileLike(file), { message: "Audio file is required" }),
+  audio: z.any().refine((file) => isFileLike(file), { message: "Audio file is required" }),
   meta: z
     .object({
       fileId: z.string().optional(),
@@ -98,10 +96,7 @@ function validateFormData(formData: FormData) {
           message: "Invalid metadata payload",
           details: {
             reason: "INVALID_META_JSON",
-            error:
-              metaError instanceof Error
-                ? metaError.message
-                : String(metaError),
+            error: metaError instanceof Error ? metaError.message : String(metaError),
           },
           statusCode: 400,
         }),
@@ -144,9 +139,7 @@ function validateFormData(formData: FormData) {
 async function processTranscription(
   uploadedFile: File,
   language: string,
-): Promise<
-  { success: true; data: any } | { success: false; error: NextResponse }
-> {
+): Promise<{ success: true; data: any } | { success: false; error: NextResponse }> {
   console.log("开始处理转录请求 (AI SDK):", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
@@ -220,9 +213,7 @@ async function processTranscription(
           ? transcriptionError.message
           : String(transcriptionError),
       errorType:
-        transcriptionError instanceof Error
-          ? transcriptionError.constructor.name
-          : "Unknown",
+        transcriptionError instanceof Error ? transcriptionError.constructor.name : "Unknown",
       timestamp: new Date().toISOString(),
     });
 
@@ -294,10 +285,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process transcription
-    const transcriptionResult = await processTranscription(
-      formValidation.data.audio,
-      language,
-    );
+    const transcriptionResult = await processTranscription(formValidation.data.audio, language);
     if (!transcriptionResult.success) {
       return transcriptionResult.error;
     }

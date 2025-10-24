@@ -14,7 +14,6 @@ const nextConfig = {
       "@tanstack/react-query",
     ],
   },
-  serverExternalPackages: ["groq-sdk"],
 
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
@@ -23,7 +22,6 @@ const nextConfig = {
         fs: false,
         net: false,
         tls: false,
-        "groq-sdk": false,
       };
     }
 

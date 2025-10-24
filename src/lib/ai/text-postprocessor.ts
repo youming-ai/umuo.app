@@ -82,9 +82,7 @@ ${inputText}`;
     }
   } catch (error) {
     console.error("文本后处理失败:", error);
-    throw new Error(
-      `文本处理失败: ${error instanceof Error ? error.message : "未知错误"}`,
-    );
+    throw new Error(`文本处理失败: ${error instanceof Error ? error.message : "未知错误"}`);
   }
 }
 
