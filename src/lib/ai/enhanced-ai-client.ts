@@ -1,10 +1,12 @@
-import Groq from "groq-sdk";
+import { experimental_transcribe as transcribe } from "ai";
+import { groq } from "@ai-sdk/groq";
 
 /**
- * Enhanced Groq Client - umuo.app 项目的AI音频转录核心模块
+ * Enhanced AI Client - umuo.app 项目的AI音频转录核心模块
+ * 使用 AI SDK 替代原生 groq-sdk
  *
  * 功能概述：
- * - 基于 Groq API 的音频转录服务，支持 Whisper 模型
+ * - 基于 AI SDK 和 Groq API 的音频转录服务，支持 Whisper 模型
  * - 智能音频预处理和优化，提升转录准确率
  * - 完善的错误处理和重试机制
  * - 支持并发控制和请求限流
@@ -16,13 +18,13 @@ import Groq from "groq-sdk";
  * 3. 并发控制：防止 API 过载和配额超限
  * 4. 错误恢复：智能重试和降级策略
  *
- * @module EnhancedGroqClient
+ * @module EnhancedAIClient
  */
 
 // ===================================================================
 // 错误类型定义 - 精确的错误分类和处理
 // ===================================================================
-export class EnhancedGroqError extends Error {
+export class EnhancedAIError extends Error {
   constructor(
     message: string,
     public code: string,
@@ -30,18 +32,18 @@ export class EnhancedGroqError extends Error {
     public details?: unknown,
   ) {
     super(message);
-    this.name = "EnhancedGroqError";
+    this.name = "EnhancedAIError";
   }
 }
 
-export class AuthenticationError extends EnhancedGroqError {
+export class AuthenticationError extends EnhancedAIError {
   constructor(message: string) {
     super(message, "AUTHENTICATION_ERROR", 401);
     this.name = "AuthenticationError";
   }
 }
 
-export class RateLimitError extends EnhancedGroqError {
+export class RateLimitError extends EnhancedAIError {
   constructor(
     message: string,
     public retryAfter: number = 1000,
@@ -51,21 +53,21 @@ export class RateLimitError extends EnhancedGroqError {
   }
 }
 
-export class ValidationError extends EnhancedGroqError {
+export class ValidationError extends EnhancedAIError {
   constructor(message: string) {
     super(message, "VALIDATION_ERROR", 400);
     this.name = "ValidationError";
   }
 }
 
-export class QuotaExceededError extends EnhancedGroqError {
+export class QuotaExceededError extends EnhancedAIError {
   constructor(message: string) {
     super(message, "QUOTA_EXCEEDED", 402);
     this.name = "QuotaExceededError";
   }
 }
 
-export class TimeoutError extends EnhancedGroqError {
+export class TimeoutError extends EnhancedAIError {
   constructor(message: string) {
     super(message, "TIMEOUT_ERROR", 408);
     this.name = "TimeoutError";
@@ -108,11 +110,9 @@ export interface TranscriptionResponse {
 }
 
 // ===================================================================
-// 增强的Groq客户端类 - 核心音频转录处理
+// 增强的AI客户端类 - 核心音频转录处理
 // ===================================================================
-export class EnhancedGroqClient {
-  private client: Groq;
-
+export class EnhancedAIClient {
   /** 使用统计 - 用于监控和调试 */
   private usageStats = {
     requestCount: 0, // 总请求数
@@ -130,33 +130,6 @@ export class EnhancedGroqClient {
         "GROQ_API_KEY 环境变量未设置。请在 .env.local 文件中设置 GROQ_API_KEY=your_api_key_here",
       );
     }
-
-    this.client = new Groq({
-      apiKey,
-      timeout: 180000, // 3分钟超时 - 减少以获得更快反馈
-      maxRetries: 2, // 减少重试次数以加快响应
-      // 添加性能优化配置
-      fetch: async (url, options) => {
-        // 添加连接keepalive和优化headers
-        const optimizedOptions = {
-          ...options,
-          headers: {
-            ...options?.headers,
-            Connection: "keep-alive",
-            Accept: "application/json, text/plain, */*",
-            "Accept-Encoding": "gzip, deflate, br",
-          },
-        };
-
-        try {
-          const response = await fetch(url, optimizedOptions);
-          return response;
-        } catch (error) {
-          console.error("Groq API fetch error:", error);
-          throw error;
-        }
-      },
-    });
   }
 
   /**
@@ -194,7 +167,8 @@ export class EnhancedGroqClient {
 
     try {
       // 使用Web Audio API进行音频优化
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
@@ -220,7 +194,10 @@ export class EnhancedGroqClient {
       }
 
       // 转换回Blob
-      const optimizedBlob = await this.audioBufferToBlob(optimizedBuffer, "audio/wav");
+      const optimizedBlob = await this.audioBufferToBlob(
+        optimizedBuffer,
+        "audio/wav",
+      );
       const optimizedFile = new File(
         [optimizedBlob],
         file.name.replace(/\.[^/.]+$/, "_optimized.wav"),
@@ -246,7 +223,10 @@ export class EnhancedGroqClient {
   /**
    * 将AudioBuffer转换为Blob
    */
-  private async audioBufferToBlob(audioBuffer: AudioBuffer, mimeType: string): Promise<Blob> {
+  private async audioBufferToBlob(
+    audioBuffer: AudioBuffer,
+    mimeType: string,
+  ): Promise<Blob> {
     const length = audioBuffer.length;
     const numberOfChannels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
@@ -280,7 +260,10 @@ export class EnhancedGroqClient {
     let offset = 44;
     for (let i = 0; i < length; i++) {
       for (let channel = 0; channel < numberOfChannels; channel++) {
-        const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
+        const sample = Math.max(
+          -1,
+          Math.min(1, audioBuffer.getChannelData(channel)[i]),
+        );
         view.setInt16(offset, sample * 0x7fff, true);
         offset += 2;
       }
@@ -306,12 +289,15 @@ export class EnhancedGroqClient {
   }
 
   /**
-   * 音频转录 - 使用原始Groq SDK但增强错误处理
+   * 音频转录 - 使用 AI SDK 替代原生 Groq SDK
    */
-  async transcribe(file: File, options: TranscriptionOptions = {}): Promise<TranscriptionResponse> {
+  async transcribe(
+    file: File,
+    options: TranscriptionOptions = {},
+  ): Promise<TranscriptionResponse> {
     const startTime = Date.now();
 
-    console.log("开始增强音频转录:", {
+    console.log("开始增强音频转录 (AI SDK):", {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
@@ -340,36 +326,56 @@ export class EnhancedGroqClient {
       // 文件大小验证 - 使用优化后的文件大小
       const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
       if (optimizedFile.size > MAX_FILE_SIZE) {
-        throw new ValidationError(`优化后文件大小仍然超过限制 (${MAX_FILE_SIZE / 1024 / 1024}MB)`);
+        throw new ValidationError(
+          `优化后文件大小仍然超过限制 (${MAX_FILE_SIZE / 1024 / 1024}MB)`,
+        );
       }
 
-      // 优化请求参数以获得更快响应
-      const optimizedOptions = {
-        model: options.model || "whisper-large-v3-turbo",
-        language: options.language || "ja", // 默认日语
-        response_format: options.responseFormat || "verbose_json",
-        temperature: options.temperature || 0, // 使用0温度以获得更确定性结果
-        prompt: options.prompt || `这是一段日语音频，请准确转录其中的日语内容。`, // 优化的提示词
-      };
+      // 将 File 转换为 Uint8Array 以适配 AI SDK
+      const arrayBuffer = await optimizedFile.arrayBuffer();
+      const audioData = new Uint8Array(arrayBuffer);
 
-      console.log("开始发送转录请求到Groq API:", {
+      // 优化请求参数以获得更快响应
+      console.log("开始发送转录请求到 AI SDK:", {
         originalSize: file.size,
         optimizedSize: optimizedFile.size,
         compressionRatio: `${(((file.size - optimizedFile.size) / file.size) * 100).toFixed(1)}%`,
-        ...optimizedOptions,
+        language: options.language || "ja",
+        model: options.model || "whisper-large-v3-turbo",
       });
 
-      // 执行转录 - 使用优化后的文件和参数
-      const transcription = await this.client.audio.transcriptions.create({
-        file: optimizedFile, // 使用优化后的文件
-        ...optimizedOptions, // 使用优化的参数
+      // 执行转录 - 使用 AI SDK 的 transcribe 函数
+      const transcript = await transcribe({
+        model: groq.transcription(options.model || "whisper-large-v3-turbo"),
+        audio: audioData,
+        providerOptions: {
+          groq: {
+            language: options.language || "ja",
+            temperature: options.temperature || 0,
+            response_format: options.responseFormat || "verbose_json",
+            prompt:
+              options.prompt || `这是一段日语音频，请准确转录其中的日语内容。`,
+          },
+        },
       });
 
       const result = {
-        text: transcription.text,
-        language: (transcription as any).language || options.language || "ja",
-        duration: (transcription as any).duration,
-        segments: (transcription as any).segments,
+        text: transcript.text,
+        language: transcript.language || options.language || "ja",
+        duration: transcript.durationInSeconds,
+        segments:
+          transcript.segments?.map((segment: any) => ({
+            id: segment.id || 0,
+            seek: segment.seek || 0,
+            start: segment.start,
+            end: segment.end,
+            text: segment.text,
+            tokens: segment.tokens || [],
+            temperature: segment.temperature || 0,
+            avg_logprob: segment.avg_logprob || 0,
+            compression_ratio: segment.compression_ratio || 0,
+            no_speech_prob: segment.no_speech_prob || 0,
+          })) || [],
       };
 
       // 存储到缓存
@@ -384,12 +390,12 @@ export class EnhancedGroqClient {
       }
 
       const transcriptionTime = Date.now() - startTime;
-      console.log("增强转录成功完成:", {
+      console.log("增强转录成功完成 (AI SDK):", {
         fileName: file.name,
-        textLength: transcription.text?.length || 0,
-        duration: (transcription as any).duration,
-        language: (transcription as any).language,
-        segmentsCount: (transcription as any).segments?.length || 0,
+        textLength: transcript.text?.length || 0,
+        duration: transcript.durationInSeconds,
+        language: transcript.language,
+        segmentsCount: transcript.segments?.length || 0,
         transcriptionTime: `${transcriptionTime}ms`,
         fromCache: false,
       });
@@ -397,7 +403,7 @@ export class EnhancedGroqClient {
       return result;
     } catch (error) {
       // 详细错误日志
-      console.error("增强转录失败详情:", {
+      console.error("增强转录失败详情 (AI SDK):", {
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
@@ -408,7 +414,8 @@ export class EnhancedGroqClient {
 
       // 更新错误统计
       this.usageStats.errorCount++;
-      this.usageStats.lastError = error instanceof Error ? error : new Error(String(error));
+      this.usageStats.lastError =
+        error instanceof Error ? error : new Error(String(error));
 
       // 增强的错误处理
       return this.handleError(error, file);
@@ -423,8 +430,13 @@ export class EnhancedGroqClient {
       const errorMessage = error.message.toLowerCase();
 
       // Groq API特定错误
-      if (errorMessage.includes("401") || errorMessage.includes("unauthorized")) {
-        throw new AuthenticationError("GROQ API 密钥无效或已过期，请检查 API 密钥配置");
+      if (
+        errorMessage.includes("401") ||
+        errorMessage.includes("unauthorized")
+      ) {
+        throw new AuthenticationError(
+          "GROQ API 密钥无效或已过期，请检查 API 密钥配置",
+        );
       }
       if (errorMessage.includes("429") || errorMessage.includes("rate limit")) {
         throw new RateLimitError("GROQ API 速率限制已超出，请稍后重试", 1000);
@@ -432,33 +444,36 @@ export class EnhancedGroqClient {
       if (errorMessage.includes("timeout")) {
         throw new TimeoutError("GROQ API 请求超时，请检查网络连接");
       }
-      if (errorMessage.includes("invalid_request_error") || errorMessage.includes("invalid")) {
+      if (
+        errorMessage.includes("invalid_request_error") ||
+        errorMessage.includes("invalid")
+      ) {
         throw new ValidationError("音频文件格式或参数无效");
       }
-      if (errorMessage.includes("insufficient") || errorMessage.includes("quota")) {
+      if (
+        errorMessage.includes("insufficient") ||
+        errorMessage.includes("quota")
+      ) {
         throw new QuotaExceededError("GROQ API 配额已用完，请检查账户余额");
       }
 
-      // Groq SDK错误处理
-      if (error.constructor.name === "GroqError") {
-        const groqError = error as any;
-        if (groqError.status === 401) {
-          throw new AuthenticationError("API密钥无效");
-        }
-        if (groqError.status === 429) {
-          throw new RateLimitError("请求过于频繁，请稍后重试");
-        }
-        if (groqError.status === 400) {
-          throw new ValidationError("请求参数无效");
-        }
-        if (groqError.status === 402) {
-          throw new QuotaExceededError("账户配额不足");
-        }
+      // AI SDK 错误处理
+      if (error.constructor.name === "AI_InvalidAPIKeyError") {
+        throw new AuthenticationError("API密钥无效");
+      }
+      if (error.constructor.name === "AI_RateLimitError") {
+        throw new RateLimitError("请求过于频繁，请稍后重试");
+      }
+      if (error.constructor.name === "AI_InvalidRequestError") {
+        throw new ValidationError("请求参数无效");
+      }
+      if (error.constructor.name === "AI_InsufficientCreditsError") {
+        throw new QuotaExceededError("账户配额不足");
       }
     }
 
     // 默认错误
-    throw new EnhancedGroqError(
+    throw new EnhancedAIError(
       `转录失败: ${error instanceof Error ? error.message : String(error)}`,
       "TRANSCRIPTION_FAILED",
       500,
@@ -513,13 +528,28 @@ export class EnhancedGroqClient {
     message: string;
   }> {
     try {
-      // 尝试列出模型（这是轻量级操作）
-      await this.client.models.list();
-      return { status: "healthy", message: "Groq服务正常" };
+      // 简单的健康检查 - 尝试生成一个简单的转录请求
+      // 注意：这可能会产生少量费用，仅用于健康检查
+      const testData = new Uint8Array([0, 0]); // 空音频数据
+
+      await transcribe({
+        model: groq.transcription("whisper-large-v3-turbo"),
+        audio: testData,
+        providerOptions: {
+          groq: {
+            language: "en",
+          },
+        },
+      });
+
+      return { status: "healthy", message: "AI SDK 服务正常" };
     } catch (error) {
       if (error instanceof Error) {
         const errorMessage = error.message.toLowerCase();
-        if (errorMessage.includes("401") || errorMessage.includes("unauthorized")) {
+        if (
+          errorMessage.includes("401") ||
+          errorMessage.includes("unauthorized")
+        ) {
           return { status: "healthy", message: "API可达但认证失败" };
         }
       }
@@ -532,17 +562,17 @@ export class EnhancedGroqClient {
 }
 
 // 懒加载单例实例
-let enhancedGroqClient: EnhancedGroqClient | null = null;
+let enhancedAIClient: EnhancedAIClient | null = null;
 
-function getClient(): EnhancedGroqClient {
-  if (!enhancedGroqClient) {
-    enhancedGroqClient = new EnhancedGroqClient();
+function getClient(): EnhancedAIClient {
+  if (!enhancedAIClient) {
+    enhancedAIClient = new EnhancedAIClient();
   }
-  return enhancedGroqClient;
+  return enhancedAIClient;
 }
 
 // 便捷函数
-export async function transcribeWithEnhancedGroq(
+export async function transcribeWithEnhancedAI(
   file: File,
   options?: TranscriptionOptions,
 ): Promise<TranscriptionResponse> {
@@ -556,14 +586,14 @@ export async function transcribeWithEnhancedGroq(
 }
 
 // 错误处理辅助函数
-export function handleEnhancedGroqError(error: unknown): {
+export function handleEnhancedAIError(error: unknown): {
   code: string;
   message: string;
   statusCode: number;
   details?: unknown;
   suggestion: string;
 } {
-  if (error instanceof EnhancedGroqError) {
+  if (error instanceof EnhancedAIError) {
     return {
       code: error.code,
       message: error.message,

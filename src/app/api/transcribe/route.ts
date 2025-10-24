@@ -1,7 +1,7 @@
-import Groq from "groq-sdk";
+import { experimental_transcribe as transcribe } from "ai";
+import { groq } from "@ai-sdk/groq";
 import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { TranscriptionResponse } from "@/lib/ai/enhanced-groq-client";
 import { apiError, apiSuccess } from "@/lib/utils/api-response";
 
 // Zod schemas for validation
@@ -29,7 +29,9 @@ function isFileLike(obj: unknown): obj is File {
 }
 
 const transcribeFormSchema = z.object({
-  audio: z.any().refine((file) => isFileLike(file), { message: "Audio file is required" }),
+  audio: z
+    .any()
+    .refine((file) => isFileLike(file), { message: "Audio file is required" }),
   meta: z
     .object({
       fileId: z.string().optional(),
@@ -96,7 +98,10 @@ function validateFormData(formData: FormData) {
           message: "Invalid metadata payload",
           details: {
             reason: "INVALID_META_JSON",
-            error: metaError instanceof Error ? metaError.message : String(metaError),
+            error:
+              metaError instanceof Error
+                ? metaError.message
+                : String(metaError),
           },
           statusCode: 400,
         }),
@@ -135,14 +140,14 @@ function validateFormData(formData: FormData) {
   return { success: true as const, data: validatedForm.data };
 }
 
-// Helper function to process transcription using Groq SDK
+// Helper function to process transcription using AI SDK with Groq provider
 async function processTranscription(
   uploadedFile: File,
   language: string,
 ): Promise<
-  { success: true; data: TranscriptionResponse } | { success: false; error: NextResponse }
+  { success: true; data: any } | { success: false; error: NextResponse }
 > {
-  console.log("开始处理转录请求:", {
+  console.log("开始处理转录请求 (AI SDK):", {
     fileName: uploadedFile.name,
     fileSize: uploadedFile.size,
     fileType: uploadedFile.type,
@@ -166,35 +171,58 @@ async function processTranscription(
     };
   }
 
-  const groq = new Groq({ apiKey });
-
   try {
-    const transcription = (await groq.audio.transcriptions.create({
-      file: uploadedFile,
-      model: "whisper-large-v3-turbo",
-      language,
-      response_format: "verbose_json",
-      temperature: 0,
-    })) as TranscriptionResponse;
+    // 将 File 转换为 Uint8Array 以适配 AI SDK
+    const arrayBuffer = await uploadedFile.arrayBuffer();
+    const audioData = new Uint8Array(arrayBuffer);
 
-    console.log("转录成功完成:", {
-      fileName: uploadedFile.name,
-      textLength: transcription.text?.length || 0,
-      segmentsCount: transcription.segments?.length || 0,
-      duration: transcription.duration,
-      language: transcription.language,
+    // 使用 AI SDK 的 transcribe 函数
+    const transcript = await transcribe({
+      model: groq.transcription("whisper-large-v3-turbo"),
+      audio: audioData,
+      providerOptions: {
+        groq: {
+          language,
+          temperature: 0,
+          response_format: "verbose_json",
+        },
+      },
     });
 
-    return { success: true as const, data: transcription };
+    console.log("转录成功完成 (AI SDK):", {
+      fileName: uploadedFile.name,
+      textLength: transcript.text?.length || 0,
+      segmentsCount: transcript.segments?.length || 0,
+      durationInSeconds: transcript.durationInSeconds,
+      language: transcript.language,
+    });
+
+    // 将 AI SDK 的转录结果转换为兼容格式
+    const transcriptionResponse = {
+      text: transcript.text,
+      language: transcript.language || language,
+      duration: transcript.durationInSeconds,
+      segments:
+        transcript.segments?.map((segment: any) => ({
+          start: segment.start,
+          end: segment.end,
+          text: segment.text,
+          wordTimestamps: segment.words || [],
+        })) || [],
+    };
+
+    return { success: true as const, data: transcriptionResponse };
   } catch (transcriptionError) {
-    console.error("转录处理失败:", {
+    console.error("转录处理失败 (AI SDK):", {
       fileName: uploadedFile.name,
       error:
         transcriptionError instanceof Error
           ? transcriptionError.message
           : String(transcriptionError),
       errorType:
-        transcriptionError instanceof Error ? transcriptionError.constructor.name : "Unknown",
+        transcriptionError instanceof Error
+          ? transcriptionError.constructor.name
+          : "Unknown",
       timestamp: new Date().toISOString(),
     });
 
@@ -266,7 +294,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Process transcription
-    const transcriptionResult = await processTranscription(formValidation.data.audio, language);
+    const transcriptionResult = await processTranscription(
+      formValidation.data.audio,
+      language,
+    );
     if (!transcriptionResult.success) {
       return transcriptionResult.error;
     }

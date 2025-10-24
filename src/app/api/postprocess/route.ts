@@ -1,4 +1,5 @@
-import Groq from "groq-sdk";
+import { generateText } from "ai";
+import { groq } from "@ai-sdk/groq";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiFromError, apiSuccess } from "@/lib/utils/api-response";
@@ -57,7 +58,10 @@ const postProcessSchema = z.object({
 function validateRequestData(body: unknown) {
   const validation = postProcessSchema.safeParse(body);
   if (!validation.success) {
-    const error = validationError("Invalid request data", validation.error.format());
+    const error = validationError(
+      "Invalid request data",
+      validation.error.format(),
+    );
     return { isValid: false, error };
   }
   return { isValid: true, data: validation.data };
@@ -66,7 +70,9 @@ function validateRequestData(body: unknown) {
 /**
  * 验证segments数据
  */
-function validateSegments(segments: Array<{ text: string; start: number; end: number }>) {
+function validateSegments(
+  segments: Array<{ text: string; start: number; end: number }>,
+) {
   if (!segments || segments.length === 0) {
     return {
       isValid: false,
@@ -92,7 +98,11 @@ function validateSegments(segments: Array<{ text: string; start: number; end: nu
   // 验证每个segment的必需字段
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (!segment.text || typeof segment.start !== "number" || typeof segment.end !== "number") {
+    if (
+      !segment.text ||
+      typeof segment.start !== "number" ||
+      typeof segment.end !== "number"
+    ) {
       return {
         isValid: false,
         error: {
@@ -160,27 +170,7 @@ const defaultOptions = {
   enableFurigana: true,
 };
 
-// 性能优化的Groq客户端配置
-let groqChatClient: Groq | null = null;
-
-function getGroqChatClient(): Groq {
-  if (!groqChatClient) {
-    groqChatClient = new Groq({
-      apiKey: process.env.GROQ_API_KEY || "",
-      // 性能优化配置
-      timeout: 10000, // 10秒超时，比原来的15秒更激进
-      maxRetries: 1, // 减少重试次数，加快失败响应
-      // 在生产环境中可以考虑添加HTTP Agent配置
-      // httpAgent: new https.Agent({
-      //   keepAlive: true,
-      //   maxSockets: 5,
-      //   maxFreeSockets: 2,
-      //   timeout: 10000,
-      // })
-    });
-  }
-  return groqChatClient;
-}
+// AI SDK 使用内置的优化配置，无需手动管理客户端
 
 function buildPrompt(
   text: string,
@@ -265,52 +255,20 @@ async function postProcessSegmentWithGroq(
       options.enableFurigana,
     );
 
-    const client = getGroqChatClient();
-
-    // 使用流式响应优化性能
-    const completion = await client.chat.completions.create({
-      model: GROQ_MODEL,
+    // 使用 AI SDK 的 generateText 函数
+    const { text } = await generateText({
+      model: groq(GROQ_MODEL),
       temperature: 0.3,
-      stream: true, // 启用流式响应
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional language teacher specializing in Japanese language learning and shadowing practice. Provide accurate, educational responses that help learners understand and practice the language. Respond with valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      system:
+        "You are a professional language teacher specializing in Japanese language learning and shadowing practice. Provide accurate, educational responses that help learners understand and practice the language. Respond with valid JSON.",
+      prompt,
+      maxRetries: 1,
     });
 
-    let responseText = "";
-    // 优化超时时间，与客户端配置保持一致
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Segment processing timeout")), 10000);
-    });
-
-    // 处理流式响应
-    const streamProcessPromise = (async () => {
-      for await (const chunk of completion) {
-        const delta = chunk.choices?.[0]?.delta?.content;
-        if (delta) {
-          responseText += delta;
-        }
-      }
-      return responseText;
-    })();
-
-    // 使用Promise.race防止超时
-    const finalResponseText = (await Promise.race([
-      streamProcessPromise,
-      timeoutPromise,
-    ])) as string;
-    const parsed = parseGroqResponse(finalResponseText);
+    const parsed = parseGroqResponse(text);
 
     const processingTime = Date.now() - startTime;
-    console.log(`单个segment流式处理完成，耗时: ${processingTime}ms`);
+    console.log(`单个segment AI SDK处理完成，耗时: ${processingTime}ms`);
 
     return {
       originalText: segment.text,
@@ -323,14 +281,17 @@ async function postProcessSegmentWithGroq(
     };
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`单个segment流式处理失败，耗时: ${processingTime}ms，错误:`, error);
+    console.error(
+      `单个segment AI SDK处理失败，耗时: ${processingTime}ms，错误:`,
+      error,
+    );
 
     // 抛出错误让上层处理fallback
     throw error;
   }
 }
 
-// 批量处理短文本以减少API调用次数，使用流式响应
+// 批量处理短文本以减少API调用次数，使用 AI SDK
 async function postProcessShortTextsBatch(
   shortTextSegments: Array<{ text: string; start: number; end: number }>,
   _sourceLanguage: string,
@@ -342,7 +303,7 @@ async function postProcessShortTextsBatch(
 ) {
   if (shortTextSegments.length === 0) return [];
 
-  console.log(`流式批量处理 ${shortTextSegments.length} 个短文本segments`);
+  console.log(`AI SDK批量处理 ${shortTextSegments.length} 个短文本segments`);
   const startTime = Date.now();
 
   try {
@@ -370,51 +331,18 @@ Return format (JSON):
   ]
 }`;
 
-    const client = getGroqChatClient();
-
-    // 使用流式响应优化批量处理
-    const completion = await client.chat.completions.create({
-      model: GROQ_MODEL,
+    // 使用 AI SDK 的 generateText 函数进行批量处理
+    const { text } = await generateText({
+      model: groq(GROQ_MODEL),
       temperature: 0.3,
-      stream: true, // 启用流式响应
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional language teacher specializing in Japanese language learning. Process multiple text segments efficiently. Respond with valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      system:
+        "You are a professional language teacher specializing in Japanese language learning. Process multiple text segments efficiently. Respond with valid JSON.",
+      prompt,
+      maxRetries: 1,
     });
 
-    let responseText = "";
-
-    // 处理流式响应 - 优化超时时间
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Batch processing timeout")), 15000); // 批量处理15秒超时
-    });
-
-    const streamProcessPromise = (async () => {
-      for await (const chunk of completion) {
-        const delta = chunk.choices?.[0]?.delta?.content;
-        if (delta) {
-          responseText += delta;
-        }
-      }
-      return responseText;
-    })();
-
-    // 使用Promise.race防止超时
-    const finalResponseText = (await Promise.race([
-      streamProcessPromise,
-      timeoutPromise,
-    ])) as string;
-
-    // 清理流式响应中的markdown代码块标记
-    let cleanedText = finalResponseText.trim();
+    // 清理响应中的markdown代码块标记
+    let cleanedText = text.trim();
     if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7);
     if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3);
     if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3);
@@ -430,13 +358,16 @@ Return format (JSON):
     // 将批量处理结果映射回各个segment
     if (response.segments && Array.isArray(response.segments)) {
       const processingTime = Date.now() - startTime;
-      console.log(`批量流式处理完成，耗时: ${processingTime}ms`);
+      console.log(`批量AI SDK处理完成，耗时: ${processingTime}ms`);
 
       return shortTextSegments.map((originalSegment, index) => {
-        const processedSegment = response.segments.find((s: ProcessedSegment) => s.id === index);
+        const processedSegment = response.segments.find(
+          (s: ProcessedSegment) => s.id === index,
+        );
         return {
           originalText: originalSegment.text,
-          normalizedText: processedSegment?.normalizedText || originalSegment.text,
+          normalizedText:
+            processedSegment?.normalizedText || originalSegment.text,
           translation: processedSegment?.translation || "",
           annotations: processedSegment?.annotations || [],
           furigana: processedSegment?.furigana || "",
@@ -448,7 +379,9 @@ Return format (JSON):
 
     // Fallback: 如果解析失败，返回原始文本
     const processingTime = Date.now() - startTime;
-    console.warn(`批量流式处理解析失败，使用fallback，耗时: ${processingTime}ms`);
+    console.warn(
+      `批量AI SDK处理解析失败，使用fallback，耗时: ${processingTime}ms`,
+    );
 
     return shortTextSegments.map((segment) => ({
       originalText: segment.text,
@@ -461,7 +394,10 @@ Return format (JSON):
     }));
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`批量流式处理失败，耗时: ${processingTime}ms，错误:`, error);
+    console.error(
+      `批量AI SDK处理失败，耗时: ${processingTime}ms，错误:`,
+      error,
+    );
 
     // 返回fallback结果
     return shortTextSegments.map((segment) => ({
@@ -509,14 +445,22 @@ async function postProcessSegmentsWithGroq(
     BATCH_SIZE = 6;
   }
 
-  console.log(`开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`);
+  console.log(
+    `开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`,
+  );
   const startTime = Date.now();
 
   // 分离短文本和长文本
-  const shortTextSegments = segments.filter((seg) => seg.text.length <= SHORT_TEXT_THRESHOLD);
-  const longTextSegments = segments.filter((seg) => seg.text.length > SHORT_TEXT_THRESHOLD);
+  const shortTextSegments = segments.filter(
+    (seg) => seg.text.length <= SHORT_TEXT_THRESHOLD,
+  );
+  const longTextSegments = segments.filter(
+    (seg) => seg.text.length > SHORT_TEXT_THRESHOLD,
+  );
 
-  console.log(`短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`);
+  console.log(
+    `短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`,
+  );
 
   const allResults: PostProcessResult[] = [];
 
@@ -546,11 +490,20 @@ async function postProcessSegmentsWithGroq(
 
       const batchPromises = batch.map(async (segment, segmentIndex) => {
         try {
-          const processed = await postProcessSegmentWithGroq(segment, sourceLanguage, finalOptions);
-          console.log(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`);
+          const processed = await postProcessSegmentWithGroq(
+            segment,
+            sourceLanguage,
+            finalOptions,
+          );
+          console.log(
+            `长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`,
+          );
           return processed;
         } catch (error) {
-          console.error(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`, error);
+          console.error(
+            `长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`,
+            error,
+          );
           return {
             originalText: segment.text,
             normalizedText: segment.text,
@@ -632,7 +585,13 @@ export async function POST(request: NextRequest) {
         statusCode: 400,
       });
     }
-    const { segments, language, targetLanguage, enableAnnotations, enableFurigana } = data;
+    const {
+      segments,
+      language,
+      targetLanguage,
+      enableAnnotations,
+      enableFurigana,
+    } = data;
 
     // 验证输入数据
     const segmentValidation = validateSegments(segments);
@@ -646,11 +605,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const processedSegments = await postProcessSegmentsWithGroq(segments, language, {
-      targetLanguage,
-      enableAnnotations,
-      enableFurigana,
-    });
+    const processedSegments = await postProcessSegmentsWithGroq(
+      segments,
+      language,
+      {
+        targetLanguage,
+        enableAnnotations,
+        enableFurigana,
+      },
+    );
 
     // Return processed segments with original metadata preserved
     const finalSegments = processedSegments.map((processedSegment, index) => ({

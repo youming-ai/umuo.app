@@ -1,4 +1,5 @@
-import Groq from "groq-sdk";
+import { generateText } from "ai";
+import { groq } from "@ai-sdk/groq";
 
 interface PostProcessOptions {
   language?: string;
@@ -18,28 +19,14 @@ interface ProcessedText {
   }>;
 }
 
-// 懒加载Groq客户端
-let groqClient: Groq | null = null;
-
-function getGroqClient(): Groq {
-  if (!groqClient) {
-    const apiKey = process.env.GROQ_API_KEY || "";
-    if (!apiKey) {
-      throw new Error(
-        "GROQ_API_KEY 环境变量未设置。请在 .env.local 文件中设置 GROQ_API_KEY=your_api_key_here",
-      );
-    }
-    groqClient = new Groq({ apiKey });
-  }
-  return groqClient;
-}
+// AI SDK 使用内置的优化配置，无需手动管理客户端
 
 /**
  * 使用 openai/gpt-oss-20b 模型对文本进行后处理
  * 添加 romaji 和中文翻译
  */
 export async function postProcessText(
-  text: string,
+  inputText: string,
   _options: PostProcessOptions = {},
 ): Promise<ProcessedText> {
   // 检查是否在浏览器环境中
@@ -66,36 +53,27 @@ export async function postProcessText(
 }
 
 文本内容：
-${text}`;
+${inputText}`;
 
-    const groq = getGroqClient();
-    const response = await groq.chat.completions.create({
-      model: "openai/gpt-oss-20b",
-      messages: [
-        {
-          role: "system",
-          content:
-            "你是一个专业的日语文本处理助手，专门为日语学习材料添加罗马音和中文翻译。请严格按照JSON格式返回结果。",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+    // 使用 AI SDK 的 generateText 函数
+    const { text } = await generateText({
+      model: groq("openai/gpt-oss-20b"),
       temperature: 0.3,
-      response_format: { type: "json_object" },
+      system:
+        "你是一个专业的日语文本处理助手，专门为日语学习材料添加罗马音和中文翻译。请严格按照JSON格式返回结果。",
+      prompt,
+      maxRetries: 1,
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
+    if (!text) {
       throw new Error("未收到有效的响应内容");
     }
 
     try {
-      const result = JSON.parse(content);
+      const result = JSON.parse(text);
       return {
-        originalText: text,
-        processedText: text,
+        originalText: inputText,
+        processedText: inputText,
         segments: result.segments || [],
       };
     } catch (parseError) {
@@ -104,7 +82,9 @@ ${text}`;
     }
   } catch (error) {
     console.error("文本后处理失败:", error);
-    throw new Error(`文本处理失败: ${error instanceof Error ? error.message : "未知错误"}`);
+    throw new Error(
+      `文本处理失败: ${error instanceof Error ? error.message : "未知错误"}`,
+    );
   }
 }
 
