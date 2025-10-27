@@ -167,8 +167,7 @@ export class EnhancedAIClient {
 
     try {
       // 使用Web Audio API进行音频优化
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const arrayBuffer = await file.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
@@ -194,10 +193,7 @@ export class EnhancedAIClient {
       }
 
       // 转换回Blob
-      const optimizedBlob = await this.audioBufferToBlob(
-        optimizedBuffer,
-        "audio/wav",
-      );
+      const optimizedBlob = await this.audioBufferToBlob(optimizedBuffer, "audio/wav");
       const optimizedFile = new File(
         [optimizedBlob],
         file.name.replace(/\.[^/.]+$/, "_optimized.wav"),
@@ -223,10 +219,7 @@ export class EnhancedAIClient {
   /**
    * 将AudioBuffer转换为Blob
    */
-  private async audioBufferToBlob(
-    audioBuffer: AudioBuffer,
-    mimeType: string,
-  ): Promise<Blob> {
+  private async audioBufferToBlob(audioBuffer: AudioBuffer, mimeType: string): Promise<Blob> {
     const length = audioBuffer.length;
     const numberOfChannels = audioBuffer.numberOfChannels;
     const sampleRate = audioBuffer.sampleRate;
@@ -260,10 +253,7 @@ export class EnhancedAIClient {
     let offset = 44;
     for (let i = 0; i < length; i++) {
       for (let channel = 0; channel < numberOfChannels; channel++) {
-        const sample = Math.max(
-          -1,
-          Math.min(1, audioBuffer.getChannelData(channel)[i]),
-        );
+        const sample = Math.max(-1, Math.min(1, audioBuffer.getChannelData(channel)[i]));
         view.setInt16(offset, sample * 0x7fff, true);
         offset += 2;
       }
@@ -291,10 +281,7 @@ export class EnhancedAIClient {
   /**
    * 音频转录 - 使用 AI SDK 替代原生 Groq SDK
    */
-  async transcribe(
-    file: File,
-    options: TranscriptionOptions = {},
-  ): Promise<TranscriptionResponse> {
+  async transcribe(file: File, options: TranscriptionOptions = {}): Promise<TranscriptionResponse> {
     const startTime = Date.now();
 
     console.log("开始增强音频转录 (AI SDK):", {
@@ -326,9 +313,7 @@ export class EnhancedAIClient {
       // 文件大小验证 - 使用优化后的文件大小
       const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
       if (optimizedFile.size > MAX_FILE_SIZE) {
-        throw new ValidationError(
-          `优化后文件大小仍然超过限制 (${MAX_FILE_SIZE / 1024 / 1024}MB)`,
-        );
+        throw new ValidationError(`优化后文件大小仍然超过限制 (${MAX_FILE_SIZE / 1024 / 1024}MB)`);
       }
 
       // 将 File 转换为 Uint8Array 以适配 AI SDK
@@ -353,8 +338,7 @@ export class EnhancedAIClient {
             language: options.language || "ja",
             temperature: options.temperature || 0,
             response_format: options.responseFormat || "verbose_json",
-            prompt:
-              options.prompt || `这是一段日语音频，请准确转录其中的日语内容。`,
+            prompt: options.prompt || `这是一段日语音频，请准确转录其中的日语内容。`,
           },
         },
       });
@@ -414,8 +398,7 @@ export class EnhancedAIClient {
 
       // 更新错误统计
       this.usageStats.errorCount++;
-      this.usageStats.lastError =
-        error instanceof Error ? error : new Error(String(error));
+      this.usageStats.lastError = error instanceof Error ? error : new Error(String(error));
 
       // 增强的错误处理
       return this.handleError(error, file);
@@ -430,13 +413,8 @@ export class EnhancedAIClient {
       const errorMessage = error.message.toLowerCase();
 
       // Groq API特定错误
-      if (
-        errorMessage.includes("401") ||
-        errorMessage.includes("unauthorized")
-      ) {
-        throw new AuthenticationError(
-          "GROQ API 密钥无效或已过期，请检查 API 密钥配置",
-        );
+      if (errorMessage.includes("401") || errorMessage.includes("unauthorized")) {
+        throw new AuthenticationError("GROQ API 密钥无效或已过期，请检查 API 密钥配置");
       }
       if (errorMessage.includes("429") || errorMessage.includes("rate limit")) {
         throw new RateLimitError("GROQ API 速率限制已超出，请稍后重试", 1000);
@@ -444,16 +422,10 @@ export class EnhancedAIClient {
       if (errorMessage.includes("timeout")) {
         throw new TimeoutError("GROQ API 请求超时，请检查网络连接");
       }
-      if (
-        errorMessage.includes("invalid_request_error") ||
-        errorMessage.includes("invalid")
-      ) {
+      if (errorMessage.includes("invalid_request_error") || errorMessage.includes("invalid")) {
         throw new ValidationError("音频文件格式或参数无效");
       }
-      if (
-        errorMessage.includes("insufficient") ||
-        errorMessage.includes("quota")
-      ) {
+      if (errorMessage.includes("insufficient") || errorMessage.includes("quota")) {
         throw new QuotaExceededError("GROQ API 配额已用完，请检查账户余额");
       }
 
@@ -546,10 +518,7 @@ export class EnhancedAIClient {
     } catch (error) {
       if (error instanceof Error) {
         const errorMessage = error.message.toLowerCase();
-        if (
-          errorMessage.includes("401") ||
-          errorMessage.includes("unauthorized")
-        ) {
+        if (errorMessage.includes("401") || errorMessage.includes("unauthorized")) {
           return { status: "healthy", message: "API可达但认证失败" };
         }
       }

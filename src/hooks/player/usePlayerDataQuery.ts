@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   transcriptionKeys,
   useTranscription,
@@ -92,6 +92,7 @@ interface UsePlayerDataQueryReturn {
   transcriptionProgress: number;
   retry: () => void;
   startTranscription: () => void;
+  resetAutoTranscription: () => void; // 新增：重置自动转录功能
 }
 
 export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
@@ -122,6 +123,22 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
   const isTranscribing = transcriptionMutation.isPending;
 
+  // 统一计算是否应该开始自动转录
+  // 优化：使用 useMemo 避免重复计算，统一状态判断逻辑
+  const shouldStartTranscription = useMemo(() => {
+    const conditions = {
+      isValidId,
+      hasFile: !!file,
+      hasTranscript: !!transcript,
+      isLoading: loading,
+      isTranscribingPending: transcriptionMutation.isPending,
+    };
+
+    console.log("🔍 自动转录状态检查:", conditions);
+
+    return isValidId && !loading && file && !transcript && !transcriptionMutation.isPending;
+  }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
+
   // 清理音频URL
   useEffect(() => {
     if (audioUrl && audioUrl !== audioUrlRef.current) {
@@ -142,17 +159,33 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 开始转录函数
   const startTranscription = useCallback(async () => {
-    if (!file || transcript || transcriptionMutation.isPending) {
+    // 优化：使用统一的状态判断，避免重复逻辑
+    if (!shouldStartTranscription) {
+      console.log("❌ 转录条件不满足，跳过转录:", {
+        hasFile: !!file,
+        hasTranscript: !!transcript,
+        isPending: transcriptionMutation.isPending,
+        isLoading: loading,
+        isValidId,
+      });
       return;
     }
+
+    console.log("🚀 开始转录文件:", {
+      fileId: file!.id,
+      fileName: file!.name,
+    });
 
     setTranscriptionProgress(0);
 
     try {
-      await transcriptionMutation.mutateAsync({ file, language: "ja" });
+      console.log("📡 发送转录请求到 API");
+      await transcriptionMutation.mutateAsync({ file: file!, language: "ja" });
+      console.log("✅ 转录 API 调用成功");
       setTranscriptionProgress(100);
 
       // 重新获取转录数据以获得新的 transcript ID
+      console.log("🔄 刷新转录数据缓存");
       await queryClient.invalidateQueries({
         queryKey: transcriptionKeys.forFile(parsedFileId),
       });
@@ -182,12 +215,26 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
       const newTranscript = freshData.transcript;
 
+      console.log("📝 转录数据获取完成:", {
+        transcriptId: newTranscript?.id,
+        segmentsCount: segments.length,
+        hasText: !!newTranscript?.text,
+      });
+
       // 进行文本后处理
       if (segments.length > 0 && newTranscript) {
+        console.log("🔤 开始文本后处理");
         const fullText = segments.map((seg: Segment) => seg.text).join("\n");
         try {
+          console.log("📡 发送文本后处理请求");
           const processedResult = await postProcessText(fullText, {
             language: "ja",
+          });
+          console.log("✅ 文本后处理完成:", {
+            processedCount: processedResult.segments.length,
+            hasTranslation: processedResult.segments.some(
+              (s) => "translation" in s && !!s.translation,
+            ),
           });
 
           // 更新字幕段，添加处理后的信息
@@ -209,18 +256,40 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           }
 
           // 刷新查询缓存
+          console.log("🔄 刷新查询缓存，更新UI");
           queryClient.invalidateQueries({
             queryKey: transcriptionKeys.forFile(parsedFileId),
           });
+          console.log("🎉 转录和后处理流程全部完成");
         } catch (processError) {
           console.error("文本后处理失败:", processError);
         }
+      } else {
+        console.log("⚠️ 没有segments数据，跳过后处理");
       }
     } catch (error) {
       console.error("转录失败:", error);
       setTranscriptionProgress(0);
+
+      // 转录失败后的恢复机制：允许用户重新触发自动转录
+      console.log("💡 转录失败，可通过 resetAutoTranscription() 重新触发");
+      // 注意：不在这里自动重置 shouldAutoTranscribe，让用户主动调用 resetAutoTranscription
     }
-  }, [file, transcript, transcriptionMutation, segments, queryClient, parsedFileId]);
+  }, [
+    shouldStartTranscription, // 使用统一状态判断
+    file,
+    transcriptionMutation,
+    segments,
+    queryClient,
+    parsedFileId,
+  ]);
+
+  // 重置自动转录的函数
+  const resetAutoTranscription = useCallback(() => {
+    console.log("🔄 重置自动转录状态");
+    setShouldAutoTranscribe(true);
+    setTranscriptionProgress(0);
+  }, []);
 
   /**
    * 自动转录执行逻辑
@@ -239,10 +308,11 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
    * 4. 清理定时器，防止内存泄漏
    */
   useEffect(() => {
-    if (shouldAutoTranscribe && file && !transcript && !loading && !isTranscribing) {
+    if (shouldAutoTranscribe && shouldStartTranscription) {
       console.log("🎵 检测到文件未转录，开始自动转录:", {
-        fileId: file.id,
-        fileName: file.name,
+        fileId: file!.id,
+        fileName: file!.name,
+        condition: "shouldAutoTranscribe + shouldStartTranscription",
       });
 
       // 重置标志，防止重复触发
@@ -250,36 +320,37 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
       // 延迟执行：提供更好的用户体验
       const timer = setTimeout(() => {
+        console.log("⏰ 延迟结束，开始执行转录");
         startTranscription();
       }, 500); // 500ms延迟，让用户有准备时间
 
-      return () => clearTimeout(timer); // 清理定时器
+      return () => {
+        console.log("🧹 清理转录定时器");
+        clearTimeout(timer);
+      };
     }
-  }, [shouldAutoTranscribe, file, transcript, loading, isTranscribing, startTranscription]);
+  }, [shouldAutoTranscribe, shouldStartTranscription, startTranscription]);
 
   /**
    * 自动转录检测逻辑
+   *
+   * 优化：直接使用 shouldStartTranscription 进行检测
    *
    * 检测时机：
    * - 页面加载完成后
    * - 文件数据获取完成后
    * - 转录状态变化后
    *
-   * 检测条件：
-   * 1. 文件ID有效
-   * 2. 数据加载完成
-   * 3. 文件存在
-   * 4. 没有转录记录
-   * 5. 转录mutation不在进行中
-   *
-   * 满足所有条件时，设置 shouldAutoTranscribe 标志位
+   * 当 shouldStartTranscription 为 true 时，设置 shouldAutoTranscribe 标志位
    */
   useEffect(() => {
-    if (isValidId && !loading && file && !transcript && !transcriptionMutation.isPending) {
-      // 所有条件满足，触发自动转录
+    if (shouldStartTranscription) {
+      console.log("🎯 检测条件满足，准备触发自动转录");
       setShouldAutoTranscribe(true);
+    } else {
+      console.log("❌ 检测条件不满足，不触发自动转录");
     }
-  }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
+  }, [shouldStartTranscription]);
 
   // 模拟转录进度
   useEffect(() => {
@@ -321,5 +392,6 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
     transcriptionProgress,
     retry,
     startTranscription,
+    resetAutoTranscription, // 新增：重置自动转录功能
   };
 }
