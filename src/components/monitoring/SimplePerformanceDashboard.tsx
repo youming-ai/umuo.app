@@ -5,14 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { useSimplePerformanceMonitor } from "@/hooks/useSimplePerformanceMonitor";
 
 export const SimplePerformanceDashboard: React.FC = () => {
-  const {
-    totalMetrics,
-    averageApiTime,
-    isMonitoring,
-    getMetrics,
-    clearMetrics,
-    setMonitoring,
-  } = useSimplePerformanceMonitor();
+  const { totalMetrics, averageApiTime, isMonitoring, getMetrics, clearMetrics, setMonitoring } =
+    useSimplePerformanceMonitor();
 
   const allMetrics = getMetrics();
 
@@ -21,9 +15,7 @@ export const SimplePerformanceDashboard: React.FC = () => {
     (m) => m.operationName?.startsWith("api_") || m.metadata?.type === "api",
   );
   const transcriptionMetrics = allMetrics.filter(
-    (m) =>
-      m.operationName === "transcription" ||
-      m.metadata?.type === "transcription",
+    (m) => m.operationName === "transcription" || m.metadata?.type === "transcription",
   );
 
   const formatDuration = (ms: number): string => {
@@ -75,11 +67,7 @@ export const SimplePerformanceDashboard: React.FC = () => {
           <Badge variant={isMonitoring ? "default" : "secondary"}>
             {isMonitoring ? "监控中" : "已暂停"}
           </Badge>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMonitoring(!isMonitoring)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setMonitoring(!isMonitoring)}>
             {isMonitoring ? "暂停" : "开始"}
           </Button>
           <Button variant="outline" size="sm" onClick={clearMetrics}>
@@ -120,9 +108,7 @@ export const SimplePerformanceDashboard: React.FC = () => {
             <CardTitle className="text-sm font-medium">转录错误率</CardTitle>
           </CardHeader>
           <CardContent>
-            <div
-              className={`text-2xl font-bold ${getStatusColor(transcriptionErrorRate)}`}
-            >
+            <div className={`text-2xl font-bold ${getStatusColor(transcriptionErrorRate)}`}>
               {transcriptionErrorRate.toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground">转录任务错误率</p>
@@ -154,9 +140,7 @@ export const SimplePerformanceDashboard: React.FC = () => {
                   <span className="text-muted-foreground">
                     {metric.operationName?.replace("api_", "") || metric.name}
                   </span>
-                  <span className="font-medium">
-                    {formatDuration(metric.duration || 0)}
-                  </span>
+                  <span className="font-medium">{formatDuration(metric.duration || 0)}</span>
                 </div>
               ))}
               {apiMetrics.length === 0 && (
@@ -176,15 +160,11 @@ export const SimplePerformanceDashboard: React.FC = () => {
               {transcriptionMetrics.slice(-10).map((metric, index) => (
                 <div key={index} className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
-                    {metric.metadata?.success === false
-                      ? "转录失败"
-                      : "转录成功"}
+                    {metric.metadata?.success === false ? "转录失败" : "转录成功"}
                   </span>
                   <span
                     className={`font-medium ${
-                      metric.metadata?.success === false
-                        ? "text-red-600"
-                        : "text-green-600"
+                      metric.metadata?.success === false ? "text-red-600" : "text-green-600"
                     }`}
                   >
                     {metric.metadata?.success === false

@@ -97,20 +97,15 @@ export class RepositoryFactory {
     cleanedOrphanedTranscripts: number;
     cleanedOrphanedSegments: number;
   }> {
-    const endTimer = this.performanceService.startTimer(
-      "repository-maintenance",
-    );
+    const endTimer = this.performanceService.startTimer("repository-maintenance");
 
     try {
-      const [
-        cleanedOrphanedFiles,
-        cleanedOrphanedTranscripts,
-        cleanedOrphanedSegments,
-      ] = await Promise.all([
-        this.fileRepository.cleanupOldFiles(90),
-        Promise.resolve(0), // 简化的转录清理
-        Promise.resolve(0), // 简化的片段清理
-      ]);
+      const [cleanedOrphanedFiles, cleanedOrphanedTranscripts, cleanedOrphanedSegments] =
+        await Promise.all([
+          this.fileRepository.cleanupOldFiles(90),
+          Promise.resolve(0), // 简化的转录清理
+          Promise.resolve(0), // 简化的片段清理
+        ]);
 
       this.clearAllCaches();
 

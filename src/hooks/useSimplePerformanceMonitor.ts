@@ -4,11 +4,7 @@ import { SimplePerformanceService } from "@/lib/monitoring/simple-performance.se
 export interface UseSimplePerformanceMonitorReturn {
   recordMetric: (name: string, value: number, category?: string) => void;
   recordApiCall: (name: string, duration: number, success?: boolean) => void;
-  recordTranscription: (
-    fileId: number,
-    duration: number,
-    success?: boolean,
-  ) => void;
+  recordTranscription: (fileId: number, duration: number, success?: boolean) => void;
   recordUserInteraction: (action: string, duration: number) => void;
   getMetrics: () => any[];
   getAverageMetric: (name: string) => number;

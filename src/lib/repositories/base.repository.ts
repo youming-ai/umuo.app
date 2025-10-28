@@ -1,8 +1,4 @@
-import type {
-  IRepository,
-  QueryOptions,
-  PaginatedResult,
-} from "./interfaces/repository.interface";
+import type { IRepository, QueryOptions, PaginatedResult } from "./interfaces/repository.interface";
 import { SimplePerformanceService } from "@/lib/monitoring/simple-performance.service";
 
 /**
@@ -18,19 +14,14 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     protected readonly entityName: string,
     performanceService?: SimplePerformanceService,
   ) {
-    this.performanceService =
-      performanceService || new SimplePerformanceService();
+    this.performanceService = performanceService || new SimplePerformanceService();
     this.cache = new Map();
   }
 
   abstract create(data: Partial<T>, options?: QueryOptions): Promise<T>;
   abstract findById(id: number, options?: QueryOptions): Promise<T | null>;
   abstract findAll(options?: QueryOptions): Promise<T[]>;
-  abstract update(
-    id: number,
-    data: Partial<T>,
-    options?: QueryOptions,
-  ): Promise<T>;
+  abstract update(id: number, data: Partial<T>, options?: QueryOptions): Promise<T>;
   abstract delete(id: number, options?: QueryOptions): Promise<boolean>;
   abstract count(options?: QueryOptions): Promise<number>;
 
@@ -55,9 +46,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     }
   }
 
-  async updateMany(
-    updates: Array<{ id: number; data: Partial<T> }>,
-  ): Promise<T[]> {
+  async updateMany(updates: Array<{ id: number; data: Partial<T> }>): Promise<T[]> {
     const operation = `updateMany-${this.entityName}`;
     const endTimer = this.performanceService.startTimer(operation, {
       repository: this.entityName,
@@ -108,10 +97,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   }
 
   // 高级查询的默认实现
-  async findWhere(
-    predicate: (item: T) => boolean,
-    options?: QueryOptions,
-  ): Promise<T[]> {
+  async findWhere(predicate: (item: T) => boolean, options?: QueryOptions): Promise<T[]> {
     const operation = `findWhere-${this.entityName}`;
     const endTimer = this.performanceService.startTimer(operation, {
       repository: this.entityName,
@@ -126,11 +112,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     }
   }
 
-  async search(
-    searchTerm: string,
-    fields: string[],
-    options?: QueryOptions,
-  ): Promise<T[]> {
+  async search(searchTerm: string, fields: string[], options?: QueryOptions): Promise<T[]> {
     const operation = `search-${this.entityName}`;
     const endTimer = this.performanceService.startTimer(operation, {
       repository: this.entityName,
@@ -144,10 +126,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
       return all.filter((item) =>
         fields.some((field) => {
           const value = (item as any)[field];
-          return (
-            value &&
-            String(value).toLowerCase().includes(searchTerm.toLowerCase())
-          );
+          return value && String(value).toLowerCase().includes(searchTerm.toLowerCase());
         }),
       );
     } finally {
@@ -190,9 +169,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   }
 
   // 事务支持的默认实现（简化版）
-  async transaction<T>(
-    operation: (repo: IRepository<T>) => Promise<T>,
-  ): Promise<T> {
+  async transaction<T>(operation: (repo: IRepository<T>) => Promise<T>): Promise<T> {
     return operation(this as unknown as IRepository<T>);
   }
 
@@ -248,11 +225,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
 
       return filtered;
     } catch (error) {
-      this.performanceService.recordError(
-        "repository",
-        `findMany-${this.entityName}`,
-        error,
-      );
+      this.performanceService.recordError("repository", `findMany-${this.entityName}`, error);
       throw error;
     } finally {
       const duration = endTimer();
@@ -275,11 +248,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
       const entity = await this.findById(id, options);
       return entity !== null;
     } catch (error) {
-      this.performanceService.recordError(
-        "repository",
-        `exists-${this.entityName}`,
-        error,
-      );
+      this.performanceService.recordError("repository", `exists-${this.entityName}`, error);
       throw error;
     } finally {
       const duration = endTimer();
@@ -353,9 +322,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
 
   protected handleError(error: unknown, operation: string): never {
     const message = error instanceof Error ? error.message : String(error);
-    const enhancedError = new Error(
-      `${this.entityName}.${operation}: ${message}`,
-    );
+    const enhancedError = new Error(`${this.entityName}.${operation}: ${message}`);
     (enhancedError as any).cause = error;
     throw enhancedError;
   }
@@ -377,14 +344,11 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     fn: () => Promise<TData>,
     metadata?: Record<string, unknown>,
   ): Promise<TData> {
-    const endTimer = this.performanceService.startTimer(
-      `${this.entityName}.${operation}`,
-      {
-        repository: this.entityName,
-        operation,
-        ...metadata,
-      },
-    );
+    const endTimer = this.performanceService.startTimer(`${this.entityName}.${operation}`, {
+      repository: this.entityName,
+      operation,
+      ...metadata,
+    });
 
     try {
       const result = await fn();
@@ -399,11 +363,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
 
       return result;
     } catch (error) {
-      this.performanceService.recordError(
-        "repository",
-        `${this.entityName}.${operation}`,
-        error,
-      );
+      this.performanceService.recordError("repository", `${this.entityName}.${operation}`, error);
       endTimer();
       throw error;
     }

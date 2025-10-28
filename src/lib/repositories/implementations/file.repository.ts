@@ -1,8 +1,5 @@
 import { BaseRepository } from "../base.repository";
-import {
-  type IFileRepository,
-  type QueryOptions,
-} from "../interfaces/repository.interface";
+import { type IFileRepository, type QueryOptions } from "../interfaces/repository.interface";
 import { db } from "@/lib/db/db";
 import type { FileRow } from "@/types/db/database";
 
@@ -10,10 +7,7 @@ import type { FileRow } from "@/types/db/database";
  * 文件Repository实现
  * 封装对files表的CRUD操作和业务逻辑
  */
-export class FileRepository
-  extends BaseRepository<FileRow>
-  implements IFileRepository
-{
+export class FileRepository extends BaseRepository<FileRow> implements IFileRepository {
   constructor() {
     super("FileRepository");
   }
@@ -40,10 +34,7 @@ export class FileRepository
         let results = await db.files.toArray();
 
         // 默认按创建时间倒序
-        results.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         // 应用分页
         if (options?.offset) {
@@ -60,10 +51,7 @@ export class FileRepository
     );
   }
 
-  async create(
-    data: Partial<FileRow>,
-    options?: QueryOptions,
-  ): Promise<FileRow> {
+  async create(data: Partial<FileRow>, options?: QueryOptions): Promise<FileRow> {
     this.validateData(data);
 
     return this.executeWithMetrics(
@@ -83,9 +71,7 @@ export class FileRepository
         const createdFile = await this.findById(id);
 
         if (!createdFile) {
-          throw new Error(
-            "Failed to create file: Unable to retrieve created record",
-          );
+          throw new Error("Failed to create file: Unable to retrieve created record");
         }
 
         return createdFile;
@@ -94,11 +80,7 @@ export class FileRepository
     );
   }
 
-  async update(
-    id: number,
-    data: Partial<FileRow>,
-    options?: QueryOptions,
-  ): Promise<FileRow> {
+  async update(id: number, data: Partial<FileRow>, options?: QueryOptions): Promise<FileRow> {
     this.validateId(id);
     this.validateData(data);
 
@@ -114,9 +96,7 @@ export class FileRepository
 
         const updatedFile = await this.findById(id);
         if (!updatedFile) {
-          throw new Error(
-            "Failed to update file: Unable to retrieve updated record",
-          );
+          throw new Error("Failed to update file: Unable to retrieve updated record");
         }
 
         return updatedFile;
@@ -200,10 +180,7 @@ export class FileRepository
       "findRecent",
       async () => {
         const allFiles = await db.files.toArray();
-        allFiles.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        allFiles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         return limit ? allFiles.slice(0, limit) : allFiles;
       },
       { limit },
@@ -215,9 +192,7 @@ export class FileRepository
       "findByNamePattern",
       async () => {
         const allFiles = await db.files.toArray();
-        return allFiles.filter((file) =>
-          file.name.toLowerCase().includes(pattern.toLowerCase()),
-        );
+        return allFiles.filter((file) => file.name.toLowerCase().includes(pattern.toLowerCase()));
       },
       { pattern },
     );

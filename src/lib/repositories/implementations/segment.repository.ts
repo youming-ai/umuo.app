@@ -1,8 +1,5 @@
 import { BaseRepository } from "../base.repository";
-import {
-  type ISegmentRepository,
-  type QueryOptions,
-} from "../interfaces/repository.interface";
+import { type ISegmentRepository, type QueryOptions } from "../interfaces/repository.interface";
 import { db } from "@/lib/db/db";
 import type { Segment } from "@/types/db/database";
 
@@ -10,10 +7,7 @@ import type { Segment } from "@/types/db/database";
  * 片段Repository实现
  * 封装对segments表的CRUD操作和业务逻辑
  */
-export class SegmentRepository
-  extends BaseRepository<Segment>
-  implements ISegmentRepository
-{
+export class SegmentRepository extends BaseRepository<Segment> implements ISegmentRepository {
   constructor() {
     super("SegmentRepository");
   }
@@ -55,10 +49,7 @@ export class SegmentRepository
     );
   }
 
-  async create(
-    data: Partial<Segment>,
-    options?: QueryOptions,
-  ): Promise<Segment> {
+  async create(data: Partial<Segment>, options?: QueryOptions): Promise<Segment> {
     this.validateData(data);
 
     return this.executeWithMetrics(
@@ -87,9 +78,7 @@ export class SegmentRepository
         const createdSegment = await this.findById(id);
 
         if (!createdSegment) {
-          throw new Error(
-            "Failed to create segment: Unable to retrieve created record",
-          );
+          throw new Error("Failed to create segment: Unable to retrieve created record");
         }
 
         return createdSegment;
@@ -98,22 +87,14 @@ export class SegmentRepository
     );
   }
 
-  async update(
-    id: number,
-    data: Partial<Segment>,
-    options?: QueryOptions,
-  ): Promise<Segment> {
+  async update(id: number, data: Partial<Segment>, options?: QueryOptions): Promise<Segment> {
     this.validateId(id);
     this.validateData(data);
 
     return this.executeWithMetrics(
       "update",
       async () => {
-        if (
-          data.start !== undefined &&
-          data.end !== undefined &&
-          data.start >= data.end
-        ) {
+        if (data.start !== undefined && data.end !== undefined && data.start >= data.end) {
           throw new Error("Segment start must be less than end");
         }
 
@@ -126,9 +107,7 @@ export class SegmentRepository
 
         const updatedSegment = await this.findById(id);
         if (!updatedSegment) {
-          throw new Error(
-            "Failed to update segment: Unable to retrieve updated record",
-          );
+          throw new Error("Failed to update segment: Unable to retrieve updated record");
         }
 
         return updatedSegment;
@@ -170,10 +149,7 @@ export class SegmentRepository
     return this.executeWithMetrics(
       "findByTranscriptId",
       async () => {
-        const segments = await db.segments
-          .where("transcriptId")
-          .equals(transcriptId)
-          .toArray();
+        const segments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
         return segments.sort((a, b) => a.start - b.start);
       },
       { transcriptId },
@@ -188,14 +164,9 @@ export class SegmentRepository
     return this.executeWithMetrics(
       "findByTimeRange",
       async () => {
-        const allSegments = await db.segments
-          .where("transcriptId")
-          .equals(transcriptId)
-          .toArray();
+        const allSegments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
         return allSegments
-          .filter(
-            (segment) => segment.start < endTime && segment.end > startTime,
-          )
+          .filter((segment) => segment.start < endTime && segment.end > startTime)
           .sort((a, b) => a.start - b.start) as Segment[];
       },
       { transcriptId, startTime, endTime },
@@ -218,10 +189,7 @@ export class SegmentRepository
   async getAverageDuration(): Promise<number> {
     return this.executeWithMetrics("getAverageDuration", async () => {
       const segments = await db.segments.toArray();
-      const totalDuration = segments.reduce(
-        (sum, seg) => sum + (seg.end - seg.start),
-        0,
-      );
+      const totalDuration = segments.reduce((sum, seg) => sum + (seg.end - seg.start), 0);
       return segments.length > 0 ? totalDuration / segments.length : 0;
     });
   }
@@ -230,19 +198,13 @@ export class SegmentRepository
     return this.executeWithMetrics(
       "getSegmentCount",
       async () => {
-        return await db.segments
-          .where("transcriptId")
-          .equals(transcriptId)
-          .count();
+        return await db.segments.where("transcriptId").equals(transcriptId).count();
       },
       { transcriptId },
     );
   }
 
-  async updateTranslation(
-    segmentId: number,
-    translation: string,
-  ): Promise<void> {
+  async updateTranslation(segmentId: number, translation: string): Promise<void> {
     await this.executeWithMetrics(
       "updateTranslation",
       async () => {
@@ -255,10 +217,7 @@ export class SegmentRepository
     );
   }
 
-  async updateNormalizedText(
-    segmentId: number,
-    normalizedText: string,
-  ): Promise<void> {
+  async updateNormalizedText(segmentId: number, normalizedText: string): Promise<void> {
     await this.executeWithMetrics(
       "updateNormalizedText",
       async () => {
@@ -293,31 +252,20 @@ export class SegmentRepository
     );
   }
 
-  async searchByKeyword(
-    transcriptId: number,
-    keywords: string[],
-  ): Promise<Segment[]> {
+  async searchByKeyword(transcriptId: number, keywords: string[]): Promise<Segment[]> {
     return this.executeWithMetrics(
       "searchByKeyword",
       async () => {
-        const segments = await db.segments
-          .where("transcriptId")
-          .equals(transcriptId)
-          .toArray();
+        const segments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
         return segments.filter((segment) =>
-          keywords.some((keyword) =>
-            segment.text.toLowerCase().includes(keyword.toLowerCase()),
-          ),
+          keywords.some((keyword) => segment.text.toLowerCase().includes(keyword.toLowerCase())),
         ) as Segment[];
       },
       { transcriptId, keywords },
     );
   }
 
-  async filterByConfidence(
-    transcriptId: number,
-    minConfidence: number,
-  ): Promise<Segment[]> {
+  async filterByConfidence(transcriptId: number, minConfidence: number): Promise<Segment[]> {
     return this.executeWithMetrics(
       "filterByConfidence",
       async () => {

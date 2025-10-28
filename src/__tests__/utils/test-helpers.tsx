@@ -26,11 +26,7 @@ const TestProviders = ({
   queryClient?: QueryClient;
 }) => {
   const testQueryClient = queryClient || createTestQueryClient();
-  return (
-    <QueryClientProvider client={testQueryClient}>
-      {children}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>;
 };
 
 // 自定义渲染函数
@@ -43,9 +39,7 @@ const customRender = (
   const { queryClient, ...renderOptions } = options || {};
 
   return render(ui, {
-    wrapper: ({ children }) => (
-      <TestProviders queryClient={queryClient}>{children}</TestProviders>
-    ),
+    wrapper: ({ children }) => <TestProviders queryClient={queryClient}>{children}</TestProviders>,
     ...renderOptions,
   });
 };
@@ -99,11 +93,7 @@ export const createMockAudioElement = () => {
 };
 
 // 创建模拟文件
-export const createMockFile = (
-  name: string,
-  type: string,
-  size: number = 1024,
-): File => {
+export const createMockFile = (name: string, type: string, size: number = 1024): File => {
   const bits = new Array(size).fill(0);
   return new File(bits, name, { type });
 };
@@ -140,15 +130,10 @@ export const createMockTranscriptionTask = (overrides: Partial<any> = {}) => ({
 });
 
 // 异步测试工具
-export const waitForAsync = () =>
-  new Promise((resolve) => setTimeout(resolve, 0));
+export const waitForAsync = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 // 事件触发工具
-export const fireKeyboardEvent = (
-  element: HTMLElement,
-  eventType: string,
-  key: string,
-) => {
+export const fireKeyboardEvent = (element: HTMLElement, eventType: string, key: string) => {
   const event = new KeyboardEvent(eventType, { key });
   element.dispatchEvent(event);
 };

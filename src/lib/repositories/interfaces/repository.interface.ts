@@ -58,22 +58,11 @@ export interface IRepository<T> {
   exists(id: number, options?: QueryOptions): Promise<boolean>;
 
   // 高级查询
-  findWhere(
-    predicate: (item: T) => boolean,
-    options?: QueryOptions,
-  ): Promise<T[]>;
-  search(
-    searchTerm: string,
-    fields: string[],
-    options?: QueryOptions,
-  ): Promise<T[]>;
+  findWhere(predicate: (item: T) => boolean, options?: QueryOptions): Promise<T[]>;
+  search(searchTerm: string, fields: string[], options?: QueryOptions): Promise<T[]>;
 
   // 分页查询
-  findPaginated(
-    page: number,
-    limit: number,
-    options?: QueryOptions,
-  ): Promise<PaginatedResult<T>>;
+  findPaginated(page: number, limit: number, options?: QueryOptions): Promise<PaginatedResult<T>>;
 
   // 事务支持
   transaction<T>(
@@ -143,11 +132,7 @@ export interface ITranscriptRepository extends IRepository<TranscriptRow> {
   >;
 
   // 转录管理
-  updateProgress(
-    transcriptId: number,
-    progress: number,
-    status?: string,
-  ): Promise<void>;
+  updateProgress(transcriptId: number, progress: number, status?: string): Promise<void>;
   markAsCompleted(transcriptId: number, result: any): Promise<void>;
   markAsFailed(transcriptId: number, error: string): Promise<void>;
 }
@@ -156,11 +141,7 @@ export interface ITranscriptRepository extends IRepository<TranscriptRow> {
 export interface ISegmentRepository extends IRepository<Segment> {
   // 特定于字幕段的方法
   findByTranscriptId(transcriptId: number): Promise<Segment[]>;
-  findByTimeRange(
-    transcriptId: number,
-    startTime: number,
-    endTime: number,
-  ): Promise<Segment[]>;
+  findByTimeRange(transcriptId: number, startTime: number, endTime: number): Promise<Segment[]>;
   findByText(text: string): Promise<Segment[]>;
 
   // 统计方法
@@ -169,21 +150,12 @@ export interface ISegmentRepository extends IRepository<Segment> {
 
   // 字幕段管理
   updateTranslation(segmentId: number, translation: string): Promise<void>;
-  updateNormalizedText(
-    segmentId: number,
-    normalizedText: string,
-  ): Promise<void>;
-  batchUpdateByTranscriptId(
-    transcriptId: number,
-    updates: Partial<Segment>[],
-  ): Promise<number>;
+  updateNormalizedText(segmentId: number, normalizedText: string): Promise<void>;
+  batchUpdateByTranscriptId(transcriptId: number, updates: Partial<Segment>[]): Promise<number>;
 
   // 搜索和过滤
   searchByKeyword(transcriptId: number, keywords: string[]): Promise<Segment[]>;
-  filterByConfidence(
-    transcriptId: number,
-    minConfidence: number,
-  ): Promise<Segment[]>;
+  filterByConfidence(transcriptId: number, minConfidence: number): Promise<Segment[]>;
 
   // 高级操作
   optimizeForPlayback(transcriptId: number): Promise<Segment[]>;
@@ -254,14 +226,8 @@ export interface IRepositoryMetrics {
 }
 
 export interface IPerformanceMonitor {
-  startOperation(
-    operationName: string,
-    operationType: "read" | "write" | "query",
-  ): string;
-  endOperation(
-    operationId: string,
-    metrics?: Partial<IRepositoryMetrics>,
-  ): void;
+  startOperation(operationName: string, operationType: "read" | "write" | "query"): string;
+  endOperation(operationId: string, metrics?: Partial<IRepositoryMetrics>): void;
   recordMetric(metric: IRepositoryMetrics): void;
   getMetrics(): IRepositoryMetrics[];
   clearMetrics(): void;

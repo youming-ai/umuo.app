@@ -1,8 +1,5 @@
 import { BaseRepository } from "../base.repository";
-import {
-  type ITranscriptRepository,
-  type QueryOptions,
-} from "../interfaces/repository.interface";
+import { type ITranscriptRepository, type QueryOptions } from "../interfaces/repository.interface";
 import { db } from "@/lib/db/db";
 import type { TranscriptRow, Segment } from "@/types/db/database";
 
@@ -18,10 +15,7 @@ export class TranscriptRepository
     super("TranscriptRepository");
   }
 
-  async findById(
-    id: number,
-    options?: QueryOptions,
-  ): Promise<TranscriptRow | null> {
+  async findById(id: number, options?: QueryOptions): Promise<TranscriptRow | null> {
     this.validateId(id);
 
     return this.executeWithMetrics(
@@ -41,10 +35,7 @@ export class TranscriptRepository
         let results = await db.transcripts.toArray();
 
         // 默认按创建时间倒序
-        results.sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        );
+        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         // 应用分页
         if (options?.offset) {
@@ -61,10 +52,7 @@ export class TranscriptRepository
     );
   }
 
-  async create(
-    data: Partial<TranscriptRow>,
-    options?: QueryOptions,
-  ): Promise<TranscriptRow> {
+  async create(data: Partial<TranscriptRow>, options?: QueryOptions): Promise<TranscriptRow> {
     this.validateData(data);
 
     return this.executeWithMetrics(
@@ -88,9 +76,7 @@ export class TranscriptRepository
         const createdTranscript = await this.findById(id);
 
         if (!createdTranscript) {
-          throw new Error(
-            "Failed to create transcript: Unable to retrieve created record",
-          );
+          throw new Error("Failed to create transcript: Unable to retrieve created record");
         }
 
         return createdTranscript;
@@ -119,9 +105,7 @@ export class TranscriptRepository
 
         const updatedTranscript = await this.findById(id);
         if (!updatedTranscript) {
-          throw new Error(
-            "Failed to update transcript: Unable to retrieve updated record",
-          );
+          throw new Error("Failed to update transcript: Unable to retrieve updated record");
         }
 
         return updatedTranscript;
@@ -166,10 +150,7 @@ export class TranscriptRepository
     return this.executeWithMetrics(
       "findByFileId",
       async () => {
-        const transcript = await db.transcripts
-          .where("fileId")
-          .equals(fileId)
-          .first();
+        const transcript = await db.transcripts.where("fileId").equals(fileId).first();
         return transcript || null;
       },
       { fileId },
@@ -204,10 +185,7 @@ export class TranscriptRepository
     return this.executeWithMetrics(
       "findCompleted",
       async () => {
-        const transcripts = await db.transcripts
-          .where("status")
-          .equals("completed")
-          .toArray();
+        const transcripts = await db.transcripts.where("status").equals("completed").toArray();
         return limit ? transcripts.slice(0, limit) : transcripts;
       },
       { limit },
@@ -217,10 +195,7 @@ export class TranscriptRepository
   async getAverageDuration(): Promise<number> {
     return this.executeWithMetrics("getAverageDuration", async () => {
       const transcripts = await db.transcripts.toArray();
-      const totalDuration = transcripts.reduce(
-        (sum, t) => sum + (t.duration || 0),
-        0,
-      );
+      const totalDuration = transcripts.reduce((sum, t) => sum + (t.duration || 0), 0);
       return transcripts.length > 0 ? totalDuration / transcripts.length : 0;
     });
   }
@@ -235,12 +210,8 @@ export class TranscriptRepository
   async getCompletionRate(): Promise<number> {
     return this.executeWithMetrics("getCompletionRate", async () => {
       const transcripts = await db.transcripts.toArray();
-      const completed = transcripts.filter(
-        (t) => t.status === "completed",
-      ).length;
-      return transcripts.length > 0
-        ? (completed / transcripts.length) * 100
-        : 0;
+      const completed = transcripts.filter((t) => t.status === "completed").length;
+      return transcripts.length > 0 ? (completed / transcripts.length) * 100 : 0;
     });
   }
 
@@ -254,10 +225,7 @@ export class TranscriptRepository
         const transcript = await db.transcripts.get(transcriptId);
         if (!transcript) return null;
 
-        const segments = await db.segments
-          .where("transcriptId")
-          .equals(transcriptId)
-          .toArray();
+        const segments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
 
         return {
           transcript,
@@ -290,11 +258,7 @@ export class TranscriptRepository
     );
   }
 
-  async updateProgress(
-    transcriptId: number,
-    progress: number,
-    status?: string,
-  ): Promise<void> {
+  async updateProgress(transcriptId: number, progress: number, status?: string): Promise<void> {
     await this.executeWithMetrics(
       "updateProgress",
       async () => {

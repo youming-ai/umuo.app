@@ -1,8 +1,8 @@
-import '@testing-library/jest-dom';
-import { beforeAll, beforeEach, afterEach, vi } from 'vitest';
+import "@testing-library/jest-dom";
+import { beforeAll, beforeEach, afterEach, vi } from "vitest";
 
 // Mock Next.js router
-vi.mock('next/navigation', () => ({
+vi.mock("next/navigation", () => ({
   useRouter() {
     return {
       push: vi.fn(),
@@ -17,12 +17,12 @@ vi.mock('next/navigation', () => ({
     return new URLSearchParams();
   },
   usePathname() {
-    return '/';
+    return "/";
   },
 }));
 
 // Mock Next.js App Router
-vi.mock('next/app-router', () => ({}));
+vi.mock("next/app-router", () => ({}));
 
 // Mock IndexedDB (Dexie)
 const mockDB = {
@@ -85,25 +85,25 @@ const mockDB = {
   close: vi.fn(),
 };
 
-vi.mock('@/lib/db/db', () => ({
+vi.mock("@/lib/db/db", () => ({
   db: mockDB,
   DatabaseService: vi.fn(() => mockDB),
 }));
 
 // Mock AI 服务
-vi.mock('@ai-sdk/openai', () => ({
+vi.mock("@ai-sdk/openai", () => ({
   createOpenAI: vi.fn(() => ({
     transcription: vi.fn(),
   })),
 }));
 
-vi.mock('@ai-sdk/groq', () => ({
+vi.mock("@ai-sdk/groq", () => ({
   createGroq: vi.fn(() => ({
     transcription: vi.fn(),
   })),
 }));
 
-vi.mock('ai', () => ({
+vi.mock("ai", () => ({
   transcribe: vi.fn(),
 }));
 
@@ -139,7 +139,7 @@ global.File = class File {
   constructor(
     public bits: any[],
     public name: string,
-    public options: { type: string; lastModified?: number } = { type: '' }
+    public options: { type: string; lastModified?: number } = { type: "" },
   ) {
     this.size = bits.reduce((acc, bit) => acc + bit.length, 0);
     this.type = options.type;
@@ -159,7 +159,7 @@ global.File = class File {
   }
 
   text() {
-    return Promise.resolve('');
+    return Promise.resolve("");
   }
 
   arrayBuffer() {
@@ -215,7 +215,7 @@ const localStorageMock = {
   length: 0,
   key: vi.fn(),
 };
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(window, "localStorage", {
   value: localStorageMock,
 });
 
@@ -228,14 +228,14 @@ const sessionStorageMock = {
   length: 0,
   key: vi.fn(),
 };
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty(window, "sessionStorage", {
   value: sessionStorageMock,
 });
 
 // Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -250,8 +250,8 @@ Object.defineProperty(window, 'matchMedia', {
 // 全局测试设置
 beforeAll(() => {
   // 设置测试环境变量
-  process.env.NODE_ENV = 'test';
-  process.env.GROQ_API_KEY = 'test-api-key';
+  process.env.NODE_ENV = "test";
+  process.env.GROQ_API_KEY = "test-api-key";
 });
 
 beforeEach(() => {
@@ -284,9 +284,9 @@ export const createMockFile = (name: string, type: string, size: number = 1024):
 export const createMockTranscript = (overrides: Partial<any> = {}) => ({
   id: 1,
   fileId: 1,
-  text: '这是一个测试转录文本',
-  status: 'completed',
-  language: 'ja',
+  text: "这是一个测试转录文本",
+  status: "completed",
+  language: "ja",
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
@@ -297,13 +297,13 @@ export const createMockSegment = (overrides: Partial<any> = {}) => ({
   transcriptId: 1,
   start: 0,
   end: 5,
-  text: '测试字幕',
+  text: "测试字幕",
   createdAt: new Date(),
   updatedAt: new Date(),
   ...overrides,
 });
 
-export const waitFor = (ms: number = 100) => new Promise(resolve => setTimeout(resolve, ms));
+export const waitFor = (ms: number = 100) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 导出常用测试工具
 export { vi, mockDB };

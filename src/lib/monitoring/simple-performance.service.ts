@@ -30,15 +30,10 @@ export class SimplePerformanceService {
     clearMetrics: () => set({ metrics: [] }),
     getMetrics: () => get().metrics,
     getAverageTime: (operationName) => {
-      const relevantMetrics = get().metrics.filter(
-        (m) => m.operationName === operationName,
-      );
+      const relevantMetrics = get().metrics.filter((m) => m.operationName === operationName);
       if (relevantMetrics.length === 0) return 0;
 
-      const totalTime = relevantMetrics.reduce(
-        (sum, m) => sum + (m.duration || 0),
-        0,
-      );
+      const totalTime = relevantMetrics.reduce((sum, m) => sum + (m.duration || 0), 0);
       return totalTime / relevantMetrics.length;
     },
   }));
@@ -46,10 +41,7 @@ export class SimplePerformanceService {
   /**
    * 开始计时操作
    */
-  startTimer(
-    operationName: string,
-    metadata?: Record<string, any>,
-  ): () => number {
+  startTimer(operationName: string, metadata?: Record<string, any>): () => number {
     const startTime = performance.now();
 
     this.store.getState().addMetric({
@@ -83,11 +75,7 @@ export class SimplePerformanceService {
   /**
    * 记录指标
    */
-  recordMetric(
-    metricName: string,
-    value: number,
-    metadata?: Record<string, any>,
-  ): void {
+  recordMetric(metricName: string, value: number, metadata?: Record<string, any>): void {
     this.store.getState().addMetric({
       operationName: metricName,
       startTime: Date.now(),
@@ -138,9 +126,7 @@ export class SimplePerformanceService {
 
     // 计算统计信息
     for (const [operationName, operationMetrics] of Object.entries(grouped)) {
-      const durations = operationMetrics
-        .map((m) => m.duration || 0)
-        .filter((d) => d > 0);
+      const durations = operationMetrics.map((m) => m.duration || 0).filter((d) => d > 0);
 
       if (durations.length > 0) {
         report[operationName] = {
