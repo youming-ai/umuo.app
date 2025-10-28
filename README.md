@@ -71,7 +71,7 @@
 
 ### 安装
 ```bash
-git clone https://github.com/yourusername/umuo.app.git
+git clone https://github.com/youming-ai/umuo.app.git
 cd umuo.app
 pnpm install
 ```
@@ -168,7 +168,7 @@ pnpm build
 如有问题或建议，请：
 - 创建 Issue
 - 发送邮件至 [your-email@example.com]
-- 访问项目主页 [https://github.com/yourusername/umuo.app]
+- 访问项目主页 [https://umuo.app](https://umuo.app)
 
 ---
 

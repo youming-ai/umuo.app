@@ -120,11 +120,6 @@ umuo.app/
 │
 ├── 🔧 开发配置
 │   ├── .git/                        # Git 配置
-│   ├── .github/                     # GitHub Actions
-│   │   └── workflows/
-│   │       ├── cloudflare-pages.yml  # 部署工作流
-│   │       ├── performance.yml      # 性能测试
-│   │       └── build-only.yml       # 构建工作流
 │   ├── .husky/                      # Git hooks
 │   ├── .vscode/                      # VSCode 配置
 │   └── .wrangler/                    # Wrangler 配置
@@ -149,7 +144,7 @@ umuo.app/
 - **状态管理**: TanStack Query + React Hooks
 - **数据库**: IndexedDB (Dexie)
 - **AI服务**: Groq SDK (Whisper transcription)
-- **部署**: Cloudflare Pages
+- **部署**: Cloudflare Pages (Git 集成)
 - **代码质量**: Biome.js + ESLint
 
 ### 功能模块
@@ -202,9 +197,9 @@ pnpm deploy:preview           # 预览部署
 pnpm deploy:quick              # 快速部署
 ```
 
-#### GitHub Actions
-- **自动部署**: 推送到 main 分支自动部署
-- **性能测试**: Lighthouse CI 自动运行
+#### 自动化部署
+- **Git 集成**: 推送到 main 分支自动部署到 Cloudflare Pages
+- **性能测试**: 集成性能监控和测试
 - **代码质量**: 自动化代码检查和格式化
 
 ## 🚀 部署信息
@@ -212,7 +207,7 @@ pnpm deploy:quick              # 快速部署
 ### 生产环境
 - **URL**: https://umuo-app.pages.dev
 - **平台**: Cloudflare Pages
-- **CI/CD**: GitHub Actions
+- **自动部署**: Cloudflare Pages Git 集成
 
 ### 环境变量
 - `NODE_ENV`: 运行环境
