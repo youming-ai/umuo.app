@@ -5,31 +5,14 @@
 
 "use client";
 
-import React, { useMemo } from "react";
-import {
-  Clock,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Pause,
-  Play,
-  X,
-  RotateCcw,
-} from "lucide-react";
-import { cn } from "@/lib/utils/utils";
+import { CheckCircle, Clock, Loader2, Pause, Play, RotateCcw, X, XCircle } from "lucide-react";
+import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type {
-  TranscriptionTask,
-  TranscriptionStatus,
-} from "@/types/transcription";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils/utils";
+import type { TranscriptionTask } from "@/types/transcription";
 
 interface TranscriptionStatusPanelProps {
   task: TranscriptionTask | null;
@@ -107,17 +90,23 @@ export function TranscriptionStatusPanel({
   onResumeTranscription,
   onRetryTranscription,
 }: TranscriptionStatusPanelProps) {
+  // 计算预估时间 - 移到条件渲染之前
+  const estimatedTime = useMemo(() => {
+    if (!task) return null;
+    if (task.progress.estimatedDuration && task.progress.progress > 0) {
+      const remaining = task.progress.estimatedDuration * (1 - task.progress.progress / 100);
+      return Math.ceil(remaining);
+    }
+    return null;
+  }, [task?.progress]);
+
   if (!task) {
     return (
       <div className={cn("p-4 text-center text-gray-500", className)}>
         <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <p className="text-sm">尚未开始转录</p>
         {onStartTranscription && (
-          <Button
-            size="sm"
-            className="mt-2"
-            onClick={() => onStartTranscription()}
-          >
+          <Button size="sm" className="mt-2" onClick={() => onStartTranscription()}>
             开始转录
           </Button>
         )}
@@ -142,18 +131,8 @@ export function TranscriptionStatusPanel({
     const k = 1024;
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
   };
-
-  // 计算预估时间
-  const estimatedTime = useMemo(() => {
-    if (task.progress.estimatedDuration && task.progress.progress > 0) {
-      const remaining =
-        task.progress.estimatedDuration * (1 - task.progress.progress / 100);
-      return Math.ceil(remaining);
-    }
-    return null;
-  }, [task.progress]);
 
   // 操作按钮
   const renderActions = () => {
@@ -165,11 +144,7 @@ export function TranscriptionStatusPanel({
         return (
           <div className="flex gap-2">
             {onCancelTranscription && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onCancelTranscription()}
-              >
+              <Button size="sm" variant="outline" onClick={() => onCancelTranscription()}>
                 <X className="h-4 w-4" />
                 取消
               </Button>
@@ -184,11 +159,7 @@ export function TranscriptionStatusPanel({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onPauseTranscription()}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => onPauseTranscription()}>
                       <Pause className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -202,11 +173,7 @@ export function TranscriptionStatusPanel({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onCancelTranscription()}
-                    >
+                    <Button size="sm" variant="outline" onClick={() => onCancelTranscription()}>
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -229,11 +196,7 @@ export function TranscriptionStatusPanel({
               </Button>
             )}
             {onCancelTranscription && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onCancelTranscription()}
-              >
+              <Button size="sm" variant="outline" onClick={() => onCancelTranscription()}>
                 <X className="h-4 w-4" />
               </Button>
             )}
@@ -272,10 +235,7 @@ export function TranscriptionStatusPanel({
         </div>
 
         {!compact && (
-          <Badge
-            variant="secondary"
-            className={cn(config.color, "border-current")}
-          >
+          <Badge variant="secondary" className={cn(config.color, "border-current")}>
             {task.priority.toUpperCase()}
           </Badge>
         )}
@@ -290,9 +250,7 @@ export function TranscriptionStatusPanel({
           </div>
           <Progress value={task.progress.progress} className="h-2" />
           {task.progress.message && (
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {task.progress.message}
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{task.progress.message}</p>
           )}
         </div>
       )}
@@ -318,9 +276,7 @@ export function TranscriptionStatusPanel({
             {task.progress.actualDuration && (
               <div>
                 <p className="text-gray-500">处理时间</p>
-                <p className="font-medium">
-                  {formatDuration(task.progress.actualDuration)}
-                </p>
+                <p className="font-medium">{formatDuration(task.progress.actualDuration)}</p>
               </div>
             )}
           </div>
@@ -328,9 +284,7 @@ export function TranscriptionStatusPanel({
           {/* 错误信息 */}
           {status === "failed" && task.progress.error && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-              <p className="text-sm text-red-700 dark:text-red-300">
-                错误: {task.progress.error}
-              </p>
+              <p className="text-sm text-red-700 dark:text-red-300">错误: {task.progress.error}</p>
             </div>
           )}
 
@@ -342,15 +296,11 @@ export function TranscriptionStatusPanel({
                 <div className="grid grid-cols-2 gap-4 text-xs">
                   <div>
                     <span className="text-gray-500">文本长度:</span>
-                    <span className="ml-1">
-                      {task.progress.result.text.length} 字符
-                    </span>
+                    <span className="ml-1">{task.progress.result.text.length} 字符</span>
                   </div>
                   <div>
                     <span className="text-gray-500">片段数量:</span>
-                    <span className="ml-1">
-                      {task.progress.result.segmentsCount}
-                    </span>
+                    <span className="ml-1">{task.progress.result.segmentsCount}</span>
                   </div>
                 </div>
               </div>
@@ -385,12 +335,7 @@ export function TranscriptionStatusIndicator({
 }) {
   if (!task) {
     return (
-      <div
-        className={cn(
-          "flex items-center gap-2 text-sm text-gray-500",
-          className,
-        )}
-      >
+      <div className={cn("flex items-center gap-2 text-sm text-gray-500", className)}>
         <Clock className="h-4 w-4" />
         <span>未转录</span>
       </div>
@@ -403,17 +348,11 @@ export function TranscriptionStatusIndicator({
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <Icon
-        className={cn(
-          "h-4 w-4",
-          config.color,
-          task.status === "processing" && "animate-spin",
-        )}
+        className={cn("h-4 w-4", config.color, task.status === "processing" && "animate-spin")}
       />
       <span className="text-sm">{config.label}</span>
       {task.status === "processing" && (
-        <span className="text-xs text-gray-500">
-          ({task.progress.progress}%)
-        </span>
+        <span className="text-xs text-gray-500">({task.progress.progress}%)</span>
       )}
     </div>
   );
@@ -440,9 +379,7 @@ export function TranscriptionProgressBar({
         <span className="font-medium">{task.progress.progress}%</span>
       </div>
       <Progress value={task.progress.progress} className="h-2" />
-      {task.progress.message && (
-        <p className="text-xs text-gray-500">{task.progress.message}</p>
-      )}
+      {task.progress.message && <p className="text-xs text-gray-500">{task.progress.message}</p>}
     </div>
   );
 }

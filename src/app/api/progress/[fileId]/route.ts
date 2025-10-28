@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getServerProgress } from "@/lib/ai/server-progress";
 
 // Edge Runtime configuration for Cloudflare Workers compatibility
-export const runtime = 'edge';
+export const runtime = "edge";
 
 export async function GET(
   _request: NextRequest,

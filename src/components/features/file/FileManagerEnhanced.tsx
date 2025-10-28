@@ -5,11 +5,12 @@
 
 "use client";
 
+import { Grid, List, Search } from "lucide-react";
 import React, { useState } from "react";
-import { Upload, Settings, Search, Filter, Grid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Navigation from "@/components/ui/Navigation";
 import {
   Select,
   SelectContent,
@@ -17,32 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useFiles } from "@/hooks";
 import FileCard from "./FileCard";
 import FileUpload from "./FileUpload";
 import StatsCards from "./StatsCards";
-import Navigation from "@/components/ui/Navigation";
 
-interface FileManagerProps {
-  className?: string;
-}
-
-export default function FileManager({ className }: FileManagerProps) {
+export default function FileManager() {
   // 基础状态
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
-  const [filterBy, setFilterBy] = useState<
-    "all" | "transcribed" | "untranscribed"
-  >("all");
+  const [filterBy, setFilterBy] = useState<"all" | "transcribed" | "untranscribed">("all");
 
   // Hooks
   const { files, addFiles, deleteFile } = useFiles();
@@ -65,7 +51,6 @@ export default function FileManager({ className }: FileManagerProps) {
           return a.name.localeCompare(b.name);
         case "size":
           return (b.size || 0) - (a.size || 0);
-        case "date":
         default:
           return (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0);
       }
@@ -80,7 +65,7 @@ export default function FileManager({ className }: FileManagerProps) {
       // 显示成功提示
       const { toast } = await import("sonner");
       toast.success(`成功上传 ${selectedFiles.length} 个文件`);
-    } catch (error) {
+    } catch (_error) {
       const { toast } = await import("sonner");
       toast.error("文件上传失败");
     }
@@ -96,9 +81,7 @@ export default function FileManager({ className }: FileManagerProps) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold">文件管理</h1>
-              <p className="text-muted-foreground">
-                管理您的音频文件和转录任务
-              </p>
+              <p className="text-muted-foreground">管理您的音频文件和转录任务</p>
             </div>
           </div>
 
@@ -133,7 +116,7 @@ export default function FileManager({ className }: FileManagerProps) {
             {/* 过滤器 */}
             <Select
               value={filterBy}
-              onValueChange={(value: any) => setFilterBy(value)}
+              onValueChange={(value: "all" | "transcribed" | "untranscribed") => setFilterBy(value)}
             >
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="状态过滤" />
@@ -148,7 +131,7 @@ export default function FileManager({ className }: FileManagerProps) {
             {/* 排序 */}
             <Select
               value={sortBy}
-              onValueChange={(value: any) => setSortBy(value)}
+              onValueChange={(value: "name" | "date" | "size") => setSortBy(value)}
             >
               <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="排序方式" />
@@ -191,9 +174,7 @@ export default function FileManager({ className }: FileManagerProps) {
                     {searchQuery ? "没有找到匹配的文件" : "还没有上传任何文件"}
                   </h3>
                   <p className="text-muted-foreground text-center mb-4">
-                    {searchQuery
-                      ? "尝试调整搜索条件或过滤器"
-                      : "上传音频文件开始使用转录功能"}
+                    {searchQuery ? "尝试调整搜索条件或过滤器" : "上传音频文件开始使用转录功能"}
                   </p>
                   {!searchQuery && (
                     <FileUpload

@@ -8,7 +8,7 @@ export interface ValidationError {
   message: string;
   severity: "error" | "warning" | "info";
   field?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface ValidationResult {
@@ -359,7 +359,9 @@ export async function validateAudioContent(file: File): Promise<AudioProperties 
             message: "音频文件解码失败，文件可能已损坏或格式不支持",
             severity: "error",
             field: "content",
-            details: { error: error instanceof Error ? error.message : "Unknown error" },
+            details: {
+              error: error instanceof Error ? error.message : "Unknown error",
+            },
           });
         } finally {
           await audioContext.close();
@@ -386,7 +388,9 @@ export async function validateAudioContent(file: File): Promise<AudioProperties 
       message: "无法创建音频上下文，浏览器可能不支持音频解码",
       severity: "error",
       field: "browser",
-      details: { error: error instanceof Error ? error.message : "Unknown error" },
+      details: {
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
     };
   }
 }
@@ -649,7 +653,7 @@ export async function validateFileWithSecurity(file: File): Promise<ValidationRe
           message: `音频文件验证通过 - 时长: ${formatDuration(audioValidation.duration || 0)}, 采样率: ${audioValidation.sampleRate}Hz`,
           severity: "info",
           field: "audio",
-          details: audioValidation,
+          details: audioValidation as Record<string, unknown>,
         });
       }
     }
@@ -693,7 +697,9 @@ export async function validateFileWithSecurity(file: File): Promise<ValidationRe
       message: "验证过程中发生错误",
       severity: "error",
       field: "system",
-      details: { error: error instanceof Error ? error.message : "Unknown error" },
+      details: {
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
     });
   }
 

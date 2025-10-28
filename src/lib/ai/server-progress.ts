@@ -12,8 +12,8 @@ export type ServerProgress = {
 };
 
 // 检测运行环境
-const isEdgeRuntime = typeof globalThis !== 'undefined' &&
-                     (globalThis as any).EdgeRuntime !== undefined;
+const isEdgeRuntime =
+  typeof globalThis !== "undefined" && (globalThis as any).EdgeRuntime !== undefined;
 
 // 内存存储 - 仅用于非 Edge 环境或作为降级方案
 const fallbackStore = new Map<number, ServerProgress>();
@@ -22,15 +22,18 @@ const fallbackStore = new Map<number, ServerProgress>();
  * 设置进度数据
  * 在 Edge Runtime 中使用 KV 存储，否则使用内存存储
  */
-export async function setServerProgress(fileId: number, progress: Partial<ServerProgress>): Promise<void> {
+export async function setServerProgress(
+  fileId: number,
+  progress: Partial<ServerProgress>,
+): Promise<void> {
   if (isEdgeRuntime) {
     try {
       // 在 Edge Runtime 中使用 KV 存储
-      const { setServerProgress: kvSetProgress } = await import('../cloudflare/kv-progress-store');
+      const { setServerProgress: kvSetProgress } = await import("../cloudflare/kv-progress-store");
       await kvSetProgress(fileId, progress);
       return;
     } catch (error) {
-      console.warn('KV storage not available, falling back to memory storage:', error);
+      console.warn("KV storage not available, falling back to memory storage:", error);
       // 降级到内存存储
     }
   }
@@ -72,10 +75,10 @@ export async function getServerProgress(fileId: number): Promise<ServerProgress 
   if (isEdgeRuntime) {
     try {
       // 在 Edge Runtime 中使用 KV 存储
-      const { getServerProgress: kvGetProgress } = await import('../cloudflare/kv-progress-store');
+      const { getServerProgress: kvGetProgress } = await import("../cloudflare/kv-progress-store");
       return await kvGetProgress(fileId);
     } catch (error) {
-      console.warn('KV storage not available, falling back to memory storage:', error);
+      console.warn("KV storage not available, falling back to memory storage:", error);
       // 降级到内存存储
     }
   }
@@ -91,10 +94,12 @@ export async function getAllServerProgress(): Promise<ServerProgress[]> {
   if (isEdgeRuntime) {
     try {
       // 在 Edge Runtime 中使用 KV 存储
-      const { getAllServerProgress: kvGetAllProgress } = await import('../cloudflare/kv-progress-store');
+      const { getAllServerProgress: kvGetAllProgress } = await import(
+        "../cloudflare/kv-progress-store"
+      );
       return await kvGetAllProgress();
     } catch (error) {
-      console.warn('KV storage not available, falling back to memory storage:', error);
+      console.warn("KV storage not available, falling back to memory storage:", error);
       // 降级到内存存储
     }
   }
@@ -110,11 +115,13 @@ export async function clearServerProgress(fileId: number): Promise<void> {
   if (isEdgeRuntime) {
     try {
       // 在 Edge Runtime 中使用 KV 存储
-      const { clearServerProgress: kvClearProgress } = await import('../cloudflare/kv-progress-store');
+      const { clearServerProgress: kvClearProgress } = await import(
+        "../cloudflare/kv-progress-store"
+      );
       await kvClearProgress(fileId);
       return;
     } catch (error) {
-      console.warn('KV storage not available, falling back to memory storage:', error);
+      console.warn("KV storage not available, falling back to memory storage:", error);
       // 降级到内存存储
     }
   }
@@ -129,7 +136,9 @@ export async function clearServerProgress(fileId: number): Promise<void> {
  */
 export function setServerProgressSync(fileId: number, progress: Partial<ServerProgress>): void {
   if (isEdgeRuntime) {
-    console.warn('setServerProgressSync is deprecated in Edge Runtime. Use async setServerProgress instead.');
+    console.warn(
+      "setServerProgressSync is deprecated in Edge Runtime. Use async setServerProgress instead.",
+    );
     return;
   }
 
@@ -164,7 +173,9 @@ export function setServerProgressSync(fileId: number, progress: Partial<ServerPr
  */
 export function getServerProgressSync(fileId: number): ServerProgress | undefined {
   if (isEdgeRuntime) {
-    console.warn('getServerProgressSync is deprecated in Edge Runtime. Use async getServerProgress instead.');
+    console.warn(
+      "getServerProgressSync is deprecated in Edge Runtime. Use async getServerProgress instead.",
+    );
     return undefined;
   }
 
@@ -176,7 +187,9 @@ export function getServerProgressSync(fileId: number): ServerProgress | undefine
  */
 export function getAllServerProgressSync(): ServerProgress[] {
   if (isEdgeRuntime) {
-    console.warn('getAllServerProgressSync is deprecated in Edge Runtime. Use async getAllServerProgress instead.');
+    console.warn(
+      "getAllServerProgressSync is deprecated in Edge Runtime. Use async getAllServerProgress instead.",
+    );
     return [];
   }
 

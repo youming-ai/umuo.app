@@ -1,12 +1,12 @@
-import { generateText } from "ai";
 import { groq } from "@ai-sdk/groq";
+import { generateText } from "ai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiFromError, apiSuccess } from "@/lib/utils/api-response";
 import { validationError } from "@/lib/utils/error-handler";
 
 // Edge Runtime configuration for Cloudflare Workers compatibility
-export const runtime = 'edge';
+export const runtime = "edge";
 
 const GROQ_MODEL = "openai/gpt-oss-20b";
 

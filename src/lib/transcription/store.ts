@@ -6,16 +6,14 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
-  TranscriptionTask,
-  TranscriptionQueueState,
-  TranscriptionStatus,
-  TranscriptionPriority,
-  TranscriptionOptions,
-  TranscriptionProgress,
-  TranscriptionEvent,
-  TranscriptionUIState,
-  ITranscriptionManager,
   TranscriptionError,
+  type TranscriptionEvent,
+  type TranscriptionOptions,
+  type TranscriptionQueueState,
+  type TranscriptionResult,
+  type TranscriptionStatus,
+  type TranscriptionTask,
+  type TranscriptionUIState,
 } from "@/types/transcription";
 
 /**
@@ -63,16 +61,12 @@ interface TranscriptionActions {
 
   // 任务状态操作
   startTask: (taskId: string) => void;
-  completeTask: (taskId: string, result: any) => void;
+  completeTask: (taskId: string, result: TranscriptionResult) => void;
   failTask: (taskId: string, error: Error) => void;
   cancelTask: (taskId: string) => void;
   pauseTask: (taskId: string) => void;
   resumeTask: (taskId: string) => void;
-  updateTaskProgress: (
-    taskId: string,
-    progress: number,
-    message?: string,
-  ) => void;
+  updateTaskProgress: (taskId: string, progress: number, message?: string) => void;
 
   // UI 控制
   setUIState: (updates: Partial<TranscriptionUIState>) => void;
@@ -89,9 +83,7 @@ interface TranscriptionActions {
   retryFailedTasks: () => void;
 }
 
-export const useTranscriptionStore = create<
-  TranscriptionState & TranscriptionActions
->()(
+export const useTranscriptionStore = create<TranscriptionState & TranscriptionActions>()(
   devtools(
     (set, get) => ({
       // 初始状态
@@ -177,10 +169,7 @@ export const useTranscriptionStore = create<
           fileName,
           fileSize,
           status: "idle",
-          priority:
-            options?.priority ||
-            state.config.defaultOptions.priority ||
-            "normal",
+          priority: options?.priority || state.config.defaultOptions.priority || "normal",
           progress: {
             fileId,
             status: "idle",
@@ -285,38 +274,30 @@ export const useTranscriptionStore = create<
         const { tasks } = get();
         const allTasks = Array.from(tasks.values());
 
-        const queued = allTasks.filter(
-          (t) => t.status === "queued" || t.status === "idle",
-        );
+        const queued = allTasks.filter((t) => t.status === "queued" || t.status === "idle");
         const processing = allTasks.filter((t) => t.status === "processing");
         const completed = allTasks
           .filter((t) => t.status === "completed")
-          .sort(
-            (a, b) =>
-              b.progress.completedAt!.getTime() -
-              a.progress.completedAt!.getTime(),
-          )
+          .sort((a, b) => {
+            const aTime = a.progress.completedAt?.getTime() || 0;
+            const bTime = b.progress.completedAt?.getTime() || 0;
+            return bTime - aTime;
+          })
           .slice(0, 10); // 只保留最近10个完成的任务
         const failed = allTasks
           .filter((t) => t.status === "failed")
-          .sort(
-            (a, b) =>
-              b.progress.createdAt.getTime() - a.progress.createdAt.getTime(),
-          )
+          .sort((a, b) => b.progress.createdAt.getTime() - a.progress.createdAt.getTime())
           .slice(0, 10); // 只保留最近10个失败的任务
 
         // 计算统计信息
-        const allCompletedTasks = allTasks.filter(
-          (t) => t.status === "completed",
-        );
+        const allCompletedTasks = allTasks.filter((t) => t.status === "completed");
         const allFailedTasks = allTasks.filter((t) => t.status === "failed");
 
         const stats = {
           totalProcessed: allCompletedTasks.length + allFailedTasks.length,
           successCount: allCompletedTasks.length,
           failureCount: allFailedTasks.length,
-          averageProcessingTime:
-            calculateAverageProcessingTime(allCompletedTasks),
+          averageProcessingTime: calculateAverageProcessingTime(allCompletedTasks),
           queueLength: queued.length,
         };
 
@@ -363,7 +344,7 @@ export const useTranscriptionStore = create<
         });
       },
 
-      completeTask: (taskId: string, result: any) => {
+      completeTask: (taskId: string, result: TranscriptionResult) => {
         const task = get().getTask(taskId);
         if (!task) return;
 
@@ -468,11 +449,7 @@ export const useTranscriptionStore = create<
         get().startTask(taskId);
       },
 
-      updateTaskProgress: (
-        taskId: string,
-        progress: number,
-        message?: string,
-      ) => {
+      updateTaskProgress: (taskId: string, progress: number, message?: string) => {
         const task = get().getTask(taskId);
         if (!task) return;
 
@@ -496,8 +473,7 @@ export const useTranscriptionStore = create<
         set((prevState) => ({
           uiState: {
             ...prevState.uiState,
-            showTranscriptionManager:
-              !prevState.uiState.showTranscriptionManager,
+            showTranscriptionManager: !prevState.uiState.showTranscriptionManager,
           },
         }));
       },
@@ -512,10 +488,7 @@ export const useTranscriptionStore = create<
             try {
               callback(event);
             } catch (error) {
-              console.error(
-                `Error in event listener for ${event.type}:`,
-                error,
-              );
+              console.error(`Error in event listener for ${event.type}:`, error);
             }
           });
         }
@@ -528,7 +501,7 @@ export const useTranscriptionStore = create<
           eventListeners.set(eventType, new Set());
         }
 
-        eventListeners.get(eventType)!.add(callback);
+        eventListeners.get(eventType)?.add(callback);
 
         // 返回取消监听的函数
         return () => {
@@ -573,9 +546,7 @@ export const useTranscriptionStore = create<
 
       retryFailedTasks: () => {
         const { tasks } = get();
-        const failedTasks = Array.from(tasks.values()).filter(
-          (task) => task.status === "failed",
-        );
+        const failedTasks = Array.from(tasks.values()).filter((task) => task.status === "failed");
 
         failedTasks.forEach((task) => {
           get().startTask(task.id);
@@ -589,9 +560,7 @@ export const useTranscriptionStore = create<
 );
 
 // 辅助函数：计算平均处理时间
-function calculateAverageProcessingTime(
-  completedTasks: TranscriptionTask[],
-): number {
+function calculateAverageProcessingTime(completedTasks: TranscriptionTask[]): number {
   if (completedTasks.length === 0) return 0;
 
   const totalTime = completedTasks.reduce((sum, task) => {
@@ -605,14 +574,11 @@ function calculateAverageProcessingTime(
 export const useTranscriptionTasks = () =>
   useTranscriptionStore((state) => Array.from(state.tasks.values()));
 
-export const useTranscriptionQueue = () =>
-  useTranscriptionStore((state) => state.queueState);
+export const useTranscriptionQueue = () => useTranscriptionStore((state) => state.queueState);
 
-export const useTranscriptionConfig = () =>
-  useTranscriptionStore((state) => state.config);
+export const useTranscriptionConfig = () => useTranscriptionStore((state) => state.config);
 
-export const useTranscriptionUI = () =>
-  useTranscriptionStore((state) => state.uiState);
+export const useTranscriptionUI = () => useTranscriptionStore((state) => state.uiState);
 
 // 便捷 hooks
 export const useTaskByFileId = (fileId: number) =>

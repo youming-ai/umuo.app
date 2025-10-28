@@ -7,6 +7,7 @@ import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
 import PwaRegister from "@/components/ui/PwaRegister";
 import { ThemeDebuggerToggle } from "@/components/ui/ThemeDebugger";
+import { ClarityProvider } from "@/components/providers/ClarityProvider";
 
 export const metadata: Metadata = {
   title: "影子跟读",
@@ -56,15 +57,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider defaultTheme="dark">
-          <MonitoringInitializer />
-          <QueryProvider>
-            <PageErrorBoundary>
-              <div className="relative min-h-screen">{children}</div>
-            </PageErrorBoundary>
-          </QueryProvider>
-          <ThemeDebuggerToggle />
-          <PwaRegister />
-          <ToastContainer>{null}</ToastContainer>
+          <ClarityProvider projectId="tx4r6c5h9b">
+            <MonitoringInitializer />
+            <QueryProvider>
+              <PageErrorBoundary>
+                <div className="relative min-h-screen">{children}</div>
+              </PageErrorBoundary>
+            </QueryProvider>
+            <ThemeDebuggerToggle />
+            <PwaRegister />
+            <ToastContainer>{null}</ToastContainer>
+          </ClarityProvider>
         </ThemeProvider>
       </body>
     </html>

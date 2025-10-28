@@ -123,13 +123,8 @@ export default function FileUpload({
         </span>
 
         <div className="flex flex-col items-center gap-2">
-          <p
-            className="text-xl font-bold text-[var(--text-primary)]"
-            id={uploadDescriptionId}
-          >
-            {currentFileCount >= maxFiles
-              ? "已达到文件数量上限"
-              : "拖拽文件到这里"}
+          <p className="text-xl font-bold text-[var(--text-primary)]" id={uploadDescriptionId}>
+            {currentFileCount >= maxFiles ? "已达到文件数量上限" : "拖拽文件到这里"}
           </p>
           <p className="text-sm text-[var(--text-muted)]">
             {currentFileCount >= maxFiles
@@ -137,9 +132,7 @@ export default function FileUpload({
               : `支持 MP3、WAV、M4A、OGG、FLAC 格式 (${currentFileCount}/${maxFiles})`}
           </p>
           {currentFileCount < maxFiles && remainingSlots > 0 && (
-            <p className="text-xs text-[var(--text-muted)]">
-              还可添加 {remainingSlots} 个文件
-            </p>
+            <p className="text-xs text-[var(--text-muted)]">还可添加 {remainingSlots} 个文件</p>
           )}
         </div>
 
@@ -150,18 +143,14 @@ export default function FileUpload({
           aria-describedby={uploadDescriptionId}
           disabled={isDisabled}
         >
-          <span>
-            {currentFileCount >= maxFiles ? "已达到上限" : "选择文件"}
-          </span>
+          <span>{currentFileCount >= maxFiles ? "已达到上限" : "选择文件"}</span>
         </button>
       </section>
 
       {/* 上传进度指示器 */}
       {isUploading && (
         <div className="mt-4 text-center">
-          <p className="mb-2 text-sm text-[var(--text-muted)]">
-            上传中... {uploadProgress}%
-          </p>
+          <p className="mb-2 text-sm text-[var(--text-muted)]">上传中... {uploadProgress}%</p>
           <div className="h-2 w-full rounded-full bg-[var(--border-muted)]">
             <div
               className="bg-[var(--button-color)] h-2 rounded-full transition-all duration-300"

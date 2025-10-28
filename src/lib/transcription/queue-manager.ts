@@ -4,23 +4,22 @@
  * 使用事件驱动替代定时器，支持 Edge Runtime
  */
 
+import { TranscriptionService } from "@/lib/ai/transcription-service";
+import { edgeAdapter } from "@/lib/cloudflare/edge-adapter";
+import { DbUtils } from "@/lib/db/db";
 import {
-  TranscriptionTask,
-  TranscriptionOptions,
-  TranscriptionStatus,
-  TranscriptionPriority,
-  ITranscriptionManager,
+  type ITranscriptionManager,
   TranscriptionError,
-  TranscriptionEvent,
+  type TranscriptionOptions,
+  type TranscriptionQueueState,
+  type TranscriptionStatus,
+  type TranscriptionTask,
 } from "@/types/transcription";
 import { useTranscriptionStore } from "./store";
-import { TranscriptionService } from "@/lib/ai/transcription-service";
-import { DbUtils } from "@/lib/db/db";
-import { edgeAdapter } from "@/lib/cloudflare/edge-adapter";
 
 // 检测运行环境
-const isEdgeRuntime = typeof globalThis !== 'undefined' &&
-                     (globalThis as any).EdgeRuntime !== undefined;
+const _isEdgeRuntime =
+  typeof globalThis !== "undefined" && (globalThis as any).EdgeRuntime !== undefined;
 
 /**
  * 转录队列管理器实现 - 事件驱动版本
@@ -44,10 +43,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
   /**
    * 添加转录任务
    */
-  async addTask(
-    fileId: number,
-    options: TranscriptionOptions = {},
-  ): Promise<string> {
+  async addTask(fileId: number, options: TranscriptionOptions = {}): Promise<string> {
     try {
       // 获取文件信息
       const file = await DbUtils.getFile(fileId);
@@ -69,11 +65,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
 
       // 显示通知
       if (options.autoStart !== false) {
-        this.showNotification(
-          "转录任务已添加",
-          `${file.name} 已加入转录队列`,
-          "info",
-        );
+        this.showNotification("转录任务已添加", `${file.name} 已加入转录队列`, "info");
       }
 
       return taskId;
@@ -82,14 +74,10 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
         throw error;
       }
 
-      throw new TranscriptionError(
-        "Failed to add transcription task",
-        "ADD_TASK_FAILED",
-        {
-          fileId,
-          originalError: error,
-        },
-      );
+      throw new TranscriptionError("Failed to add transcription task", "ADD_TASK_FAILED", {
+        fileId,
+        originalError: error,
+      });
     }
   }
 
@@ -112,11 +100,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
 
       if (success) {
         console.log(`🗑️ 转录任务已移除: ${taskId}`);
-        this.showNotification(
-          "任务已移除",
-          `任务 ${task.fileName} 已从队列中移除`,
-          "info",
-        );
+        this.showNotification("任务已移除", `任务 ${task.fileName} 已从队列中移除`, "info");
       }
 
       return success;
@@ -144,11 +128,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
 
     useTranscriptionStore.getState().cancelTask(taskId);
 
-    this.showNotification(
-      "转录已取消",
-      `${task.fileName} 的转录已取消`,
-      "warning",
-    );
+    this.showNotification("转录已取消", `${task.fileName} 的转录已取消`, "warning");
     return true;
   }
 
@@ -170,11 +150,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
       console.log(`🔄 重试转录任务: ${taskId}`);
       useTranscriptionStore.getState().startTask(taskId);
 
-      this.showNotification(
-        "开始重试",
-        `${task.fileName} 开始重新转录`,
-        "info",
-      );
+      this.showNotification("开始重试", `${task.fileName} 开始重新转录`, "info");
       return true;
     } catch (error) {
       console.error(`Failed to retry task ${taskId}:`, error);
@@ -194,11 +170,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
     useTranscriptionStore.getState().pauseTask(taskId);
     console.log(`⏸️ 转录任务已暂停: ${taskId}`);
 
-    this.showNotification(
-      "转录已暂停",
-      `${task.fileName} 的转录已暂停`,
-      "info",
-    );
+    this.showNotification("转录已暂停", `${task.fileName} 的转录已暂停`, "info");
     return true;
   }
 
@@ -214,11 +186,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
     useTranscriptionStore.getState().resumeTask(taskId);
     console.log(`▶️ 转录任务已恢复: ${taskId}`);
 
-    this.showNotification(
-      "转录已恢复",
-      `${task.fileName} 的转录已恢复`,
-      "info",
-    );
+    this.showNotification("转录已恢复", `${task.fileName} 的转录已恢复`, "info");
     return true;
   }
 
@@ -241,9 +209,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
    */
   getTasksByStatus(status: TranscriptionStatus): TranscriptionTask[] {
     const state = useTranscriptionStore.getState();
-    return Array.from(state.tasks.values()).filter(
-      (task) => task.status === status,
-    );
+    return Array.from(state.tasks.values()).filter((task) => task.status === status);
   }
 
   /**
@@ -320,10 +286,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
     const state = useTranscriptionStore.getState();
 
     // 取消所有等待和正在处理的任务
-    const tasksToCancel = [
-      ...state.queueState.queued,
-      ...state.queueState.processing,
-    ];
+    const tasksToCancel = [...state.queueState.queued, ...state.queueState.processing];
 
     tasksToCancel.forEach((task) => {
       this.cancelTask(task.id);
@@ -350,19 +313,17 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
   /**
    * 添加队列更新监听器
    */
-  onQueueUpdate(callback: (state: any) => void): () => void {
+  onQueueUpdate(callback: (state: TranscriptionQueueState) => void): () => void {
     return useTranscriptionStore.getState().on("queue_updated", callback);
   }
 
   /**
    * 添加进度更新监听器
    */
-  onProgressUpdate(
-    callback: (taskId: string, progress: number) => void,
-  ): () => void {
+  onProgressUpdate(callback: (taskId: string, progress: number) => void): () => void {
     return useTranscriptionStore
       .getState()
-      .on("task_progress", (event: any) => {
+      .on("task_progress", (event: { taskId: string; progress: number }) => {
         callback(event.taskId, event.progress);
       });
   }
@@ -388,14 +349,14 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
 
     // 并行启动任务以提高效率
     const taskPromises = tasksToStart
-      .filter(task => !this.processingTasks.has(task.id))
-      .map(task => this.executeTask(task));
+      .filter((task) => !this.processingTasks.has(task.id))
+      .map((task) => this.executeTask(task));
 
     // 等待所有任务启动（但不等待完成）
     if (taskPromises.length > 0) {
       // 不等待任务完成，让它们异步执行
-      Promise.allSettled(taskPromises).catch(error => {
-        console.error('Task execution error:', error);
+      Promise.allSettled(taskPromises).catch((error) => {
+        console.error("Task execution error:", error);
       });
     }
   }
@@ -437,17 +398,12 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
       useTranscriptionStore.getState().completeTask(task.id, result);
 
       console.log(`✅ 转录任务完成: ${task.id}`);
-      this.showNotification(
-        "转录完成",
-        `${task.fileName} 转录已完成`,
-        "success",
-      );
+      this.showNotification("转录完成", `${task.fileName} 转录已完成`, "success");
     } catch (error) {
       console.error(`❌ 转录任务失败: ${task.id}`, error);
 
       // 转录失败
-      const transcriptionError =
-        error instanceof Error ? error : new Error(String(error));
+      const transcriptionError = error instanceof Error ? error : new Error(String(error));
       useTranscriptionStore.getState().failTask(task.id, transcriptionError);
 
       // 检查是否需要自动重试
@@ -482,8 +438,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
     };
 
     return tasks.sort((a, b) => {
-      const priorityDiff =
-        priorityOrder[a.priority] - priorityOrder[b.priority];
+      const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
       if (priorityDiff !== 0) {
         return priorityDiff;
       }
@@ -506,7 +461,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
   /**
    * 获取重试延迟
    */
-  private getRetryDelay(task: TranscriptionTask): number {
+  private getRetryDelay(_task: TranscriptionTask): number {
     // 简化处理，返回固定延迟
     return this.config.retryDelays[0];
   }
@@ -535,7 +490,7 @@ export class TranscriptionQueueManager implements ITranscriptionManager {
         default:
           toast.info(message);
       }
-    } catch (error) {
+    } catch (_error) {
       // 如果 toast 不可用，使用 console
       console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
     }

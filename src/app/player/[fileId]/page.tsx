@@ -5,13 +5,12 @@
 
 "use client";
 
-import React from "react";
 import { useParams } from "next/navigation";
 import PlayerErrorBoundary from "@/components/features/player/PlayerErrorBoundary";
 import PlayerPageComponent from "@/components/features/player/PlayerPage";
-import { usePlayerData } from "@/hooks/player/usePlayerDataNew";
 import { PlayerLoadingState } from "@/components/features/player/page/PlayerFallbackStates";
 import { TranscriptionLoading } from "@/components/transcription/TranscriptionLoading";
+import { usePlayerData } from "@/hooks/player/usePlayerDataNew";
 
 export default function PlayerPage() {
   const params = useParams();
@@ -25,7 +24,6 @@ export default function PlayerPage() {
     segments,
     transcriptionTask,
     isTranscribing,
-    transcriptionProgress,
     loading,
     error,
     startTranscription,
@@ -41,20 +39,18 @@ export default function PlayerPage() {
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-full p-3 mb-4">
             <span className="text-red-600 dark:text-red-400">!</span>
           </div>
-          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
-            加载失败
-          </h3>
-          <p className="text-sm text-red-600 dark:text-red-400 max-w-md">
-            {error}
-          </p>
+          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">加载失败</h3>
+          <p className="text-sm text-red-600 dark:text-red-400 max-w-md">{error}</p>
           <div className="flex flex-wrap gap-3 mt-6">
             <button
+              type="button"
               onClick={() => window.history.back()}
               className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
             >
               返回
             </button>
             <button
+              type="button"
               onClick={() =>
                 transcriptionTask?.status === "failed"
                   ? resetAutoTranscription()
@@ -73,14 +69,13 @@ export default function PlayerPage() {
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-3 mb-4">
             <span className="text-gray-600 dark:text-gray-400">?</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400">
-            文件不存在
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400">文件不存在</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
             找不到指定的音频文件。请检查文件是否已被删除。
           </p>
           <div className="mt-6">
             <button
+              type="button"
               onClick={() => window.history.back()}
               className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm transition-colors"
             >
@@ -95,15 +90,14 @@ export default function PlayerPage() {
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-full p-3 mb-4">
             <span className="text-blue-600 dark:text-blue-400">🎵</span>
           </div>
-          <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            准备转录
-          </h3>
+          <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">准备转录</h3>
           <p className="text-sm text-blue-600 dark:text-blue-400 max-w-md mb-6">
             此文件尚未转录，将自动开始转录处理。转录完成后，您就可以播放带字幕的音频。
           </p>
 
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <button
+              type="button"
               onClick={() => startTranscription()}
               className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors flex items-center justify-center"
             >
@@ -111,6 +105,7 @@ export default function PlayerPage() {
             </button>
 
             <button
+              type="button"
               onClick={() => window.history.back()}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm transition-colors"
             >
@@ -120,19 +115,13 @@ export default function PlayerPage() {
 
           {isTranscribing && (
             <div className="mt-4 w-full max-w-xs">
-              <TranscriptionLoading
-                task={transcriptionTask}
-                showMessage={true}
-                compact={false}
-              />
+              <TranscriptionLoading task={transcriptionTask} showMessage={true} compact={false} />
             </div>
           )}
         </div>
       )}
 
-      {file && audioUrl && transcript && segments && (
-        <PlayerPageComponent fileId={fileId} />
-      )}
+      {file && audioUrl && transcript && segments && <PlayerPageComponent fileId={fileId} />}
     </PlayerErrorBoundary>
   );
 }
