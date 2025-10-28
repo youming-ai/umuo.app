@@ -36,35 +36,29 @@ pnpm test
 pnpm lint
 ```
 
-## 📦 手动部署（备用方案）
+## 📦 本地部署（开发和测试）
 
-虽然推荐使用自动部署，但项目保留了手动部署选项：
+虽然推荐使用自动部署，但项目保留了本地部署选项用于开发和测试：
 
-### 方式一：使用部署脚本
+### 本地部署命令
 ```bash
 # 完整部署流程
-pnpm deploy:manual
+pnpm deploy:local
 
 # 预览环境部署
-pnpm deploy:preview:manual
-
-# 快速部署（跳过缓存清理）
-pnpm deploy:quick
+pnpm deploy:preview
 
 # 仅构建，不部署
 pnpm deploy:build
 ```
 
-### 方式二：使用 Wrangler CLI
+### Wrangler CLI（高级用户）
 ```bash
-# 登录 Cloudflare
-pnpm cf:login
+# 登录 Cloudflare（如需）
+npx wrangler login
 
-# 生产环境部署
-pnpm cf:deploy:prod
-
-# 预览环境部署
-pnpm cf:deploy:preview
+# 直接部署到 Cloudflare Pages
+npx wrangler pages deploy .next --project-name umuo-app
 ```
 
 ## 🔧 环境变量配置
