@@ -1,0 +1,33 @@
+name: Build and Deploy (BACKUP - MOVED TO CLOUDFLARE PAGES)
+
+# ⚠️  此文件已备份
+# GitHub Actions 已被 Cloudflare Pages Git 集成替代
+# 现在使用 Cloudflare Pages 的内置 CI/CD 进行自动部署
+#
+# 如需恢复此工作流，请重命名为 build-and-deploy.yml
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: "deploy-production"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy to Production (DISABLED)
+
+    steps:
+      - name: Notice
+        run: |
+          echo "⚠️  This workflow has been disabled."
+          echo "   Deployment is now handled by Cloudflare Pages Git integration."
+          echo "   To restore this workflow, rename the file to build-and-deploy.yml"
+          exit 1
