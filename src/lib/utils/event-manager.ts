@@ -21,7 +21,9 @@ export interface EventEmitterOptions {
   batchTimeout?: number;
 }
 
-export class OptimizedEventEmitter<T extends Record<string, any> = Record<string, any>> {
+export class OptimizedEventEmitter<
+  T extends Record<string, any> = Record<string, any>,
+> {
   private listeners = new Map<keyof T, Map<string, EventListener>>();
   private eventQueue: Array<{ type: keyof T; data: T[keyof T] }> = [];
   private options: Required<EventEmitterOptions>;
@@ -39,8 +41,14 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
     };
 
     // 创建防抖和节流的事件发射函数
-    this.debouncedEmit = debounce(this.emitImmediate.bind(this), this.options.debounceTime);
-    this.throttledEmit = throttle(this.emitImmediate.bind(this), this.options.throttleTime);
+    this.debouncedEmit = debounce(
+      this.emitImmediate.bind(this),
+      this.options.debounceTime,
+    );
+    this.throttledEmit = throttle(
+      this.emitImmediate.bind(this),
+      this.options.throttleTime,
+    );
   }
 
   // 添加事件监听器
@@ -59,7 +67,9 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
 
     // 检查监听器数量限制
     if (eventListeners.size >= this.options.maxListeners) {
-      console.warn(`事件 ${String(event)} 的监听器数量已达到最大限制 ${this.options.maxListeners}`);
+      console.warn(
+        `事件 ${String(event)} 的监听器数量已达到最大限制 ${this.options.maxListeners}`,
+      );
     }
 
     eventListeners.set(id, {
@@ -69,12 +79,25 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
       id,
     });
 
-    // 返回清理函数
+    // 返回监听器ID
+    return id;
+  }
+
+  // 添加事件监听器并返回清理函数
+  onWithCleanup<K extends keyof T>(
+    event: K,
+    callback: (data: T[K]) => void,
+    options: { priority?: number; once?: boolean } = {},
+  ): () => void {
+    const id = this.on(event, callback, options);
     return () => this.off(event, id);
   }
 
   // 移除事件监听器
-  off<K extends keyof T>(event: K, idOrCallback: string | ((data: T[K]) => void)): void {
+  off<K extends keyof T>(
+    event: K,
+    idOrCallback: string | ((data: T[K]) => void),
+  ): void {
     const eventListeners = this.listeners.get(event);
     if (!eventListeners) return;
 
@@ -324,7 +347,11 @@ export class TranscriptionEventManager extends OptimizedEventEmitter<Transcripti
   }
 
   // 高频事件的防抖发射
-  emitDebouncedProgress(taskId: string, progress: number, message?: string): void {
+  emitDebouncedProgress(
+    taskId: string,
+    progress: number,
+    message?: string,
+  ): void {
     this.emitDebounced("task:progress", { taskId, progress, message });
   }
 

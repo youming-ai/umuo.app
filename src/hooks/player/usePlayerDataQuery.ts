@@ -10,22 +10,22 @@ import { db } from "@/lib/db/db";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 // 音频URL缓存管理 - 使用 WeakMap 防止内存泄漏
-const audioUrlCache = new WeakMap<File, string>();
+const audioUrlCache = new WeakMap<Blob, string>();
 const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
 
-function createAudioUrl(file: File): string {
+function createAudioUrl(blob: Blob): string {
   // 检查缓存
-  if (audioUrlCache.has(file)) {
-    return audioUrlCache.get(file)!;
+  if (audioUrlCache.has(blob)) {
+    return audioUrlCache.get(blob)!;
   }
 
-  const url = URL.createObjectURL(file);
-  audioUrlCache.set(file, url);
+  const url = URL.createObjectURL(blob);
+  audioUrlCache.set(blob, url);
 
   // 设置自动清理
   setTimeout(() => {
     URL.revokeObjectURL(url);
-    audioUrlCache.delete(file);
+    audioUrlCache.delete(blob);
   }, CACHE_TTL);
 
   return url;
@@ -148,7 +148,8 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 计算加载状态
   const loading = fileQuery.isLoading || transcriptionQuery.isLoading;
-  const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
+  const error =
+    fileQuery.error?.message || transcriptionQuery.error?.message || null;
   const isTranscribing = transcriptionMutation.isPending;
 
   // 统一计算是否应该开始自动转录
@@ -164,7 +165,13 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
     console.log("🔍 自动转录状态检查:", conditions);
 
-    return isValidId && !loading && file && !transcript && !transcriptionMutation.isPending;
+    return (
+      isValidId &&
+      !loading &&
+      file &&
+      !transcript &&
+      !transcriptionMutation.isPending
+    );
   }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
 
   // 组件卸载时清理资源
@@ -209,7 +216,10 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       const freshData = await queryClient.fetchQuery({
         queryKey: transcriptionKeys.forFile(parsedFileId),
         queryFn: async () => {
-          const transcripts = await db.transcripts.where("fileId").equals(parsedFileId).toArray();
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(parsedFileId)
+            .toArray();
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           if (transcript && typeof transcript.id === "number") {
@@ -255,7 +265,11 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           });
 
           // 更新字幕段，添加处理后的信息
-          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
+          for (
+            let i = 0;
+            i < segments.length && i < processedResult.segments.length;
+            i++
+          ) {
             const originalSegment = segments[i];
             const processedSegment = processedResult.segments[i];
 
@@ -265,7 +279,9 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
               .where("[transcriptId+start]")
               .equals([newTranscript.id, originalSegment.start])
               .modify((segment) => {
-                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
+                segment.romaji = (
+                  processedSegment as ProcessedTranscriptionSegment
+                )?.romaji;
                 segment.translation = (
                   processedSegment as ProcessedTranscriptionSegment
                 )?.translation;
