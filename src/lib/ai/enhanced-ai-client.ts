@@ -1,5 +1,5 @@
-import { experimental_transcribe as transcribe } from "ai";
 import { groq } from "@ai-sdk/groq";
+import { experimental_transcribe as transcribe } from "ai";
 
 /**
  * Enhanced AI Client - umuo.app 项目的AI音频转录核心模块
@@ -348,18 +348,20 @@ export class EnhancedAIClient {
         language: transcript.language || options.language || "ja",
         duration: transcript.durationInSeconds,
         segments:
-          transcript.segments?.map((segment: any) => ({
-            id: segment.id || 0,
-            seek: segment.seek || 0,
-            start: segment.start,
-            end: segment.end,
-            text: segment.text,
-            tokens: segment.tokens || [],
-            temperature: segment.temperature || 0,
-            avg_logprob: segment.avg_logprob || 0,
-            compression_ratio: segment.compression_ratio || 0,
-            no_speech_prob: segment.no_speech_prob || 0,
-          })) || [],
+          transcript.segments?.map(
+            (segment: { text: string; startSecond: number; endSecond: number }) => ({
+              id: 0,
+              seek: 0,
+              start: segment.startSecond,
+              end: segment.endSecond,
+              text: segment.text,
+              tokens: [],
+              temperature: 0,
+              avg_logprob: 0,
+              compression_ratio: 0,
+              no_speech_prob: 0,
+            }),
+          ) || [],
       };
 
       // 存储到缓存

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db/db";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
+import type { ProcessedSegment } from "@/types/transcription";
 
 // 转录响应类型
 interface TranscriptionResponse {
@@ -92,6 +93,8 @@ export function useTranscription() {
       });
 
       let response: Response;
+      const startTime = Date.now();
+
       try {
         response = await fetch(
           `/api/transcribe?language=${language}&fileId=${file.id}`,
@@ -215,8 +218,8 @@ export function useTranscription() {
             const postProcessResult = (await postProcessResponse.json()) as {
               success: boolean;
               data?: {
-                segments?: any[];
-                processedSegments?: any[];
+                segments?: ProcessedSegment[];
+                processedSegments?: ProcessedSegment[];
               };
             };
             console.log("文本后处理成功:", {

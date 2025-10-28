@@ -3,6 +3,7 @@
  * 专门监控文件上传、分块、验证等操作的性能指标
  */
 
+import type { ValidationResult } from "./file-validation";
 import { MetricCategory, PerformanceMonitoring } from "./performance-monitoring";
 
 // 文件处理操作类型
@@ -245,12 +246,7 @@ export class FilePerformanceMonitoring {
   recordValidationMetrics(
     operationId: string,
     validationTime: number,
-    validationResult: {
-      isValid: boolean;
-      errors: Array<{ code: string; message: string }>;
-      warnings: Array<{ code: string; message: string }>;
-      securityScore: number;
-    },
+    validationResult: ValidationResult,
   ): void {
     if (!this.config.enabled || !this.config.trackDetailedMetrics) return;
 
@@ -282,7 +278,7 @@ export class FilePerformanceMonitoring {
     this.performanceMonitoring.recordMetric(
       "file_validation_score",
       MetricCategory.FILE_PROCESSING,
-      validationResult.securityScore,
+      validationResult.securityScore ?? 0,
       "score",
       { operation: operation.operation },
       {
@@ -656,8 +652,11 @@ export function useFilePerformanceMonitoring() {
       chunkSize: number,
       chunkingTime: number,
     ) => monitoring.recordChunkingMetrics(operationId, chunksCount, chunkSize, chunkingTime),
-    recordValidationMetrics: (operationId: string, validationTime: number, validationResult: any) =>
-      monitoring.recordValidationMetrics(operationId, validationTime, validationResult),
+    recordValidationMetrics: (
+      operationId: string,
+      validationTime: number,
+      validationResult: ValidationResult,
+    ) => monitoring.recordValidationMetrics(operationId, validationTime, validationResult),
     recordStorageMetrics: (
       operationId: string,
       storageTime: number,

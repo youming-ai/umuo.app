@@ -1,11 +1,8 @@
 "use client";
 
+import { TranscriptionLoading } from "@/components/transcription/TranscriptionLoading";
 import { useTranscriptionStatus } from "@/hooks/api/useTranscription";
 import { useTranscriptionStatus as useTranscriptionTaskStatus } from "@/hooks/player/usePlayerData";
-import {
-  TranscriptionLoading,
-  TranscriptionStatusMinimal,
-} from "@/components/transcription/TranscriptionLoading";
 import type { FileRow } from "@/types/db/database";
 
 interface FileCardProps {
@@ -24,8 +21,9 @@ export default function FileCard({
   isCurrentFile = false,
 }: FileCardProps) {
   // 使用 TanStack Query 获取转录状态
-  const { data: transcriptionData, isLoading: isLoadingTranscript } =
-    useTranscriptionStatus(file.id ?? 0);
+  const { data: transcriptionData, isLoading: isLoadingTranscript } = useTranscriptionStatus(
+    file.id ?? 0,
+  );
   const transcript = transcriptionData?.transcript || null;
 
   // 获取转录任务用于新的loading UI
@@ -77,15 +75,11 @@ export default function FileCard({
               />
             ) : transcript ? (
               <div className="flex items-center gap-1 text-sm status-success">
-                <span className="material-symbols-outlined text-sm">
-                  check_circle
-                </span>
+                <span className="material-symbols-outlined text-sm">check_circle</span>
                 转录完成
               </div>
             ) : (
-              <div className="text-sm text-[var(--text-muted)]">
-                点击播放开始转录
-              </div>
+              <div className="text-sm text-[var(--text-muted)]">点击播放开始转录</div>
             )}
           </div>
         </div>

@@ -3,12 +3,11 @@
  * 提供兼容性接口，处理 Edge Runtime 环境下的特殊需求
  */
 
-import type { KVNamespace, ExecutionContext } from '@/types/cloudflare';
+import type { ExecutionContext, KVNamespace } from "@/types/cloudflare";
 
 // Edge Runtime 环境检测
 export function isEdgeRuntime(): boolean {
-  return typeof globalThis !== 'undefined' &&
-         (globalThis as any).EdgeRuntime !== undefined;
+  return typeof globalThis !== "undefined" && (globalThis as any).EdgeRuntime !== undefined;
 }
 
 // 环境变量适配器
@@ -34,10 +33,10 @@ export class EdgeRuntimeError extends Error {
     message: string,
     public readonly code: string,
     public readonly statusCode: number = 500,
-    public readonly details?: unknown
+    public readonly details?: unknown,
   ) {
     super(message);
-    this.name = 'EdgeRuntimeError';
+    this.name = "EdgeRuntimeError";
   }
 }
 
@@ -67,7 +66,7 @@ export class EdgeTimer {
       try {
         callback();
       } catch (error) {
-        console.error('Timer callback error:', error);
+        console.error("Timer callback error:", error);
       }
     }, actualDelay);
 
@@ -154,7 +153,7 @@ export class EdgeMemoryStore<T> {
 
   async list(): Promise<string[]> {
     const list = await this.kv.list({ prefix: this.keyPrefix });
-    return list.keys.map((key: { name: string }) => key.name.replace(this.keyPrefix, ''));
+    return list.keys.map((key: { name: string }) => key.name.replace(this.keyPrefix, ""));
   }
 }
 
@@ -170,16 +169,16 @@ export interface EdgeRequestContext {
 export function createEdgeResponse(
   data: unknown,
   status: number = 200,
-  headers: Record<string, string> = {}
+  headers: Record<string, string> = {},
 ): Response {
   const responseHeaders = new Headers({
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...headers,
   });
 
   // Edge Runtime 特定的头部
   if (isEdgeRuntime()) {
-    responseHeaders.set('X-Edge-Runtime', 'true');
+    responseHeaders.set("X-Edge-Runtime", "true");
   }
 
   return new Response(JSON.stringify(data), {
@@ -191,13 +190,13 @@ export function createEdgeResponse(
 // 错误响应适配器
 export function createEdgeErrorResponse(
   error: Error | EdgeRuntimeError,
-  status: number = 500
+  status: number = 500,
 ): Response {
   const errorResponse = {
     success: false,
     error: {
       message: error.message,
-      code: error instanceof EdgeRuntimeError ? error.code : 'INTERNAL_ERROR',
+      code: error instanceof EdgeRuntimeError ? error.code : "INTERNAL_ERROR",
       ...(error instanceof EdgeRuntimeError && { details: error.details }),
     },
     timestamp: Date.now(),
@@ -217,35 +216,35 @@ export class EdgeAsyncTask {
   static registerTask(
     taskId: string,
     task: Promise<unknown>,
-    ctx?: { waitUntil: (promise: Promise<unknown>) => void }
+    ctx?: { waitUntil: (promise: Promise<unknown>) => void },
   ): void {
-    this.tasks.set(taskId, task);
+    EdgeAsyncTask.tasks.set(taskId, task);
 
     // 在 Edge Runtime 中使用 waitUntil
     if (isEdgeRuntime() && ctx?.waitUntil) {
       ctx.waitUntil(
         task.finally(() => {
-          this.tasks.delete(taskId);
-        })
+          EdgeAsyncTask.tasks.delete(taskId);
+        }),
       );
     } else {
       // 非 Edge 环境，直接处理
       task.finally(() => {
-        this.tasks.delete(taskId);
+        EdgeAsyncTask.tasks.delete(taskId);
       });
     }
   }
 
-  static getTaskStatus(taskId: string): 'running' | 'completed' | 'not_found' {
-    const task = this.tasks.get(taskId);
-    if (!task) return 'not_found';
+  static getTaskStatus(taskId: string): "running" | "completed" | "not_found" {
+    const task = EdgeAsyncTask.tasks.get(taskId);
+    if (!task) return "not_found";
 
     // 简单的状态检查，实际实现可能需要更复杂的逻辑
-    return 'running';
+    return "running";
   }
 
   static async waitForTask(taskId: string): Promise<unknown> {
-    const task = this.tasks.get(taskId);
+    const task = EdgeAsyncTask.tasks.get(taskId);
     if (!task) {
       throw new Error(`Task ${taskId} not found`);
     }

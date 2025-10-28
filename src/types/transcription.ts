@@ -3,6 +3,48 @@
  * 用于统一管理转录状态、任务和队列
  */
 
+// 转录片段和单词类型
+export interface TranscriptionSegment {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
+  confidence?: number;
+  words?: TranscriptionWord[];
+}
+
+export interface TranscriptionWord {
+  word: string;
+  start: number;
+  end: number;
+  confidence?: number;
+}
+
+export interface ProcessedSegment {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
+  normalizedText?: string;
+  translation?: string;
+  annotations?: string[];
+  furigana?: string;
+  words: TranscriptionWord[];
+  confidence: number;
+}
+
+export interface TranscriptionResult {
+  text: string;
+  duration?: number;
+  segments?: TranscriptionSegment[];
+  processedSegments?: ProcessedSegment[];
+  language?: string;
+  confidence?: number;
+  model: string;
+  processingTime: number;
+  segmentsCount?: number;
+}
+
 // 转录任务状态
 export type TranscriptionStatus =
   | "idle" // 空闲状态
@@ -126,9 +168,7 @@ export interface ITranscriptionManager {
   // 事件监听
   onTaskUpdate(callback: (task: TranscriptionTask) => void): () => void;
   onQueueUpdate(callback: (state: TranscriptionQueueState) => void): () => void;
-  onProgressUpdate(
-    callback: (taskId: string, progress: number) => void,
-  ): () => void;
+  onProgressUpdate(callback: (taskId: string, progress: number) => void): () => void;
 }
 
 // 用户界面相关类型
@@ -162,7 +202,7 @@ export class TranscriptionError extends Error {
   constructor(
     message: string,
     public code: string,
-    public details?: any,
+    public details?: Record<string, unknown>,
     public recoverable: boolean = true,
   ) {
     super(message);
@@ -184,7 +224,7 @@ export type TranscriptionEvent =
       type: "task_completed";
       taskId: string;
       task: TranscriptionTask;
-      result: any;
+      result: TranscriptionResult;
     }
   | {
       type: "task_failed";

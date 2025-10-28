@@ -3,7 +3,7 @@
  * 替换内存存储，支持持久化进度跟踪
  */
 
-import type { KVNamespace } from '@/types/cloudflare';
+import type { KVNamespace } from "@/types/cloudflare";
 
 // 进度数据类型定义
 export interface ServerProgress {
@@ -63,7 +63,9 @@ export class KVProgressStore {
       });
     } catch (error) {
       console.error(`Failed to store progress for file ${fileId}:`, error);
-      throw new Error(`Progress storage failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Progress storage failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -112,7 +114,7 @@ export class KVProgressStore {
       const results = await Promise.all(progressPromises);
       return results.filter((progress): progress is ServerProgress => progress !== null);
     } catch (error) {
-      console.error('Failed to get all progress:', error);
+      console.error("Failed to get all progress:", error);
       return [];
     }
   }
@@ -128,7 +130,9 @@ export class KVProgressStore {
       console.log(`Progress cleared for file ${fileId}`);
     } catch (error) {
       console.error(`Failed to clear progress for file ${fileId}:`, error);
-      throw new Error(`Progress cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Progress cleanup failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
   }
 
@@ -154,14 +158,14 @@ export class KVProgressStore {
             await this.kv.delete(key.name);
             console.log(`Cleaned up expired progress for file ${progress.fileId}`);
           }
-        } catch (error) {
+        } catch (_error) {
           // 如果数据损坏，直接删除
           await this.kv.delete(key.name);
           console.log(`Cleaned up corrupted progress data: ${key.name}`);
         }
       }
     } catch (error) {
-      console.error('Failed to cleanup expired progress:', error);
+      console.error("Failed to cleanup expired progress:", error);
     }
   }
 
@@ -186,7 +190,9 @@ export function getProgressStore(): KVProgressStore {
     const globalEnv = globalThis as any;
 
     if (!globalEnv.TRANSCRIPTION_PROGRESS) {
-      throw new Error('TRANSCRIPTION_PROGRESS KV namespace not available. Make sure wrangler.toml is configured correctly.');
+      throw new Error(
+        "TRANSCRIPTION_PROGRESS KV namespace not available. Make sure wrangler.toml is configured correctly.",
+      );
     }
 
     progressStoreInstance = new KVProgressStore(globalEnv.TRANSCRIPTION_PROGRESS);
@@ -198,7 +204,10 @@ export function getProgressStore(): KVProgressStore {
 /**
  * 兼容性函数 - 替换原有的 server-progress.ts 函数
  */
-export async function setServerProgress(fileId: number, progress: Partial<ServerProgress>): Promise<void> {
+export async function setServerProgress(
+  fileId: number,
+  progress: Partial<ServerProgress>,
+): Promise<void> {
   const store = getProgressStore();
   await store.setProgress(fileId, progress);
 }

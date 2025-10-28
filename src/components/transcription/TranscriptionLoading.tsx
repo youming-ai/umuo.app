@@ -5,10 +5,9 @@
 
 "use client";
 
-import React from "react";
-import { Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
-import { cn } from "@/lib/utils/utils";
+import { CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils/utils";
 import type { TranscriptionTask } from "@/types/transcription";
 
 interface TranscriptionLoadingProps {
@@ -101,15 +100,9 @@ export function TranscriptionLoading({
     return (
       <div className={cn("flex items-center gap-1", className)}>
         <Icon
-          className={cn(
-            "h-3 w-3",
-            status.color,
-            task.status === "processing" && "animate-spin"
-          )}
+          className={cn("h-3 w-3", status.color, task.status === "processing" && "animate-spin")}
         />
-        {showMessage && (
-          <span className="text-xs text-gray-600">{status.message}</span>
-        )}
+        {showMessage && <span className="text-xs text-gray-600">{status.message}</span>}
       </div>
     );
   }
@@ -119,32 +112,20 @@ export function TranscriptionLoading({
       {/* 状态指示器 */}
       <div className="flex items-center gap-2">
         <Icon
-          className={cn(
-            "h-4 w-4",
-            status.color,
-            task.status === "processing" && "animate-spin"
-          )}
+          className={cn("h-4 w-4", status.color, task.status === "processing" && "animate-spin")}
         />
-        {showMessage && (
-          <span className={cn("text-sm", status.color)}>
-            {status.message}
-          </span>
-        )}
+        {showMessage && <span className={cn("text-sm", status.color)}>{status.message}</span>}
       </div>
 
       {/* 进度条 - 仅在处理中时显示 */}
       {status.showProgress && (
         <div className="space-y-1">
-          <Progress
-            value={status.progress}
-            className="h-1 w-full"
-          />
+          <Progress value={status.progress} className="h-1 w-full" />
           <div className="flex justify-between text-xs text-gray-500">
             <span>{status.progress}%</span>
             <span>
               {task.progress.estimatedDuration &&
-                `预计 ${Math.ceil(task.progress.estimatedDuration / 60)} 分钟`
-              }
+                `预计 ${Math.ceil(task.progress.estimatedDuration / 60)} 分钟`}
             </span>
           </div>
         </div>
@@ -154,9 +135,7 @@ export function TranscriptionLoading({
       {!compact && (
         <div className="text-xs text-gray-500">
           <div>{task.fileName}</div>
-          {task.fileSize && (
-            <div>{(task.fileSize / 1024 / 1024).toFixed(1)} MB</div>
-          )}
+          {task.fileSize && <div>{(task.fileSize / 1024 / 1024).toFixed(1)} MB</div>}
         </div>
       )}
     </div>
@@ -179,18 +158,10 @@ export function TranscriptionStatusMinimal({
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      {isProcessing && (
-        <Loader2 className="h-3 w-3 animate-spin text-primary" />
-      )}
-      {isCompleted && (
-        <CheckCircle className="h-3 w-3 text-green-500" />
-      )}
-      {hasError && (
-        <XCircle className="h-3 w-3 text-red-500" />
-      )}
-      {!isProcessing && !isCompleted && !hasError && (
-        <Clock className="h-3 w-3 text-gray-400" />
-      )}
+      {isProcessing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+      {isCompleted && <CheckCircle className="h-3 w-3 text-green-500" />}
+      {hasError && <XCircle className="h-3 w-3 text-red-500" />}
+      {!isProcessing && !isCompleted && !hasError && <Clock className="h-3 w-3 text-gray-400" />}
     </div>
   );
 }

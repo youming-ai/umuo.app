@@ -1,11 +1,11 @@
-import { experimental_transcribe as transcribe } from "ai";
 import { groq } from "@ai-sdk/groq";
+import { experimental_transcribe as transcribe } from "ai";
 import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/utils/api-response";
 
 // Edge Runtime configuration for Cloudflare Workers compatibility
-export const runtime = 'edge';
+export const runtime = "edge";
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({
@@ -32,9 +32,7 @@ function isFileLike(obj: unknown): obj is File {
 }
 
 const transcribeFormSchema = z.object({
-  audio: z
-    .any()
-    .refine((file) => isFileLike(file), { message: "Audio file is required" }),
+  audio: z.any().refine((file) => isFileLike(file), { message: "Audio file is required" }),
   meta: z
     .object({
       fileId: z.string().optional(),
@@ -101,10 +99,7 @@ function validateFormData(formData: FormData) {
           message: "Invalid metadata payload",
           details: {
             reason: "INVALID_META_JSON",
-            error:
-              metaError instanceof Error
-                ? metaError.message
-                : String(metaError),
+            error: metaError instanceof Error ? metaError.message : String(metaError),
           },
           statusCode: 400,
         }),
@@ -148,7 +143,27 @@ async function processTranscription(
   uploadedFile: File,
   language: string,
 ): Promise<
-  { success: true; data: any } | { success: false; error: NextResponse }
+  | {
+      success: true;
+      data: {
+        segments: Array<{
+          start: number;
+          end: number;
+          text: string;
+          wordTimestamps?: Array<{
+            word: string;
+            start: number;
+            end: number;
+          }>;
+          confidence?: number;
+          id: number;
+        }>;
+        text?: string;
+        language?: string;
+        duration?: number;
+      };
+    }
+  | { success: false; error: NextResponse }
 > {
   console.log("开始处理转录请求 (AI SDK):", {
     fileName: uploadedFile.name,
@@ -175,11 +190,11 @@ async function processTranscription(
   }
 
   try {
+    // 使用 AI SDK 的 transcribe 函数，采用推荐的配置
     // 将 File 转换为 Uint8Array 以适配 AI SDK
     const arrayBuffer = await uploadedFile.arrayBuffer();
     const audioData = new Uint8Array(arrayBuffer);
 
-    // 使用 AI SDK 的 transcribe 函数
     const transcript = await transcribe({
       model: groq.transcription("whisper-large-v3-turbo"),
       audio: audioData,
@@ -187,7 +202,8 @@ async function processTranscription(
         groq: {
           language,
           temperature: 0,
-          timestamp_granularities: ["word", "segment"], // 添加时间戳粒度
+          response_format: "verbose_json",
+          timestamp_granularities: ["word", "segment"],
         },
       },
     });
@@ -209,9 +225,7 @@ async function processTranscription(
       hasText: !!transcript.text,
       hasSegments: !!transcript.segments,
       segmentsType: typeof transcript.segments,
-      segmentsLength: Array.isArray(transcript.segments)
-        ? transcript.segments.length
-        : "N/A",
+      segmentsLength: Array.isArray(transcript.segments) ? transcript.segments.length : "N/A",
       firstSegment:
         Array.isArray(transcript.segments) && transcript.segments.length > 0
           ? transcript.segments[0]
@@ -234,33 +248,39 @@ async function processTranscription(
 
     if (Array.isArray(transcript.segments) && transcript.segments.length > 0) {
       // 使用AI SDK返回的segments
-      processedSegments = transcript.segments.map((segment: any) => ({
-        start: segment.start || segment.timestamp?.[0] || 0,
-        end: segment.end || segment.timestamp?.[1] || 0,
-        text: segment.text || segment.word || "",
-        wordTimestamps: segment.words || [],
-        confidence: segment.confidence,
-        id: segment.id,
-      }));
+      processedSegments = transcript.segments.map(
+        (segment: {
+          start?: number;
+          end?: number;
+          timestamp?: [number, number];
+          text: string;
+          word?: string;
+          words?: Array<{ word: string; start: number; end: number }>;
+          confidence?: number;
+          id?: number;
+        }) => ({
+          start: segment.start || segment.timestamp?.[0] || 0,
+          end: segment.end || segment.timestamp?.[1] || 0,
+          text: segment.text || segment.word || "",
+          wordTimestamps: segment.words || [],
+          confidence: segment.confidence,
+          id: segment.id || Math.floor(Math.random() * 1000000),
+        }),
+      );
       console.log("使用AI SDK返回的segments:", processedSegments.length);
     } else if (transcript.text && transcript.text.length > 0) {
       // 生成基本的segments：按句子分割
       console.log("AI SDK未返回segments，生成基本segments");
-      const sentences = transcript.text
-        .split(/[。！？.!?]+/)
-        .filter((s) => s.trim().length > 0);
+      const sentences = transcript.text.split(/[。！？.!?]+/).filter((s) => s.trim().length > 0);
       const avgWordsPerSecond = 2.5; // 假设平均每秒2.5个词
       const totalDuration =
-        transcript.durationInSeconds ||
-        transcript.text.length / avgWordsPerSecond;
+        transcript.durationInSeconds || transcript.text.length / avgWordsPerSecond;
 
       processedSegments = sentences.map((sentence, index) => {
         const words = sentence.trim().split(/\s+/);
         const sentenceDuration = words.length / avgWordsPerSecond;
         const startTime =
-          index === 0
-            ? 0
-            : sentences.slice(0, index).join("").length / avgWordsPerSecond;
+          index === 0 ? 0 : sentences.slice(0, index).join("").length / avgWordsPerSecond;
         const endTime = Math.min(startTime + sentenceDuration, totalDuration);
 
         return {
@@ -270,8 +290,7 @@ async function processTranscription(
           wordTimestamps: words.map((word, wordIndex) => ({
             word: word,
             start: startTime + wordIndex * (sentenceDuration / words.length),
-            end:
-              startTime + (wordIndex + 1) * (sentenceDuration / words.length),
+            end: startTime + (wordIndex + 1) * (sentenceDuration / words.length),
           })),
           confidence: 0.95,
           id: index + 1,
@@ -296,9 +315,7 @@ async function processTranscription(
           ? transcriptionError.message
           : String(transcriptionError),
       errorType:
-        transcriptionError instanceof Error
-          ? transcriptionError.constructor.name
-          : "Unknown",
+        transcriptionError instanceof Error ? transcriptionError.constructor.name : "Unknown",
       timestamp: new Date().toISOString(),
     });
 
@@ -370,10 +387,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process transcription
-    const transcriptionResult = await processTranscription(
-      formValidation.data.audio,
-      language,
-    );
+    const transcriptionResult = await processTranscription(formValidation.data.audio, language);
     if (!transcriptionResult.success) {
       return transcriptionResult.error;
     }

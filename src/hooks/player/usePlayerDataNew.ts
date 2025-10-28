@@ -3,18 +3,19 @@
  * 使用新的转录状态管理系统
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { getTranscriptionManager } from "@/lib/transcription/queue-manager";
 import {
-  useTranscriptionStore,
   useTaskByFileId,
   useTranscriptionQueue,
+  useTranscriptionStore,
 } from "@/lib/transcription/store";
-import { getTranscriptionManager } from "@/lib/transcription/queue-manager";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 import type {
-  TranscriptionTask,
   TranscriptionOptions,
+  TranscriptionQueueState,
+  TranscriptionTask,
 } from "@/types/transcription";
 
 // 查询键
@@ -54,18 +55,12 @@ function useTranscriptionDataQuery(fileId: number) {
     queryFn: async () => {
       const { db } = await import("@/lib/db/db");
 
-      const transcripts = await db.transcripts
-        .where("fileId")
-        .equals(fileId)
-        .toArray();
+      const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
 
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
       if (transcript && typeof transcript.id === "number") {
-        const segments = await db.segments
-          .where("transcriptId")
-          .equals(transcript.id)
-          .toArray();
+        const segments = await db.segments.where("transcriptId").equals(transcript.id).toArray();
 
         return {
           transcript,
@@ -138,15 +133,14 @@ export function usePlayerData(fileId: string): UsePlayerDataReturn {
 
   // 获取转录任务状态
   const transcriptionTask = useTaskByFileId(parsedFileId);
-  const queueState = useTranscriptionQueue();
+  const _queueState = useTranscriptionQueue();
 
   // 获取转录管理器
   const transcriptionManager = getTranscriptionManager();
 
   // 计算加载状态
   const loading = fileQuery.isLoading || transcriptionQuery.isLoading;
-  const error =
-    fileQuery.error?.message || transcriptionQuery.error?.message || null;
+  const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
 
   // 计算转录状态信息
   const transcriptionInfo = useMemo(() => {
@@ -218,7 +212,15 @@ export function usePlayerData(fileId: string): UsePlayerDataReturn {
     }, 500); // 500ms 延迟
 
     return () => clearTimeout(timer);
-  }, [isValidId, file, loading, transcriptionTask, transcript, parsedFileId]);
+  }, [
+    isValidId,
+    file,
+    loading,
+    transcriptionTask,
+    transcript,
+    parsedFileId,
+    transcriptionManager.addTask,
+  ]);
 
   // 监听转录完成事件，刷新数据
   useEffect(() => {
@@ -234,7 +236,7 @@ export function usePlayerData(fileId: string): UsePlayerDataReturn {
     });
 
     return unsubscribe;
-  }, [transcriptionTask, parsedFileId, queryClient]);
+  }, [transcriptionTask, parsedFileId, queryClient, transcriptionManager.onTaskUpdate]);
 
   // 开始转录
   const startTranscription = useCallback(
@@ -359,9 +361,7 @@ export function usePlayerData(fileId: string): UsePlayerDataReturn {
  * @deprecated 请使用 usePlayerData 替代
  */
 export function usePlayerDataQuery(fileId: string) {
-  console.warn(
-    "usePlayerDataQuery is deprecated, please use usePlayerData instead",
-  );
+  console.warn("usePlayerDataQuery is deprecated, please use usePlayerData instead");
   return usePlayerData(fileId);
 }
 
@@ -381,12 +381,8 @@ export function useTranscriptionStatus(fileId: number) {
     error: task?.progress.error,
 
     // 队列信息
-    queuePosition: task
-      ? queueState.queued.findIndex((t) => t.id === task.id) + 1
-      : -1,
-    estimatedWaitTime: task
-      ? calculateEstimatedWaitTime(task, queueState)
-      : undefined,
+    queuePosition: task ? queueState.queued.findIndex((t) => t.id === task.id) + 1 : -1,
+    estimatedWaitTime: task ? calculateEstimatedWaitTime(task, queueState) : undefined,
 
     // 操作方法
     start: (options?: TranscriptionOptions) => manager.addTask(fileId, options),
@@ -402,11 +398,9 @@ export function useTranscriptionStatus(fileId: number) {
  */
 function calculateEstimatedWaitTime(
   task: TranscriptionTask,
-  queueState: any,
+  queueState: TranscriptionQueueState,
 ): number {
-  const queuePosition = queueState.queued.findIndex(
-    (t: TranscriptionTask) => t.id === task.id,
-  );
+  const queuePosition = queueState.queued.findIndex((t: TranscriptionTask) => t.id === task.id);
   if (queuePosition === -1) return 0;
 
   // 简单估算：每个任务平均2分钟
