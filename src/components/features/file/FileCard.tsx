@@ -1,6 +1,11 @@
 "use client";
 
 import { useTranscriptionStatus } from "@/hooks/api/useTranscription";
+import { useTranscriptionStatus as useTranscriptionTaskStatus } from "@/hooks/player/usePlayerData";
+import {
+  TranscriptionLoading,
+  TranscriptionStatusMinimal,
+} from "@/components/transcription/TranscriptionLoading";
 import type { FileRow } from "@/types/db/database";
 
 interface FileCardProps {
@@ -19,34 +24,12 @@ export default function FileCard({
   isCurrentFile = false,
 }: FileCardProps) {
   // 使用 TanStack Query 获取转录状态
-  const { data: transcriptionData, isLoading: isLoadingTranscript } = useTranscriptionStatus(
-    file.id ?? 0,
-  );
+  const { data: transcriptionData, isLoading: isLoadingTranscript } =
+    useTranscriptionStatus(file.id ?? 0);
   const transcript = transcriptionData?.transcript || null;
 
-  const getStatus = () => {
-    if (isLoadingTranscript) {
-      return { icon: "pending", color: "status-loading", text: "检查转录状态..." };
-    }
-
-    if (transcript) {
-      switch (transcript.status) {
-        case "completed":
-          return { icon: "check_circle", color: "status-success", text: "转录完成" };
-        case "processing":
-          return { icon: "pending", color: "status-processing", text: "转录中..." };
-        case "failed":
-          return { icon: "error", color: "status-error", text: "转录失败" };
-        default:
-          return { icon: "audio_file", color: "status-ready", text: "就绪" };
-      }
-    }
-
-    // 文件已上传，等待播放时转录
-    return { icon: "audio_file", color: "status-ready", text: "点击播放开始转录" };
-  };
-
-  const status = getStatus();
+  // 获取转录任务用于新的loading UI
+  const transcriptionTask = useTranscriptionTaskStatus(file.id ?? 0);
 
   const getFileId = () => {
     if (!file.id) {
@@ -66,17 +49,45 @@ export default function FileCard({
   return (
     <div className="file-card flex items-center justify-between">
       <div className="flex items-center gap-4">
-        {status.icon === "pending" ? (
-          <div className="loading-spinner" />
-        ) : (
-          <span className={`material-symbols-outlined text-4xl ${status.color}`}>
-            {status.icon}
-          </span>
-        )}
+        {/* 音频文件图标 */}
+        <span
+          className={`material-symbols-outlined text-4xl ${
+            transcript ? "status-success" : "status-ready"
+          }`}
+        >
+          {transcript ? "check_circle" : "audio_file"}
+        </span>
 
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-file-name break-words">{file.name}</p>
-          <p className="text-sm text-[var(--text-muted)]">{status.text}</p>
+
+          {/* 简洁的转录状态显示 */}
+          <div className="mt-1">
+            {isLoadingTranscript ? (
+              <div className="flex items-center gap-1 text-sm text-[var(--text-muted)]">
+                <div className="loading-spinner" />
+                检查转录状态...
+              </div>
+            ) : transcriptionTask.task ? (
+              <TranscriptionLoading
+                task={transcriptionTask.task}
+                compact={true}
+                showMessage={true}
+                className="text-sm"
+              />
+            ) : transcript ? (
+              <div className="flex items-center gap-1 text-sm status-success">
+                <span className="material-symbols-outlined text-sm">
+                  check_circle
+                </span>
+                转录完成
+              </div>
+            ) : (
+              <div className="text-sm text-[var(--text-muted)]">
+                点击播放开始转录
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

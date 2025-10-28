@@ -21,8 +21,10 @@ interface TranscriptionResponse {
 // 查询转录状态的查询键
 export const transcriptionKeys = {
   all: ["transcription"] as const,
-  forFile: (fileId: number) => [...transcriptionKeys.all, "file", fileId] as const,
-  progress: (fileId: number) => [...transcriptionKeys.forFile(fileId), "progress"] as const,
+  forFile: (fileId: number) =>
+    [...transcriptionKeys.all, "file", fileId] as const,
+  progress: (fileId: number) =>
+    [...transcriptionKeys.forFile(fileId), "progress"] as const,
 };
 
 // 获取文件转录状态的查询
@@ -30,11 +32,17 @@ export function useTranscriptionStatus(fileId: number) {
   return useQuery({
     queryKey: transcriptionKeys.forFile(fileId),
     queryFn: async () => {
-      const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+      const transcripts = await db.transcripts
+        .where("fileId")
+        .equals(fileId)
+        .toArray();
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
       if (transcript && typeof transcript.id === "number") {
-        const segments = await db.segments.where("transcriptId").equals(transcript.id).toArray();
+        const segments = await db.segments
+          .where("transcriptId")
+          .equals(transcript.id)
+          .toArray();
         return {
           transcript,
           segments,
@@ -56,12 +64,20 @@ export function useTranscription() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ file, language = "ja" }: { file: FileRow; language?: string }) => {
+    mutationFn: async ({
+      file,
+      language = "ja",
+    }: {
+      file: FileRow;
+      language?: string;
+    }) => {
       if (!file.blob || !file.id) {
         throw new Error("文件不存在或缺少ID");
       }
 
-      const audioFile = new File([file.blob], file.name, { type: file.type || "audio/mpeg" });
+      const audioFile = new File([file.blob], file.name, {
+        type: file.type || "audio/mpeg",
+      });
 
       const formData = new FormData();
       formData.append("audio", audioFile);
@@ -77,10 +93,13 @@ export function useTranscription() {
 
       let response: Response;
       try {
-        response = await fetch(`/api/transcribe?language=${language}&fileId=${file.id}`, {
-          method: "POST",
-          body: formData,
-        });
+        response = await fetch(
+          `/api/transcribe?language=${language}&fileId=${file.id}`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
       } catch (fetchError) {
         console.error("网络请求失败:", fetchError);
         throw new Error(
@@ -153,15 +172,17 @@ export function useTranscription() {
       // 保存字幕段
       let savedSegments: Segment[] = [];
       if (result.data.segments && result.data.segments.length > 0) {
-        const segmentRecords: Omit<Segment, "id">[] = result.data.segments.map((segment) => ({
-          transcriptId,
-          start: segment.start,
-          end: segment.end,
-          text: segment.text,
-          wordTimestamps: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }));
+        const segmentRecords: Omit<Segment, "id">[] = result.data.segments.map(
+          (segment) => ({
+            transcriptId,
+            start: segment.start,
+            end: segment.end,
+            text: segment.text,
+            wordTimestamps: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }),
+        );
 
         const segmentIds = await db.segments.bulkAdd(segmentRecords);
         const fetchedSegments = await db.segments.bulkGet(segmentIds);
@@ -191,7 +212,13 @@ export function useTranscription() {
           });
 
           if (postProcessResponse.ok) {
-            const postProcessResult = await postProcessResponse.json();
+            const postProcessResult = (await postProcessResponse.json()) as {
+              success: boolean;
+              data?: {
+                segments?: any[];
+                processedSegments?: any[];
+              };
+            };
             console.log("文本后处理成功:", {
               success: postProcessResult.success,
               processedSegments: postProcessResult.data?.processedSegments,
@@ -201,7 +228,11 @@ export function useTranscription() {
             if (postProcessResult.success && postProcessResult.data?.segments) {
               const processedSegments = postProcessResult.data.segments;
 
-              for (let i = 0; i < savedSegments.length && i < processedSegments.length; i++) {
+              for (
+                let i = 0;
+                i < savedSegments.length && i < processedSegments.length;
+                i++
+              ) {
                 const segmentId = savedSegments[i]?.id;
                 if (segmentId && typeof segmentId === "number") {
                   await db.segments.update(segmentId, {
@@ -224,17 +255,25 @@ export function useTranscription() {
           }
         }
       } catch (postProcessError) {
-        console.warn("文本后处理API调用失败，但转录数据已保存:", postProcessError);
+        console.warn(
+          "文本后处理API调用失败，但转录数据已保存:",
+          postProcessError,
+        );
         // 不抛出错误，确保转录数据仍然有效
       }
 
       // 更新转录状态为完成
-      await db.transcripts.update(transcriptId, { status: "completed", updatedAt: new Date() });
+      await db.transcripts.update(transcriptId, {
+        status: "completed",
+        updatedAt: new Date(),
+      });
 
       console.log("转录流程全部完成:", { fileId: file.id, transcriptId });
 
       // 使查询缓存失效，触发重新查询
-      queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(file.id ?? 0) });
+      queryClient.invalidateQueries({
+        queryKey: transcriptionKeys.forFile(file.id ?? 0),
+      });
     },
     onError: (error, variables) => {
       console.error("转录失败:", error);
@@ -252,12 +291,18 @@ export function useDeleteTranscription() {
 
   return useMutation({
     mutationFn: async ({ fileId }: { fileId: number }) => {
-      const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+      const transcripts = await db.transcripts
+        .where("fileId")
+        .equals(fileId)
+        .toArray();
 
       for (const transcript of transcripts) {
         if (typeof transcript.id === "number") {
           // 删除相关的字幕段
-          await db.segments.where("transcriptId").equals(transcript.id).delete();
+          await db.segments
+            .where("transcriptId")
+            .equals(transcript.id)
+            .delete();
           // 删除转录记录
           await db.transcripts.delete(transcript.id);
         }
@@ -265,7 +310,9 @@ export function useDeleteTranscription() {
     },
     onSuccess: (_, { fileId }) => {
       // 使查询缓存失效
-      queryClient.invalidateQueries({ queryKey: transcriptionKeys.forFile(fileId) });
+      queryClient.invalidateQueries({
+        queryKey: transcriptionKeys.forFile(fileId),
+      });
     },
   });
 }
@@ -277,7 +324,10 @@ export function useTranscriptionSummary(fileIds: number[]) {
     queryFn: async () => {
       const summaries = await Promise.all(
         fileIds.map(async (fileId) => {
-          const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(fileId)
+            .toArray();
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           return {

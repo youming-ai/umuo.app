@@ -3,8 +3,8 @@
  * 提供统一的状态管理和事件系统
  */
 
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import {
   TranscriptionTask,
   TranscriptionQueueState,
@@ -15,8 +15,8 @@ import {
   TranscriptionEvent,
   TranscriptionUIState,
   ITranscriptionManager,
-  TranscriptionError
-} from '@/types/transcription';
+  TranscriptionError,
+} from "@/types/transcription";
 
 /**
  * 转录状态 Store - Zustand 实现
@@ -46,7 +46,12 @@ interface TranscriptionState {
 
 interface TranscriptionActions {
   // 任务管理
-  addTask: (fileId: number, fileName: string, fileSize: number, options?: TranscriptionOptions) => string;
+  addTask: (
+    fileId: number,
+    fileName: string,
+    fileSize: number,
+    options?: TranscriptionOptions,
+  ) => string;
   updateTask: (taskId: string, updates: Partial<TranscriptionTask>) => void;
   removeTask: (taskId: string) => boolean;
   getTask: (taskId: string) => TranscriptionTask | null;
@@ -63,7 +68,11 @@ interface TranscriptionActions {
   cancelTask: (taskId: string) => void;
   pauseTask: (taskId: string) => void;
   resumeTask: (taskId: string) => void;
-  updateTaskProgress: (taskId: string, progress: number, message?: string) => void;
+  updateTaskProgress: (
+    taskId: string,
+    progress: number,
+    message?: string,
+  ) => void;
 
   // UI 控制
   setUIState: (updates: Partial<TranscriptionUIState>) => void;
@@ -80,7 +89,9 @@ interface TranscriptionActions {
   retryFailedTasks: () => void;
 }
 
-export const useTranscriptionStore = create<TranscriptionState & TranscriptionActions>()(
+export const useTranscriptionStore = create<
+  TranscriptionState & TranscriptionActions
+>()(
   devtools(
     (set, get) => ({
       // 初始状态
@@ -108,12 +119,12 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         showTranscriptionManager: false,
         showProgressDetails: true,
         autoStartTranscription: true,
-        defaultLanguage: 'ja',
-        defaultPriority: 'normal',
+        defaultLanguage: "ja",
+        defaultPriority: "normal",
         showNotifications: true,
         filterBy: {},
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
+        sortBy: "createdAt",
+        sortOrder: "desc",
       },
 
       eventListeners: new Map(),
@@ -121,9 +132,9 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
       config: {
         maxConcurrency: 2,
         defaultOptions: {
-          language: 'ja',
+          language: "ja",
           autoStart: true,
-          priority: 'normal',
+          priority: "normal",
           enablePostProcessing: true,
           maxRetries: 2,
           timeoutMs: 300000,
@@ -133,7 +144,12 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
       },
 
       // 任务管理方法
-      addTask: (fileId: number, fileName: string, fileSize: number, options?: TranscriptionOptions) => {
+      addTask: (
+        fileId: number,
+        fileName: string,
+        fileSize: number,
+        options?: TranscriptionOptions,
+      ) => {
         const state = get();
         const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -141,11 +157,15 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         if (state.tasksByFileId.has(fileId)) {
           const existingTaskId = state.tasksByFileId.get(fileId)!;
           const existingTask = state.tasks.get(existingTaskId);
-          if (existingTask && existingTask.status !== 'failed' && existingTask.status !== 'completed') {
+          if (
+            existingTask &&
+            existingTask.status !== "failed" &&
+            existingTask.status !== "completed"
+          ) {
             throw new TranscriptionError(
-              'File already has an active transcription task',
-              'DUPLICATE_TASK',
-              { fileId, existingTaskId }
+              "File already has an active transcription task",
+              "DUPLICATE_TASK",
+              { fileId, existingTaskId },
             );
           }
         }
@@ -156,11 +176,14 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
           fileId,
           fileName,
           fileSize,
-          status: 'idle',
-          priority: options?.priority || state.config.defaultOptions.priority || 'normal',
+          status: "idle",
+          priority:
+            options?.priority ||
+            state.config.defaultOptions.priority ||
+            "normal",
           progress: {
             fileId,
-            status: 'idle',
+            status: "idle",
             progress: 0,
             createdAt: now,
             options: { ...state.config.defaultOptions, ...options },
@@ -181,10 +204,10 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         });
 
         // 发出事件
-        get().emit({ type: 'task_added', taskId, task });
+        get().emit({ type: "task_added", taskId, task });
 
         // 如果配置为自动开始，将任务加入队列
-        if (task.options.autoStart !== false) {
+        if (task.options?.autoStart !== false) {
           get().startTask(taskId);
         }
 
@@ -210,7 +233,11 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         // 发出事件
         const updatedTask = get().getTask(taskId);
         if (updatedTask) {
-          get().emit({ type: 'task_progress', taskId, progress: updatedTask.progress.progress });
+          get().emit({
+            type: "task_progress",
+            taskId,
+            progress: updatedTask.progress.progress,
+          });
         }
       },
 
@@ -219,11 +246,11 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         if (!task) return false;
 
         // 不能移除正在处理的任务
-        if (task.status === 'processing') {
+        if (task.status === "processing") {
           throw new TranscriptionError(
-            'Cannot remove task that is currently processing',
-            'TASK_IN_PROGRESS',
-            { taskId }
+            "Cannot remove task that is currently processing",
+            "TASK_IN_PROGRESS",
+            { taskId },
           );
         }
 
@@ -258,26 +285,38 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         const { tasks } = get();
         const allTasks = Array.from(tasks.values());
 
-        const queued = allTasks.filter(t => t.status === 'queued' || t.status === 'idle');
-        const processing = allTasks.filter(t => t.status === 'processing');
+        const queued = allTasks.filter(
+          (t) => t.status === "queued" || t.status === "idle",
+        );
+        const processing = allTasks.filter((t) => t.status === "processing");
         const completed = allTasks
-          .filter(t => t.status === 'completed')
-          .sort((a, b) => b.progress.completedAt!.getTime() - a.progress.completedAt!.getTime())
+          .filter((t) => t.status === "completed")
+          .sort(
+            (a, b) =>
+              b.progress.completedAt!.getTime() -
+              a.progress.completedAt!.getTime(),
+          )
           .slice(0, 10); // 只保留最近10个完成的任务
         const failed = allTasks
-          .filter(t => t.status === 'failed')
-          .sort((a, b) => b.progress.createdAt.getTime() - a.progress.createdAt.getTime())
+          .filter((t) => t.status === "failed")
+          .sort(
+            (a, b) =>
+              b.progress.createdAt.getTime() - a.progress.createdAt.getTime(),
+          )
           .slice(0, 10); // 只保留最近10个失败的任务
 
         // 计算统计信息
-        const allCompletedTasks = allTasks.filter(t => t.status === 'completed');
-        const allFailedTasks = allTasks.filter(t => t.status === 'failed');
+        const allCompletedTasks = allTasks.filter(
+          (t) => t.status === "completed",
+        );
+        const allFailedTasks = allTasks.filter((t) => t.status === "failed");
 
         const stats = {
           totalProcessed: allCompletedTasks.length + allFailedTasks.length,
           successCount: allCompletedTasks.length,
           failureCount: allFailedTasks.length,
-          averageProcessingTime: calculateAverageProcessingTime(allCompletedTasks),
+          averageProcessingTime:
+            calculateAverageProcessingTime(allCompletedTasks),
           queueLength: queued.length,
         };
 
@@ -296,8 +335,8 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
 
         // 发出队列更新事件
         get().emit({
-          type: 'queue_updated',
-          state: get().queueState
+          type: "queue_updated",
+          state: get().queueState,
         });
       },
 
@@ -315,10 +354,10 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
 
         const now = new Date();
         get().updateTask(taskId, {
-          status: 'queued',
+          status: "queued",
           progress: {
             ...task.progress,
-            status: 'queued',
+            status: "queued",
             startedAt: now,
           },
         });
@@ -334,16 +373,16 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
           : 0;
 
         get().updateTask(taskId, {
-          status: 'completed',
+          status: "completed",
           progress: {
             ...task.progress,
-            status: 'completed',
+            status: "completed",
             progress: 100,
-            message: '转录完成',
+            message: "转录完成",
             completedAt: now,
             actualDuration,
             result: {
-              text: result.text || '',
+              text: result.text || "",
               duration: result.duration,
               segmentsCount: result.segments?.length || 0,
               language: result.language,
@@ -352,10 +391,10 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         });
 
         get().emit({
-          type: 'task_completed',
+          type: "task_completed",
           taskId,
           task: get().getTask(taskId)!,
-          result
+          result,
         });
       },
 
@@ -369,10 +408,10 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
           : 0;
 
         get().updateTask(taskId, {
-          status: 'failed',
+          status: "failed",
           progress: {
             ...task.progress,
-            status: 'failed',
+            status: "failed",
             message: error.message,
             error: error.message,
             completedAt: now,
@@ -381,10 +420,10 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         });
 
         get().emit({
-          type: 'task_failed',
+          type: "task_failed",
           taskId,
           task: get().getTask(taskId)!,
-          error
+          error,
         });
       },
 
@@ -393,18 +432,18 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         if (!task) return;
 
         get().updateTask(taskId, {
-          status: 'cancelled',
+          status: "cancelled",
           progress: {
             ...task.progress,
-            status: 'cancelled',
-            message: '用户取消',
+            status: "cancelled",
+            message: "用户取消",
           },
         });
 
         get().emit({
-          type: 'task_cancelled',
+          type: "task_cancelled",
           taskId,
-          task: get().getTask(taskId)!
+          task: get().getTask(taskId)!,
         });
       },
 
@@ -413,23 +452,27 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         if (!task) return;
 
         get().updateTask(taskId, {
-          status: 'paused',
+          status: "paused",
           progress: {
             ...task.progress,
-            status: 'paused',
-            message: '已暂停',
+            status: "paused",
+            message: "已暂停",
           },
         });
       },
 
       resumeTask: (taskId: string) => {
         const task = get().getTask(taskId);
-        if (!task || task.status !== 'paused') return;
+        if (!task || task.status !== "paused") return;
 
         get().startTask(taskId);
       },
 
-      updateTaskProgress: (taskId: string, progress: number, message?: string) => {
+      updateTaskProgress: (
+        taskId: string,
+        progress: number,
+        message?: string,
+      ) => {
         const task = get().getTask(taskId);
         if (!task) return;
 
@@ -453,7 +496,8 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         set((prevState) => ({
           uiState: {
             ...prevState.uiState,
-            showTranscriptionManager: !prevState.uiState.showTranscriptionManager,
+            showTranscriptionManager:
+              !prevState.uiState.showTranscriptionManager,
           },
         }));
       },
@@ -464,11 +508,14 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
         const listeners = eventListeners.get(event.type);
 
         if (listeners) {
-          listeners.forEach(callback => {
+          listeners.forEach((callback) => {
             try {
               callback(event);
             } catch (error) {
-              console.error(`Error in event listener for ${event.type}:`, error);
+              console.error(
+                `Error in event listener for ${event.type}:`,
+                error,
+              );
             }
           });
         }
@@ -508,10 +555,10 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
       clearCompletedTasks: () => {
         const { tasks } = get();
         const tasksToRemove = Array.from(tasks.entries())
-          .filter(([_, task]) => task.status === 'completed')
+          .filter(([_, task]) => task.status === "completed")
           .map(([taskId]) => taskId);
 
-        tasksToRemove.forEach(taskId => {
+        tasksToRemove.forEach((taskId) => {
           get().removeTask(taskId);
         });
       },
@@ -526,22 +573,25 @@ export const useTranscriptionStore = create<TranscriptionState & TranscriptionAc
 
       retryFailedTasks: () => {
         const { tasks } = get();
-        const failedTasks = Array.from(tasks.values())
-          .filter(task => task.status === 'failed');
+        const failedTasks = Array.from(tasks.values()).filter(
+          (task) => task.status === "failed",
+        );
 
-        failedTasks.forEach(task => {
+        failedTasks.forEach((task) => {
           get().startTask(task.id);
         });
       },
     }),
     {
-      name: 'transcription-store',
-    }
-  )
+      name: "transcription-store",
+    },
+  ),
 );
 
 // 辅助函数：计算平均处理时间
-function calculateAverageProcessingTime(completedTasks: TranscriptionTask[]): number {
+function calculateAverageProcessingTime(
+  completedTasks: TranscriptionTask[],
+): number {
   if (completedTasks.length === 0) return 0;
 
   const totalTime = completedTasks.reduce((sum, task) => {
@@ -553,22 +603,22 @@ function calculateAverageProcessingTime(completedTasks: TranscriptionTask[]): nu
 
 // 导出选择器
 export const useTranscriptionTasks = () =>
-  useTranscriptionStore(state => Array.from(state.tasks.values()));
+  useTranscriptionStore((state) => Array.from(state.tasks.values()));
 
 export const useTranscriptionQueue = () =>
-  useTranscriptionStore(state => state.queueState);
+  useTranscriptionStore((state) => state.queueState);
 
 export const useTranscriptionConfig = () =>
-  useTranscriptionStore(state => state.config);
+  useTranscriptionStore((state) => state.config);
 
 export const useTranscriptionUI = () =>
-  useTranscriptionStore(state => state.uiState);
+  useTranscriptionStore((state) => state.uiState);
 
 // 便捷 hooks
 export const useTaskByFileId = (fileId: number) =>
-  useTranscriptionStore(state => state.getTaskByFileId(fileId));
+  useTranscriptionStore((state) => state.getTaskByFileId(fileId));
 
 export const useTasksByStatus = (status: TranscriptionStatus) =>
-  useTranscriptionStore(state =>
-    Array.from(state.tasks.values()).filter(task => task.status === status)
+  useTranscriptionStore((state) =>
+    Array.from(state.tasks.values()).filter((task) => task.status === status),
   );

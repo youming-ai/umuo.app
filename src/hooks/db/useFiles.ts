@@ -21,7 +21,9 @@ export interface FileUploadState {
 /**
  * Custom hook for managing file data
  */
-export function useFiles(setFileUploadState?: (state: FileUploadState) => void): UseFilesReturn {
+export function useFiles(
+  setFileUploadState?: (state: FileUploadState) => void,
+): UseFilesReturn {
   const [files, setFiles] = useState<FileRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 

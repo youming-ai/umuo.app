@@ -1,22 +1,30 @@
-name = "umuo"
+name = "umuo-app"
+pages_build_output_dir = ".next"
 compatibility_date = "2024-01-01"
 compatibility_flags = ["nodejs_compat"]
-pages_build_output_dir = ".next"
 
-# Environment variables for Cloudflare Pages
+# KV Namespaces for progress tracking and caching
+[[kv_namespaces]]
+binding = "TRANSCRIPTION_PROGRESS"
+id = "537d618c1ecd4f09b29dd1c160bdce4f"
+preview_id = "cfbcf2e4f77447cd96407f0b7d0a76aa"
+
+[[kv_namespaces]]
+binding = "TRANSCRIPTION_CACHE"
+id = "ad412743406f4fa68e1a9b396aaf8ee4"
+preview_id = "f67da4fec313493c895b96c9804c9759"
+
+# Environment variables
+[vars]
+NODE_ENV = "production"
+
 [env.production.vars]
 NODE_ENV = "production"
 NEXT_PUBLIC_APP_URL = "https://umuo.app"
 
 [env.preview.vars]
-NODE_ENV = "production"
-NEXT_PUBLIC_APP_URL = "https://preview.umuo.pages.dev"
-
-# KV Namespaces for caching (optional)
-# [[kv_namespaces]]
-# binding = "TRANSCRIPTION_CACHE"
-# id = "your-kv-namespace-id"
-# preview_id = "your-preview-kv-namespace-id"
+NODE_ENV = "development"
+NEXT_PUBLIC_APP_URL = "https://umuo-app-preview.workers.dev"
 
 # D1 Database (if needed)
 # [[d1_databases]]

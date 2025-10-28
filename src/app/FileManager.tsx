@@ -21,14 +21,32 @@ export default function FileManager() {
   const handleFilesSelected = useCallback(
     async (selectedFiles: File[]) => {
       try {
-        await addFiles(selectedFiles);
+        // 检查文件数量限制
+        const currentFileCount = files?.length || 0;
+        const maxFiles = 5;
+        const remainingSlots = maxFiles - currentFileCount;
+
+        if (remainingSlots <= 0) {
+          const { toast } = await import("sonner");
+          toast.error(`已达到最大文件数量限制 (${maxFiles}个文件)`);
+          return;
+        }
+
+        // 如果选择的文件超过剩余槽位，只取前面的文件
+        const filesToAdd = selectedFiles.slice(0, remainingSlots);
+        if (filesToAdd.length < selectedFiles.length) {
+          const { toast } = await import("sonner");
+          toast.warning(`只能添加 ${remainingSlots} 个文件，已达到最大限制`);
+        }
+
+        await addFiles(filesToAdd);
         // 移除自动转录排队，只存储文件
       } catch (_error) {
         const { toast } = await import("sonner");
         toast.error("文件上传失败");
       }
     },
-    [addFiles],
+    [addFiles, files?.length],
   );
 
   const handleDeleteFile = useCallback(
@@ -64,6 +82,8 @@ export default function FileManager() {
                   onFilesSelected={handleFilesSelected}
                   isUploading={isUploading}
                   uploadProgress={uploadProgress}
+                  currentFileCount={files?.length || 0}
+                  maxFiles={5}
                 />
               </div>
 

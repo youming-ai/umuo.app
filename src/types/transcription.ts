@@ -5,46 +5,46 @@
 
 // 转录任务状态
 export type TranscriptionStatus =
-  | 'idle'           // 空闲状态
-  | 'queued'         // 已排队，等待处理
-  | 'processing'     // 正在转录中
-  | 'completed'      // 转录完成
-  | 'failed'         // 转录失败
-  | 'cancelled'      // 用户取消
-  | 'paused';        // 暂停中
+  | "idle" // 空闲状态
+  | "queued" // 已排队，等待处理
+  | "processing" // 正在转录中
+  | "completed" // 转录完成
+  | "failed" // 转录失败
+  | "cancelled" // 用户取消
+  | "paused"; // 暂停中
 
 // 转录任务优先级
 export type TranscriptionPriority =
-  | 'low'            // 低优先级
-  | 'normal'         // 正常优先级
-  | 'high'           // 高优先级
-  | 'urgent';        // 紧急优先级
+  | "low" // 低优先级
+  | "normal" // 正常优先级
+  | "high" // 高优先级
+  | "urgent"; // 紧急优先级
 
 // 转录选项配置
 export interface TranscriptionOptions {
-  language?: string;              // 转录语言，默认 'ja'
-  autoStart?: boolean;            // 是否自动开始，默认 true
+  language?: string; // 转录语言，默认 'ja'
+  autoStart?: boolean; // 是否自动开始，默认 true
   priority?: TranscriptionPriority; // 优先级，默认 'normal'
   enablePostProcessing?: boolean; // 是否启用后处理，默认 true
-  maxRetries?: number;           // 最大重试次数，默认 2
-  timeoutMs?: number;            // 超时时间，默认 300000 (5分钟)
-  estimatedDuration?: number;    // 预估转录时长（秒）
+  maxRetries?: number; // 最大重试次数，默认 2
+  timeoutMs?: number; // 超时时间，默认 300000 (5分钟)
+  estimatedDuration?: number; // 预估转录时长（秒）
 }
 
 // 转录任务进度信息
 export interface TranscriptionProgress {
   fileId: number;
   status: TranscriptionStatus;
-  progress: number;               // 0-100 的进度百分比
-  message?: string;               // 状态消息
-  error?: string;                 // 错误信息（如果有）
+  progress: number; // 0-100 的进度百分比
+  message?: string; // 状态消息
+  error?: string; // 错误信息（如果有）
 
   // 时间信息
   createdAt: Date;
   startedAt?: Date;
   completedAt?: Date;
-  estimatedDuration?: number;    // 预估总时长（秒）
-  actualDuration?: number;        // 实际花费时长（秒）
+  estimatedDuration?: number; // 预估总时长（秒）
+  actualDuration?: number; // 实际花费时长（秒）
 
   // 转录结果（完成后可用）
   result?: {
@@ -60,42 +60,43 @@ export interface TranscriptionProgress {
 
 // 转录任务
 export interface TranscriptionTask {
-  id: string;                     // 唯一任务ID
-  fileId: number;                 // 关联的文件ID
-  fileName: string;               // 文件名
-  fileSize: number;               // 文件大小（字节）
-  duration?: number;              // 音频时长（秒）
+  id: string; // 唯一任务ID
+  fileId: number; // 关联的文件ID
+  fileName: string; // 文件名
+  fileSize: number; // 文件大小（字节）
+  duration?: number; // 音频时长（秒）
 
   // 任务信息
   status: TranscriptionStatus;
   priority: TranscriptionPriority;
   progress: TranscriptionProgress;
+  options?: TranscriptionOptions; // 转录选项
 
   // 依赖关系
-  dependencies?: string[];        // 依赖的其他任务ID
-  dependents?: string[];          // 依赖此任务的其他任务ID
+  dependencies?: string[]; // 依赖的其他任务ID
+  dependents?: string[]; // 依赖此任务的其他任务ID
 }
 
 // 队列状态
 export interface TranscriptionQueueState {
   // 队列信息
-  queued: TranscriptionTask[];    // 等待中的任务
+  queued: TranscriptionTask[]; // 等待中的任务
   processing: TranscriptionTask[]; // 正在处理的任务
-  completed: TranscriptionTask[];  // 已完成的任务（最近N个）
-  failed: TranscriptionTask[];     // 失败的任务（最近N个）
+  completed: TranscriptionTask[]; // 已完成的任务（最近N个）
+  failed: TranscriptionTask[]; // 失败的任务（最近N个）
 
   // 系统状态
-  isProcessing: boolean;          // 是否有任务正在处理
-  maxConcurrency: number;         // 最大并发数
-  currentConcurrency: number;     // 当前并发数
+  isProcessing: boolean; // 是否有任务正在处理
+  maxConcurrency: number; // 最大并发数
+  currentConcurrency: number; // 当前并发数
 
   // 统计信息
   stats: {
-    totalProcessed: number;       // 总处理数
-    successCount: number;         // 成功数
-    failureCount: number;         // 失败数
+    totalProcessed: number; // 总处理数
+    successCount: number; // 成功数
+    failureCount: number; // 失败数
     averageProcessingTime: number; // 平均处理时间（秒）
-    queueLength: number;          // 当前队列长度
+    queueLength: number; // 当前队列长度
   };
 }
 
@@ -125,7 +126,9 @@ export interface ITranscriptionManager {
   // 事件监听
   onTaskUpdate(callback: (task: TranscriptionTask) => void): () => void;
   onQueueUpdate(callback: (state: TranscriptionQueueState) => void): () => void;
-  onProgressUpdate(callback: (taskId: string, progress: number) => void): () => void;
+  onProgressUpdate(
+    callback: (taskId: string, progress: number) => void,
+  ): () => void;
 }
 
 // 用户界面相关类型
@@ -150,8 +153,8 @@ export interface TranscriptionUIState {
       end: Date;
     };
   };
-  sortBy: 'createdAt' | 'priority' | 'fileName' | 'duration';
-  sortOrder: 'asc' | 'desc';
+  sortBy: "createdAt" | "priority" | "fileName" | "duration";
+  sortOrder: "asc" | "desc";
 }
 
 // 错误类型
@@ -160,19 +163,34 @@ export class TranscriptionError extends Error {
     message: string,
     public code: string,
     public details?: any,
-    public recoverable: boolean = true
+    public recoverable: boolean = true,
   ) {
     super(message);
-    this.name = 'TranscriptionError';
+    this.name = "TranscriptionError";
   }
 }
 
 // 事件类型
 export type TranscriptionEvent =
-  | { type: 'task_added'; taskId: string; task: TranscriptionTask }
-  | { type: 'task_started'; taskId: string; task: TranscriptionTask }
-  | { type: 'task_progress'; taskId: string; progress: number; message?: string }
-  | { type: 'task_completed'; taskId: string; task: TranscriptionTask; result: any }
-  | { type: 'task_failed'; taskId: string; task: TranscriptionTask; error: Error }
-  | { type: 'task_cancelled'; taskId: string; task: TranscriptionTask }
-  | { type: 'queue_updated'; state: TranscriptionQueueState };
+  | { type: "task_added"; taskId: string; task: TranscriptionTask }
+  | { type: "task_started"; taskId: string; task: TranscriptionTask }
+  | {
+      type: "task_progress";
+      taskId: string;
+      progress: number;
+      message?: string;
+    }
+  | {
+      type: "task_completed";
+      taskId: string;
+      task: TranscriptionTask;
+      result: any;
+    }
+  | {
+      type: "task_failed";
+      taskId: string;
+      task: TranscriptionTask;
+      error: Error;
+    }
+  | { type: "task_cancelled"; taskId: string; task: TranscriptionTask }
+  | { type: "queue_updated"; state: TranscriptionQueueState };

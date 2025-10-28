@@ -5,17 +5,13 @@
 
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useParams } from "next/navigation";
-import { PlayerErrorBoundary } from "@/components/features/player/PlayerErrorBoundary";
-import { PlayerPageComponent } from "@/components/features/player/PlayerPage";
+import PlayerErrorBoundary from "@/components/features/player/PlayerErrorBoundary";
+import PlayerPageComponent from "@/components/features/player/PlayerPage";
 import { usePlayerData } from "@/hooks/player/usePlayerDataNew";
 import { PlayerLoadingState } from "@/components/features/player/page/PlayerFallbackStates";
-import {
-  useTranscriptionStore,
-  useTranscriptionUI,
-} from "@/lib/transcription/store";
-import { getTranscriptionManager } from "@/lib/transcription/queue-manager";
+import { TranscriptionLoading } from "@/components/transcription/TranscriptionLoading";
 
 export default function PlayerPage() {
   const params = useParams();
@@ -35,21 +31,6 @@ export default function PlayerPage() {
     startTranscription,
     resetAutoTranscription,
   } = usePlayerData(fileId);
-
-  // 获取转录管理器
-  const transcriptionManager = getTranscriptionManager();
-
-  // 启动转录管理器（如果尚未启动）
-  useEffect(() => {
-    if (!transcriptionManager) {
-      const manager = getTranscriptionManager();
-      manager.start();
-    }
-
-    return () => {
-      // 页面卸载时不需要停止管理器，因为它可能是全局的
-    };
-  }, []);
 
   return (
     <PlayerErrorBoundary>
@@ -123,7 +104,7 @@ export default function PlayerPage() {
 
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <button
-              onClick={startTranscription}
+              onClick={() => startTranscription()}
               className="px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm transition-colors flex items-center justify-center"
             >
               {isTranscribing ? "转录中..." : "开始转录"}
@@ -139,31 +120,18 @@ export default function PlayerPage() {
 
           {isTranscribing && (
             <div className="mt-4 w-full max-w-xs">
-              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                转录进度: {transcriptionProgress}%
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${transcriptionProgress}%` }}
-                />
-              </div>
+              <TranscriptionLoading
+                task={transcriptionTask}
+                showMessage={true}
+                compact={false}
+              />
             </div>
           )}
         </div>
       )}
 
       {file && audioUrl && transcript && segments && (
-        <PlayerPageComponent
-          fileId={fileId}
-          file={file}
-          segments={segments}
-          transcript={transcript}
-          audioUrl={audioUrl}
-          transcriptionTask={transcriptionTask}
-          isTranscribing={isTranscribing}
-          transcriptionProgress={transcriptionProgress}
-        />
+        <PlayerPageComponent fileId={fileId} />
       )}
     </PlayerErrorBoundary>
   );

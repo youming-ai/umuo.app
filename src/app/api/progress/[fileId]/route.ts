@@ -1,6 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerProgress } from "@/lib/ai/server-progress";
 
+// Edge Runtime configuration for Cloudflare Workers compatibility
+export const runtime = 'edge';
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ fileId: string }> },
@@ -13,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: "Invalid file ID" }, { status: 400 });
     }
 
-    const progress = getServerProgress(fileId);
+    const progress = await getServerProgress(fileId);
 
     if (!progress) {
       return NextResponse.json(
