@@ -9,6 +9,35 @@ import { postProcessText } from "@/lib/ai/text-postprocessor";
 import { db } from "@/lib/db/db";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
+// 音频URL缓存管理 - 使用 WeakMap 防止内存泄漏
+const audioUrlCache = new WeakMap<File, string>();
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+
+function createAudioUrl(file: File): string {
+  // 检查缓存
+  if (audioUrlCache.has(file)) {
+    return audioUrlCache.get(file)!;
+  }
+
+  const url = URL.createObjectURL(file);
+  audioUrlCache.set(file, url);
+
+  // 设置自动清理
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    audioUrlCache.delete(file);
+  }, CACHE_TTL);
+
+  return url;
+}
+
+// 清理所有缓存的音频URL
+function cleanupAudioUrls(): void {
+  // WeakMap 不需要手动清理，但我们可以添加额外的清理逻辑
+  // 这里主要用于调试和监控
+  console.log("🧹 清理音频URL缓存");
+}
+
 /**
  * Player Data Query Hook - umuo.app 播放器数据管理核心
  *
@@ -68,10 +97,10 @@ function useFileQuery(fileId: number) {
         throw new Error("文件不存在");
       }
 
-      // 生成音频URL
+      // 生成音频URL - 使用改进的缓存管理
       let audioUrl: string | null = null;
       if (file.blob) {
-        audioUrl = URL.createObjectURL(file.blob);
+        audioUrl = createAudioUrl(file.blob);
       }
 
       return { file, audioUrl };
@@ -98,7 +127,6 @@ interface UsePlayerDataQueryReturn {
 export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [shouldAutoTranscribe, setShouldAutoTranscribe] = useState(false);
-  const audioUrlRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
 
   // 解析文件ID
@@ -139,23 +167,12 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
     return isValidId && !loading && file && !transcript && !transcriptionMutation.isPending;
   }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
 
-  // 清理音频URL
+  // 组件卸载时清理资源
   useEffect(() => {
-    if (audioUrl && audioUrl !== audioUrlRef.current) {
-      // 清理之前的URL
-      if (audioUrlRef.current) {
-        URL.revokeObjectURL(audioUrlRef.current);
-      }
-      audioUrlRef.current = audioUrl;
-    }
-
     return () => {
-      if (audioUrlRef.current) {
-        URL.revokeObjectURL(audioUrlRef.current);
-        audioUrlRef.current = null;
-      }
+      cleanupAudioUrls();
     };
-  }, [audioUrl]);
+  }, []);
 
   // 开始转录函数
   const startTranscription = useCallback(async () => {

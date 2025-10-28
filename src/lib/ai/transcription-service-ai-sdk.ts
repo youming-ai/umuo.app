@@ -8,9 +8,164 @@ import { experimental_transcribe as transcribe } from "ai";
 import type { Segment } from "@/types/db/database";
 import { createGroqProviderOptions } from "./transcription-sdk-config";
 
+// 结构化错误类型
+export enum TranscriptionErrorCode {
+  NETWORK_ERROR = "NETWORK_ERROR",
+  AI_SERVICE_ERROR = "AI_SERVICE_ERROR",
+  QUOTA_EXCEEDED = "QUOTA_EXCEEDED",
+  FILE_TOO_LARGE = "FILE_TOO_LARGE",
+  INVALID_FORMAT = "INVALID_FORMAT",
+  TIMEOUT_ERROR = "TIMEOUT_ERROR",
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  DATABASE_ERROR = "DATABASE_ERROR",
+  UNKNOWN_ERROR = "UNKNOWN_ERROR",
+}
+
+export class TranscriptionError extends Error {
+  constructor(
+    message: string,
+    public code: TranscriptionErrorCode,
+    public userMessage?: string,
+    public retryable: boolean = true,
+    public details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = "TranscriptionError";
+  }
+}
+
+// 错误处理工具函数
+function classifyError(error: unknown): TranscriptionError {
+  if (error instanceof TranscriptionError) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+
+    if (message.includes("network") || message.includes("fetch")) {
+      return new TranscriptionError(
+        error.message,
+        TranscriptionErrorCode.NETWORK_ERROR,
+        "网络连接失败，请检查网络设置",
+        true,
+        { originalError: error },
+      );
+    }
+
+    if (message.includes("quota") || message.includes("limit") || message.includes("rate")) {
+      return new TranscriptionError(
+        error.message,
+        TranscriptionErrorCode.QUOTA_EXCEEDED,
+        "服务配额已用完，请稍后再试",
+        false,
+        { originalError: error },
+      );
+    }
+
+    if (message.includes("timeout")) {
+      return new TranscriptionError(
+        error.message,
+        TranscriptionErrorCode.TIMEOUT_ERROR,
+        "转录超时，请重试或使用更小的音频文件",
+        true,
+        { originalError: error },
+      );
+    }
+
+    if (message.includes("file too large") || message.includes("size")) {
+      return new TranscriptionError(
+        error.message,
+        TranscriptionErrorCode.FILE_TOO_LARGE,
+        "音频文件过大，请使用小于 100MB 的文件",
+        false,
+        { originalError: error },
+      );
+    }
+
+    if (message.includes("invalid") || message.includes("format")) {
+      return new TranscriptionError(
+        error.message,
+        TranscriptionErrorCode.INVALID_FORMAT,
+        "音频格式不支持，请使用 MP3、WAV 或 M4A 格式",
+        false,
+        { originalError: error },
+      );
+    }
+  }
+
+  return new TranscriptionError(
+    error instanceof Error ? error.message : String(error),
+    TranscriptionErrorCode.UNKNOWN_ERROR,
+    "转录失败，请重试",
+    true,
+    { originalError: error },
+  );
+}
+
+// 重试机制配置
+interface RetryConfig {
+  maxRetries: number;
+  baseDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
+}
+
+const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  baseDelay: 1000,
+  maxDelay: 10000,
+  backoffMultiplier: 2,
+};
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// 带重试的执行函数
+async function executeWithRetry<T>(
+  operation: () => Promise<T>,
+  config: Partial<RetryConfig> = {},
+): Promise<T> {
+  const finalConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= finalConfig.maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      const transcriptionError = classifyError(error);
+
+      // 如果不可重试或已达到最大重试次数，直接抛出错误
+      if (!transcriptionError.retryable || attempt === finalConfig.maxRetries) {
+        throw transcriptionError;
+      }
+
+      // 计算延迟时间（指数退避）
+      const delay = Math.min(
+        finalConfig.baseDelay * Math.pow(finalConfig.backoffMultiplier, attempt),
+        finalConfig.maxDelay,
+      );
+
+      console.warn(`转录失败，${delay}ms 后重试 (${attempt + 1}/${finalConfig.maxRetries}):`, {
+        error: transcriptionError.message,
+        code: transcriptionError.code,
+        attempt: attempt + 1,
+      });
+
+      await sleep(delay);
+    }
+  }
+
+  throw classifyError(lastError);
+}
+
 export interface TranscriptionOptions {
   language?: string;
   prompt?: string;
+  maxRetries?: number;
+  retryDelay?: number;
   onProgress?: (progress: {
     status: "pending" | "processing" | "completed" | "failed";
     progress: number;

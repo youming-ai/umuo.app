@@ -3,6 +3,52 @@
  * 用于统一管理转录状态、任务和队列
  */
 
+import { z } from "zod";
+
+// 品牌类型 - 提供类型安全
+type TaskId = string & { readonly __brand: "TaskId" };
+type FileId = number & { readonly __brand: "FileId" };
+type QueueId = string & { readonly __brand: "QueueId" };
+
+// 品牌类型创建函数
+export function createTaskId(id: string): TaskId {
+  return id as TaskId;
+}
+
+export function createFileId(id: number): FileId {
+  return id as FileId;
+}
+
+export function createQueueId(id: string): QueueId {
+  return id as QueueId;
+}
+
+// Zod 验证 Schema
+const TranscriptionWordSchema = z.object({
+  word: z.string(),
+  start: z.number(),
+  end: z.number(),
+  confidence: z.number().optional(),
+});
+
+const TranscriptionSegmentSchema = z.object({
+  id: z.number(),
+  start: z.number(),
+  end: z.number(),
+  text: z.string(),
+  confidence: z.number().optional(),
+  words: z.array(TranscriptionWordSchema).optional(),
+});
+
+// 运行时验证函数
+export function validateTranscriptionWord(data: unknown): data is TranscriptionWord {
+  return TranscriptionWordSchema.safeParse(data).success;
+}
+
+export function validateTranscriptionSegment(data: unknown): data is TranscriptionSegment {
+  return TranscriptionSegmentSchema.safeParse(data).success;
+}
+
 // 转录片段和单词类型
 export interface TranscriptionSegment {
   id: number;
@@ -100,10 +146,30 @@ export interface TranscriptionProgress {
   options: TranscriptionOptions;
 }
 
-// 转录任务
+// 转录任务验证 Schema
+const TranscriptionTaskSchema = z.object({
+  id: z.string(),
+  fileId: z.number(),
+  fileName: z.string(),
+  fileSize: z.number(),
+  duration: z.number().optional(),
+  status: z.enum(["idle", "queued", "processing", "completed", "failed", "cancelled", "paused"]),
+  priority: z.enum(["low", "normal", "high", "urgent"]),
+  progress: z.any(), // TranscriptionProgress 将在下面定义
+  options: z.any().optional(), // TranscriptionOptions 将在下面定义
+  dependencies: z.array(z.string()).optional(),
+  dependents: z.array(z.string()).optional(),
+});
+
+// 验证转录任务
+export function validateTranscriptionTask(data: unknown): data is TranscriptionTask {
+  return TranscriptionTaskSchema.safeParse(data).success;
+}
+
+// 增强的转录任务接口 - 使用品牌类型
 export interface TranscriptionTask {
-  id: string; // 唯一任务ID
-  fileId: number; // 关联的文件ID
+  id: TaskId; // 唯一任务ID
+  fileId: FileId; // 关联的文件ID
   fileName: string; // 文件名
   fileSize: number; // 文件大小（字节）
   duration?: number; // 音频时长（秒）
@@ -115,8 +181,8 @@ export interface TranscriptionTask {
   options?: TranscriptionOptions; // 转录选项
 
   // 依赖关系
-  dependencies?: string[]; // 依赖的其他任务ID
-  dependents?: string[]; // 依赖此任务的其他任务ID
+  dependencies?: TaskId[]; // 依赖的其他任务ID
+  dependents?: TaskId[]; // 依赖此任务的其他任务ID
 }
 
 // 队列状态
