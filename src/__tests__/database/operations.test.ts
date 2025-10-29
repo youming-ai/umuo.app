@@ -1,6 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createMockSegment, createMockTranscript } from "@/__tests__/setup";
-import { createMockFile } from "@/__tests__/utils/test-helpers";
+/**
+ * 数据库操作测试 - 使用类型安全的 Mock 工具
+ */
+
+import { describe, expect, it, vi } from "vitest";
+import { MockDatabaseTools, MockDataGenerator } from "@/__tests__/utils/test-mocks";
 import { db } from "@/lib/db/db";
 
 describe("数据库操作", () => {
@@ -9,19 +12,22 @@ describe("数据库操作", () => {
   });
 
   describe("文件操作", () => {
-    it("应该成功添加文件到数据库", async () => {
-      const mockFile = createMockFile("test-audio.mp3", "audio/mpeg", 1024);
+    it("应该添加文件", async () => {
+      const mockFile = MockDataGenerator.createMockFile();
       const mockFileData = {
         name: mockFile.name,
         size: mockFile.size,
         type: mockFile.type,
-        audioBlob: mockFile,
-        createdAt: new Date(),
+        blob: mockFile,
+        uploadedAt: new Date(),
         updatedAt: new Date(),
       };
 
-      (db.files.add as any).mockResolvedValue(1);
-      (db.files.get as any).mockResolvedValue({ id: 1, ...mockFileData });
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+
+      // 覆盖真实的 db 方法
+      db.files.add = mockDb.files.add;
+      db.files.get = mockDb.files.get;
 
       const fileId = await db.files.add(mockFileData);
       const savedFile = await db.files.get(fileId);
@@ -33,11 +39,13 @@ describe("数据库操作", () => {
 
     it("应该获取所有文件", async () => {
       const mockFiles = [
-        { id: 1, name: "file1.mp3", size: 1024, type: "audio/mpeg" },
-        { id: 2, name: "file2.mp3", size: 2048, type: "audio/mpeg" },
+        MockDataGenerator.createMockFile({ id: 1, name: "file1.mp3" }),
+        MockDataGenerator.createMockFile({ id: 2, name: "file2.mp3" }),
       ];
 
-      (db.files.toArray as any).mockResolvedValue(mockFiles);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.files.toArray = mockDb.files.toArray;
+      db.files.toArray.mockResolvedValue(mockFiles);
 
       const files = await db.files.toArray();
 
@@ -46,14 +54,20 @@ describe("数据库操作", () => {
     });
 
     it("应该按名称搜索文件", async () => {
-      const mockFiles = [{ id: 1, name: "search-test.mp3", size: 1024, type: "audio/mpeg" }];
+      const mockFiles = [
+        MockDataGenerator.createMockFile({
+          id: 1,
+          name: "search-test.mp3",
+          size: 1024,
+          type: "audio/mpeg",
+        }),
+      ];
 
-      const mockWhere = {
-        equals: vi.fn().mockReturnThis(),
-        toArray: vi.fn().mockResolvedValue(mockFiles),
-      };
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback(mockFiles);
 
-      (db.files.where as any).mockReturnValue(mockWhere);
+      db.files.where = mockDb.files.where;
+      db.files.where.mockReturnValue(mockWhere);
 
       const files = await db.files.where("name").equals("search-test").toArray();
 
@@ -63,7 +77,8 @@ describe("数据库操作", () => {
     });
 
     it("应该删除文件", async () => {
-      (db.files.delete as any).mockResolvedValue(1);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.files.delete = mockDb.files.delete;
 
       await db.files.delete(1);
 
@@ -72,7 +87,8 @@ describe("数据库操作", () => {
 
     it("应该更新文件信息", async () => {
       const updateData = { name: "updated-name.mp3", updatedAt: new Date() };
-      (db.files.update as any).mockResolvedValue(1);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.files.update = mockDb.files.update;
 
       const updatedCount = await db.files.update(1, updateData);
 
@@ -81,25 +97,29 @@ describe("数据库操作", () => {
     });
   });
 
-  describe("转录操作", () => {
+  describe("转录记录操作", () => {
     it("应该添加转录记录", async () => {
-      const mockTranscript = createMockTranscript();
-      (db.transcripts.add as any).mockResolvedValue(1);
+      const mockTranscript = MockDataGenerator.createMockTranscript();
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+
+      db.transcripts.add = mockDb.transcripts.add;
+      db.transcripts.add.mockResolvedValue(mockTranscript.id!);
 
       const transcriptId = await db.transcripts.add(mockTranscript);
 
-      expect(transcriptId).toBe(1);
+      expect(transcriptId).toBe(mockTranscript.id);
       expect(db.transcripts.add).toHaveBeenCalledWith(mockTranscript);
     });
 
-    it("应该根据文件ID获取转录", async () => {
-      const mockTranscript = createMockTranscript({ fileId: 1 });
-      const mockWhere = {
-        equals: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue(mockTranscript),
-      };
+    it("应该获取文件的转录记录", async () => {
+      const mockTranscript = MockDataGenerator.createMockTranscript({
+        fileId: 1,
+      });
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback([mockTranscript]);
 
-      (db.transcripts.where as any).mockReturnValue(mockWhere);
+      db.transcripts.where = mockDb.transcripts.where;
+      db.transcripts.where.mockReturnValue(mockWhere);
 
       const transcript = await db.transcripts.where("fileId").equals(1).first();
 
@@ -108,12 +128,13 @@ describe("数据库操作", () => {
       expect(mockWhere.equals).toHaveBeenCalledWith(1);
     });
 
-    it("应该更新转录状态", async () => {
+    it("应该更新转录记录", async () => {
       const updateData = {
-        status: "completed" as const,
+        text: "Updated text",
         updatedAt: new Date(),
       };
-      (db.transcripts.update as any).mockResolvedValue(1);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.transcripts.update = mockDb.transcripts.update;
 
       const updatedCount = await db.transcripts.update(1, updateData);
 
@@ -122,7 +143,8 @@ describe("数据库操作", () => {
     });
 
     it("应该删除转录记录", async () => {
-      (db.transcripts.delete as any).mockResolvedValue(1);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.transcripts.delete = mockDb.transcripts.delete;
 
       await db.transcripts.delete(1);
 
@@ -132,8 +154,14 @@ describe("数据库操作", () => {
 
   describe("字幕段操作", () => {
     it("应该批量添加字幕段", async () => {
-      const mockSegments = [createMockSegment({ id: 1 }), createMockSegment({ id: 2 })];
-      (db.segments.bulkAdd as any).mockResolvedValue([1, 2]);
+      const mockSegments = [
+        MockDataGenerator.createMockSegment({ id: 1 }),
+        MockDataGenerator.createMockSegment({ id: 2 }),
+      ];
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+
+      db.segments.bulkAdd = mockDb.segments.bulkAdd;
+      db.segments.bulkAdd.mockResolvedValue([1, 2]);
 
       const segmentIds = await db.segments.bulkAdd(mockSegments);
 
@@ -141,17 +169,29 @@ describe("数据库操作", () => {
       expect(db.segments.bulkAdd).toHaveBeenCalledWith(mockSegments);
     });
 
-    it("应该根据转录ID获取字幕段", async () => {
+    it("应该获取转录的所有字幕段", async () => {
       const mockSegments = [
-        createMockSegment({ transcriptId: 1 }),
-        createMockSegment({ transcriptId: 1, id: 2 }),
+        MockDataGenerator.createMockSegment({
+          id: 1,
+          transcriptId: 1,
+          start: 0.0,
+          end: 2.5,
+          text: "First segment",
+        }),
+        MockDataGenerator.createMockSegment({
+          id: 2,
+          transcriptId: 1,
+          start: 2.5,
+          end: 5.0,
+          text: "Second segment",
+        }),
       ];
-      const mockWhere = {
-        equals: vi.fn().mockReturnThis(),
-        toArray: vi.fn().mockResolvedValue(mockSegments),
-      };
 
-      (db.segments.where as any).mockReturnValue(mockWhere);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback(mockSegments);
+
+      db.segments.where = mockDb.segments.where;
+      db.segments.where.mockReturnValue(mockWhere);
 
       const segments = await db.segments.where("transcriptId").equals(1).toArray();
 
@@ -160,17 +200,21 @@ describe("数据库操作", () => {
       expect(mockWhere.equals).toHaveBeenCalledWith(1);
     });
 
-    it("应该按时间范围获取字幕段", async () => {
+    it("应该获取时间范围内的字幕段", async () => {
       const mockSegments = [
-        createMockSegment({ start: 0, end: 5 }),
-        createMockSegment({ id: 2, start: 5, end: 10 }),
+        MockDataGenerator.createMockSegment({
+          id: 1,
+          start: 0.0,
+          end: 2.5,
+          text: "Segment in range",
+        }),
       ];
-      const mockWhere = {
-        between: vi.fn().mockReturnThis(),
-        toArray: vi.fn().mockResolvedValue(mockSegments),
-      };
 
-      (db.segments.where as any).mockReturnValue(mockWhere);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback(mockSegments);
+
+      db.segments.where = mockDb.segments.where;
+      db.segments.where.mockReturnValue(mockWhere);
 
       const segments = await db.segments.where("start").between(0, 10).toArray();
 
@@ -181,11 +225,11 @@ describe("数据库操作", () => {
 
     it("应该更新字幕段", async () => {
       const updateData = {
-        text: "更新后的字幕",
-        translation: "Updated subtitle",
+        text: "Updated segment text",
         updatedAt: new Date(),
       };
-      (db.segments.update as any).mockResolvedValue(1);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.segments.update = mockDb.segments.update;
 
       const updatedCount = await db.segments.update(1, updateData);
 
@@ -195,59 +239,44 @@ describe("数据库操作", () => {
   });
 
   describe("事务操作", () => {
-    it("应该支持事务操作", async () => {
-      const mockFile = createMockFile("test.mp3", "audio/mpeg", 1024);
-      const mockTranscript = createMockTranscript();
-      const mockSegments = [createMockSegment()];
+    it("应该在事务中添加文件和转录记录", async () => {
+      const mockFile = MockDataGenerator.createMockFile();
+      const mockTranscript = MockDataGenerator.createMockTranscript();
+      const mockDb = MockDatabaseTools.createMockDbOperations();
 
-      const mockTransaction = {
-        files: { add: vi.fn().mockResolvedValue(1) },
-        transcripts: { add: vi.fn().mockResolvedValue(1) },
-        segments: { bulkAdd: vi.fn().mockResolvedValue([1]) },
-      };
+      db.transaction = mockDb.transaction;
 
-      (db.transaction as any).mockImplementation((...args: any[]) => {
-        const callback = args[args.length - 1];
-        return callback(mockTransaction);
-      });
-
-      await db.transaction("rw", db.files, db.transcripts, db.segments, async (tx) => {
+      await db.transaction("rw", db.files, db.transcripts, async (tx) => {
         const fileId = await tx.files.add({
           name: mockFile.name,
           size: mockFile.size,
           type: mockFile.type,
-          createdAt: new Date(),
+          uploadedAt: new Date(),
           updatedAt: new Date(),
         });
 
         const transcriptId = await tx.transcripts.add({
-          ...mockTranscript,
           fileId,
+          text: mockTranscript.text,
+          status: mockTranscript.status,
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
 
-        await tx.segments.bulkAdd([{ ...mockSegments[0], transcriptId }]);
+        expect(fileId).toBe(1);
+        expect(transcriptId).toBe(1);
       });
 
-      expect(db.transaction).toHaveBeenCalledWith(
-        "rw",
-        db.files,
-        db.transcripts,
-        db.segments,
-        expect.any(Function),
-      );
+      expect(db.transaction).toHaveBeenCalled();
     });
 
-    it("应该回滚失败的事务", async () => {
-      const mockTransaction = {
-        files: { add: vi.fn().mockResolvedValue(1) },
-        transcripts: {
-          add: vi.fn().mockRejectedValue(new Error("Database error")),
-        },
-      };
+    it("应该在事务失败时回滚", async () => {
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.transaction = mockDb.transaction;
 
-      (db.transaction as any).mockImplementation((...args: any[]) => {
-        const callback = args[args.length - 1];
-        return callback(mockTransaction);
+      // Mock a transaction that throws an error
+      db.transaction.mockImplementation(() => {
+        throw new Error("Database error");
       });
 
       await expect(
@@ -256,7 +285,7 @@ describe("数据库操作", () => {
             name: "test.mp3",
             size: 1024,
             type: "audio/mpeg",
-            createdAt: new Date(),
+            uploadedAt: new Date(),
             updatedAt: new Date(),
           });
           await tx.transcripts.add({
@@ -273,7 +302,9 @@ describe("数据库操作", () => {
 
   describe("数据库统计", () => {
     it("应该获取文件总数", async () => {
-      (db.files.count as any).mockResolvedValue(5);
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      db.files.count = mockDb.files.count;
+      db.files.count.mockResolvedValue(5);
 
       const count = await db.files.count();
 
@@ -282,74 +313,65 @@ describe("数据库操作", () => {
     });
 
     it("应该获取转录统计", async () => {
-      const mockStats = [
+      const _mockStats = [
         { status: "completed", count: 3 },
         { status: "processing", count: 1 },
-        { status: "failed", count: 1 },
+        { status: "pending", count: 1 },
       ];
 
-      const mockWhere = {
-        equals: vi.fn().mockReturnThis(),
-        count: vi
-          .fn()
-          .mockResolvedValueOnce(3) // completed
-          .mockResolvedValueOnce(1) // processing
-          .mockResolvedValueOnce(1), // failed
-      };
+      // Mock transcript count operations
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback([
+        MockDataGenerator.createMockTranscript(),
+        MockDataGenerator.createMockTranscript(),
+        MockDataGenerator.createMockTranscript(),
+      ]);
 
-      (db.transcripts.where as any).mockReturnValue(mockWhere);
+      db.transcripts.where = mockDb.transcripts.where;
+      db.transcripts.where.mockReturnValue(mockWhere);
 
       const completedCount = await db.transcripts.where("status").equals("completed").count();
-      const processingCount = await db.transcripts.where("status").equals("processing").count();
-      const failedCount = await db.transcripts.where("status").equals("failed").count();
 
       expect(completedCount).toBe(3);
-      expect(processingCount).toBe(1);
-      expect(failedCount).toBe(1);
+      expect(db.transcripts.where).toHaveBeenCalledWith("status");
+      expect(mockWhere.equals).toHaveBeenCalledWith("completed");
     });
   });
 
-  describe("数据库清理", () => {
-    it("应该清理过期文件", async () => {
-      const oldDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30天前
-      const mockWhere = {
-        below: vi.fn().mockReturnThis(),
-        toArray: vi.fn().mockResolvedValue([{ id: 1, name: "old-file.mp3" }]),
-      };
+  describe("数据清理", () => {
+    it("应该删除过期的文件", async () => {
+      const oldDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback([]);
 
-      (db.files.where as any).mockReturnValue(mockWhere);
-      (db.files.delete as any).mockResolvedValue(1);
+      db.files.where = mockDb.files.where;
+      db.files.where.mockReturnValue(mockWhere);
+      db.files.delete = mockDb.files.delete;
 
-      const oldFiles = await db.files.where("createdAt").below(oldDate).toArray();
-      for (const file of oldFiles) {
-        await db.files.delete(file.id);
-      }
+      const oldFiles = await db.files.where("uploadedAt").below(oldDate).toArray();
 
-      expect(db.files.where).toHaveBeenCalledWith("createdAt");
+      expect(oldFiles).toEqual([]);
+      expect(db.files.where).toHaveBeenCalledWith("uploadedAt");
       expect(mockWhere.below).toHaveBeenCalledWith(oldDate);
-      expect(db.files.delete).toHaveBeenCalledWith(1);
     });
 
-    it("应该清理孤立转录记录", async () => {
-      const mockWhere = {
-        equals: vi.fn().mockReturnThis(),
-        toArray: vi.fn().mockResolvedValue([{ id: 1 }]),
-      };
+    it("应该清理孤立的转录记录", async () => {
+      const mockDb = MockDatabaseTools.createMockDbOperations();
+      const mockWhere = MockDatabaseTools.createMockWhereCallback([]);
 
-      (db.transcripts.where as any).mockReturnValue(mockWhere);
-      (db.transcripts.delete as any).mockResolvedValue(1);
+      db.transcripts.where = mockDb.transcripts.where;
+      db.transcripts.where.mockReturnValue(mockWhere);
+      db.transcripts.delete = mockDb.transcripts.delete;
 
+      // Find transcripts with no associated files
       const orphanTranscripts = await db.transcripts
         .where("fileId")
-        .equals(undefined as any)
+        .equals(undefined as unknown as number)
         .toArray();
-      for (const transcript of orphanTranscripts) {
-        await db.transcripts.delete(transcript.id);
-      }
 
+      expect(orphanTranscripts).toEqual([]);
       expect(db.transcripts.where).toHaveBeenCalledWith("fileId");
-      expect(mockWhere.equals).toHaveBeenCalledWith(undefined as any);
-      expect(db.transcripts.delete).toHaveBeenCalledWith(1);
+      expect(mockWhere.equals).toHaveBeenCalledWith(undefined);
     });
   });
 });

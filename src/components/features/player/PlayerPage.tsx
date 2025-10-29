@@ -15,7 +15,7 @@ import ScrollableSubtitleDisplay from "@/components/features/player/ScrollableSu
 import ApiKeyError from "@/components/ui/ApiKeyError";
 import { usePlayerDataQuery } from "@/hooks/player/usePlayerDataQuery";
 import { useAudioPlayer } from "@/hooks/ui/useAudioPlayer";
-import { isApiKeyError } from "@/lib/utils/error-utils";
+import { isApiKeyError } from "@/lib/utils/error-handler";
 import type { Segment } from "@/types/db/database";
 
 export default function PlayerPageComponent({ fileId }: { fileId: string }) {

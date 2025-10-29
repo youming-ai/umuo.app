@@ -219,7 +219,10 @@ export class PerformanceMonitoring {
     );
 
     if (this.config.enableConsoleLogging) {
-      console.log(`[Performance] ${category}.${name}: ${value}${unit}`, { tags, metadata });
+      console.log(`[Performance] ${category}.${name}: ${value}${unit}`, {
+        tags,
+        metadata,
+      });
     }
   }
 
@@ -233,7 +236,10 @@ export class PerformanceMonitoring {
     });
 
     if (this.config.enableConsoleLogging) {
-      console.log(`[Performance] Timer started: ${category}.${name}`, { timerId, metadata });
+      console.log(`[Performance] Timer started: ${category}.${name}`, {
+        timerId,
+        metadata,
+      });
     }
 
     return timerId;
@@ -818,4 +824,202 @@ export function usePerformanceMonitoring() {
     getMemoryUsage: () => monitoring.getMemoryUsage(),
     getSystemHealth: () => monitoring.getSystemHealth(),
   };
+}
+
+// 防抖函数
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+  options: { leading?: boolean; trailing?: boolean; maxWait?: number } = {},
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout | undefined;
+  let lastCallTime: number;
+  let lastInvokeTime = 0;
+  let lastArgs: Parameters<T> | undefined;
+  let result: ReturnType<T>;
+
+  const { leading = false, trailing = true, maxWait } = options;
+
+  function invokeFunc(time: number) {
+    const args = lastArgs!;
+    lastArgs = undefined;
+    lastInvokeTime = time;
+    result = func(...args);
+    return result;
+  }
+
+  function leadingEdge(time: number) {
+    lastInvokeTime = time;
+    timeoutId = setTimeout(timerExpired, wait);
+    return leading ? invokeFunc(time) : result;
+  }
+
+  function remainingWait(time: number) {
+    const timeSinceLastCall = time - lastCallTime;
+    const timeSinceLastInvoke = time - lastInvokeTime;
+    const timeWaiting = wait - timeSinceLastCall;
+    return maxWait !== undefined
+      ? Math.min(timeWaiting, maxWait - timeSinceLastInvoke)
+      : timeWaiting;
+  }
+
+  function shouldInvoke(time: number) {
+    const timeSinceLastCall = time - lastCallTime;
+    return (
+      lastCallTime === undefined ||
+      timeSinceLastCall >= wait ||
+      timeSinceLastCall < 0 ||
+      (maxWait !== undefined && time - lastInvokeTime >= maxWait)
+    );
+  }
+
+  function timerExpired() {
+    const time = Date.now();
+    if (shouldInvoke(time)) {
+      return trailingEdge(time);
+    }
+    timeoutId = setTimeout(timerExpired, remainingWait(time));
+  }
+
+  function trailingEdge(time: number) {
+    timeoutId = undefined;
+    if (trailing && lastArgs) {
+      return invokeFunc(time);
+    }
+    lastArgs = undefined;
+    return result;
+  }
+
+  function debounced(...args: Parameters<T>) {
+    const time = Date.now();
+    const isInvoking = shouldInvoke(time);
+
+    lastArgs = args;
+    lastCallTime = time;
+
+    if (isInvoking) {
+      if (timeoutId === undefined) {
+        return leadingEdge(lastCallTime);
+      }
+      if (maxWait !== undefined) {
+        timeoutId = setTimeout(timerExpired, wait);
+        return invokeFunc(lastCallTime);
+      }
+    }
+    if (timeoutId === undefined) {
+      timeoutId = setTimeout(timerExpired, wait);
+    }
+    return result;
+  }
+
+  debounced.cancel = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    lastInvokeTime = 0;
+    lastArgs = undefined;
+    lastCallTime = 0;
+    timeoutId = undefined;
+  };
+
+  debounced.flush = () => {
+    return timeoutId === undefined ? result : trailingEdge(Date.now());
+  };
+
+  return debounced;
+}
+
+// 节流函数
+export function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+  options: { leading?: boolean; trailing?: boolean } = {},
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout | undefined;
+  let lastArgs: Parameters<T> | undefined;
+  let lastThis: unknown;
+  let lastInvokeTime = 0;
+  let lastCallTime = 0;
+  let result: ReturnType<T>;
+
+  const { leading = true, trailing = true } = options;
+
+  function invokeFunc(time: number) {
+    const args = lastArgs!;
+    const thisArg = lastThis;
+    lastArgs = undefined;
+    lastThis = undefined;
+    lastInvokeTime = time;
+    result = func.apply(thisArg, args);
+    return result;
+  }
+
+  function leadingEdge(time: number) {
+    lastInvokeTime = time;
+    timeoutId = setTimeout(timerExpired, wait);
+    return leading ? invokeFunc(time) : result;
+  }
+
+  function remainingWait(time: number) {
+    const timeSinceLastCall = time - lastInvokeTime;
+    return wait - timeSinceLastCall;
+  }
+
+  function shouldInvoke(time: number) {
+    const timeSinceLastCall = time - lastInvokeTime;
+    return lastInvokeTime === undefined || timeSinceLastCall >= wait || timeSinceLastCall < 0;
+  }
+
+  function timerExpired() {
+    const time = Date.now();
+    if (shouldInvoke(time)) {
+      return trailingEdge(time);
+    }
+    timeoutId = setTimeout(timerExpired, remainingWait(time));
+  }
+
+  function trailingEdge(time: number) {
+    timeoutId = undefined;
+    if (trailing && lastArgs) {
+      return invokeFunc(time);
+    }
+    lastArgs = undefined;
+    lastThis = undefined;
+    return result;
+  }
+
+  function throttled(this: unknown, ...args: Parameters<T>) {
+    const time = Date.now();
+    const isInvoking = shouldInvoke(time);
+
+    lastArgs = args;
+    lastThis = this;
+    lastCallTime = time;
+
+    if (isInvoking) {
+      if (timeoutId === undefined) {
+        return leadingEdge(lastCallTime);
+      }
+    }
+    if (timeoutId === undefined) {
+      timeoutId = setTimeout(timerExpired, wait);
+    }
+    return result;
+  }
+
+  throttled.cancel = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    lastInvokeTime = 0;
+    lastArgs = undefined;
+    lastThis = undefined;
+    timeoutId = undefined;
+  };
+
+  throttled.flush = () => {
+    return timeoutId === undefined ? result : trailingEdge(Date.now());
+  };
+
+  return throttled;
 }

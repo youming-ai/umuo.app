@@ -290,27 +290,33 @@ export const createMockFile = (name: string, type: string, size: number = 1024):
   return new File(bits, name, { type });
 };
 
-export const createMockTranscript = (overrides: Partial<any> = {}) => ({
-  id: 1,
-  fileId: 1,
-  text: "这是一个测试转录文本",
-  status: "completed" as const,
-  language: "ja",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-});
+// 使用类型安全的 Mock 工具
+export {
+  MockAudioTools,
+  MockDatabaseTools,
+  MockDataGenerator,
+  MockStorageTools,
+} from "./utils/test-mocks";
 
-export const createMockSegment = (overrides: Partial<any> = {}) => ({
-  id: 1,
-  transcriptId: 1,
-  start: 0,
-  end: 5,
-  text: "测试字幕",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  ...overrides,
-});
+// 为了向后兼容，保留旧的导出（已弃用）
+// 建议使用 MockDataGenerator.createMockTranscript() 代替
+/** @deprecated 使用 MockDataGenerator.createMockTranscript() 代替 */
+export const createMockTranscript = (overrides: Partial<any> = {}) => {
+  console.warn(
+    "createMockTranscript is deprecated, use MockDataGenerator.createMockTranscript() instead",
+  );
+  const { MockDataGenerator } = require("./utils/test-mocks");
+  return MockDataGenerator.createMockTranscript(overrides);
+};
+
+/** @deprecated 使用 MockDataGenerator.createMockSegment() 代替 */
+export const createMockSegment = (overrides: Partial<any> = {}) => {
+  console.warn(
+    "createMockSegment is deprecated, use MockDataGenerator.createMockSegment() instead",
+  );
+  const { MockDataGenerator } = require("./utils/test-mocks");
+  return MockDataGenerator.createMockSegment(overrides);
+};
 
 export const waitFor = (ms: number = 100) => new Promise((resolve) => setTimeout(resolve, ms));
 

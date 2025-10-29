@@ -1,0 +1,69 @@
+# Cloudflare Pages 配置
+# 基于 OpenNext.js for Cloudflare Pages 的官方推荐配置
+# 注意：此文件仅包含配置模板，实际密钥通过 Cloudflare Dashboard 设置
+
+name = "umuo-app"
+# Pages 项目不需要 main 函数，由 Functions 处理
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+# Pages 构建输出目录
+pages_build_output_dir = ".open-next/assets"
+
+# Pages Functions 配置 - D1 数据库
+[[d1_databases]]
+binding = "DB"
+database_name = "umuo-app-db"
+database_id = "5900e9a3-d502-43fb-9aac-a80f997d8f42"
+
+# Pages Functions 配置 - KV 存储
+[[kv_namespaces]]
+binding = "CACHE"
+id = "d9de145b86f84324a4e03ba7eed45994"
+preview_id = "4c8dd81741a04c5fac9bbfe2c94bf84a"
+
+# Pages Functions 配置 - R2 存储
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "umuo-app-files"
+
+# Pages 环境配置
+[env.production]
+name = "umuo-app-pages"
+
+# Production 环境的服务绑定
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "umuo-app-db"
+database_id = "5900e9a3-d502-43fb-9aac-a80f997d8f42"
+
+[[env.production.kv_namespaces]]
+binding = "CACHE"
+id = "d9de145b86f84324a4e03ba7eed45994"
+preview_id = "4c8dd81741a04c5fac9bbfe2c94bf84a"
+
+[[env.production.r2_buckets]]
+binding = "FILES"
+bucket_name = "umuo-app-files"
+
+[env.preview]
+name = "umuo-app-pages-preview"
+
+# Preview 环境的服务绑定
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "umuo-app-db"
+database_id = "5900e9a3-d502-43fb-9aac-a80f997d8f42"
+
+[[env.preview.kv_namespaces]]
+binding = "CACHE"
+id = "d9de145b86f84324a4e03ba7eed45994"
+preview_id = "4c8dd81741a04c5fac9bbfe2c94bf84a"
+
+[[env.preview.r2_buckets]]
+binding = "FILES"
+bucket_name = "umuo-app-files"
+
+# 调试和分析
+[observability]
+enabled = true

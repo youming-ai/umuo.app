@@ -337,7 +337,10 @@ export async function handleWithSmartRetry<T>(
   } catch (error) {
     const appError = handleError(error, errorContext?.component);
     const category = getErrorCategory(appError.code);
-    const strategy = { ...DefaultRecoveryStrategies[category], ...customStrategy };
+    const strategy = {
+      ...DefaultRecoveryStrategies[category],
+      ...customStrategy,
+    };
 
     if (!isRetryableError(appError.code) || strategy.maxRetries === 0) {
       showErrorToast(appError);
@@ -654,14 +657,20 @@ export class ErrorAggregator {
     }
   }
 
-  getStats(): { totalUniqueErrors: number; topErrors: Array<{ error: AppError; count: number }> } {
+  getStats(): {
+    totalUniqueErrors: number;
+    topErrors: Array<{ error: AppError; count: number }>;
+  } {
     const sorted = Array.from(this.recentErrors.entries())
       .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 10);
 
     return {
       totalUniqueErrors: this.recentErrors.size,
-      topErrors: sorted.map(([_, entry]) => ({ error: entry.error, count: entry.count })),
+      topErrors: sorted.map(([_, entry]) => ({
+        error: entry.error,
+        count: entry.count,
+      })),
     };
   }
 }
@@ -707,3 +716,48 @@ export const ErrorHandler = {
 
 // 重新导出类型、接口和枚举
 export type { AppError, ErrorContext, LogLevel as ImportedLogLevel, RetryOptions };
+
+// 检查是否为API密钥相关错误
+export function isApiKeyError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const errorMessage = error.message.toLowerCase();
+    return (
+      errorMessage.includes("groq_api_key") ||
+      errorMessage.includes("环境变量未设置") ||
+      errorMessage.includes("api key") ||
+      errorMessage.includes("authentication")
+    );
+  }
+  return false;
+}
+
+// 获取用户友好的错误消息
+export function getFriendlyErrorMessage(error: unknown): string {
+  if (isApiKeyError(error)) {
+    return "请配置 GROQ_API_KEY 环境变量以使用转录功能";
+  }
+
+  if (error instanceof Error) {
+    const errorMessage = error.message.toLowerCase();
+
+    if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+      return "网络连接失败，请检查网络连接后重试";
+    }
+
+    if (errorMessage.includes("timeout")) {
+      return "请求超时，请稍后重试";
+    }
+
+    if (errorMessage.includes("rate limit")) {
+      return "请求过于频繁，请稍后重试";
+    }
+
+    if (errorMessage.includes("file size") || errorMessage.includes("文件大小")) {
+      return "文件太大，请上传较小的音频文件";
+    }
+
+    return error.message;
+  }
+
+  return "未知错误，请重试";
+}

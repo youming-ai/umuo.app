@@ -21,8 +21,7 @@ export interface TranscriptionOptions {
   }) => void;
 }
 
-export type TranscriptionResult =
-  import("@/types/transcription").TranscriptionResult;
+export type TranscriptionResult = import("@/types/transcription").TranscriptionResult;
 
 export interface TranscriptionProgress {
   fileId: number;
@@ -43,13 +42,7 @@ export async function transcribeAudio(
 
   try {
     // 更新进度
-    await updateTranscriptionProgress(
-      fileId,
-      10,
-      "准备转录...",
-      "processing",
-      options,
-    );
+    await updateTranscriptionProgress(fileId, 10, "准备转录...", "processing", options);
 
     // 获取文件数据
     const fileRecord = await db.files.get(fileId);
@@ -57,60 +50,25 @@ export async function transcribeAudio(
       throw new Error("文件不存在");
     }
 
-    await updateTranscriptionProgress(
-      fileId,
-      30,
-      "开始转录处理...",
-      "processing",
-      options,
-    );
+    await updateTranscriptionProgress(fileId, 30, "开始转录处理...", "processing", options);
 
     // 使用 AI SDK 进行转录
     const result = await transcribeWithAISDK(fileRecord, options);
 
     // 保存结果
-    await updateTranscriptionProgress(
-      fileId,
-      90,
-      "保存转录结果...",
-      "processing",
-      options,
-    );
-    const transcriptId = await saveTranscriptionResult(
-      fileId,
-      result,
-      options,
-      startTime,
-    );
+    await updateTranscriptionProgress(fileId, 90, "保存转录结果...", "processing", options);
+    const transcriptId = await saveTranscriptionResult(fileId, result, options, startTime);
 
     // 后处理（可选，不影响主要流程）
     try {
-      await updateTranscriptionProgress(
-        fileId,
-        95,
-        "后处理...",
-        "processing",
-        options,
-      );
+      await updateTranscriptionProgress(fileId, 95, "后处理...", "processing", options);
       await processPostTranscription(transcriptId, result);
     } catch (postProcessError) {
       console.warn("后处理失败:", postProcessError);
-      await updateTranscriptionProgress(
-        fileId,
-        95,
-        "转录完成，后处理失败",
-        "processing",
-        options,
-      );
+      await updateTranscriptionProgress(fileId, 95, "转录完成，后处理失败", "processing", options);
     }
 
-    await updateTranscriptionProgress(
-      fileId,
-      100,
-      "转录完成",
-      "completed",
-      options,
-    );
+    await updateTranscriptionProgress(fileId, 100, "转录完成", "completed", options);
 
     return result;
   } catch (error) {
@@ -162,16 +120,14 @@ async function transcribeWithAISDK(
   let processedSegments: TranscriptionResult["segments"] = [];
 
   if (Array.isArray(transcript.segments) && transcript.segments.length > 0) {
-    processedSegments = transcript.segments.map(
-      (segment: any, index: number) => ({
-        start: segment.start || segment.timestamp?.[0] || 0,
-        end: segment.end || segment.timestamp?.[1] || 0,
-        text: segment.text || segment.word || "",
-        wordTimestamps: segment.words || [],
-        confidence: segment.confidence,
-        id: segment.id || index + 1,
-      }),
-    );
+    processedSegments = transcript.segments.map((segment: any, index: number) => ({
+      start: segment.start || segment.timestamp?.[0] || 0,
+      end: segment.end || segment.timestamp?.[1] || 0,
+      text: segment.text || segment.word || "",
+      wordTimestamps: segment.words || [],
+      confidence: segment.confidence,
+      id: segment.id || index + 1,
+    }));
   } else if (transcript.text) {
     // 生成基本的segments - 简化逻辑
     const sentences = transcript.text
@@ -179,16 +135,13 @@ async function transcribeWithAISDK(
       .filter((s: string) => s.trim().length > 0);
     const avgWordsPerSecond = 2.5;
     const totalDuration =
-      transcript.durationInSeconds ||
-      transcript.text.length / avgWordsPerSecond;
+      transcript.durationInSeconds || transcript.text.length / avgWordsPerSecond;
 
     processedSegments = sentences.map((sentence: string, index: number) => {
       const words = sentence.trim().split(/\s+/);
       const sentenceDuration = words.length / avgWordsPerSecond;
       const startTime =
-        index === 0
-          ? 0
-          : sentences.slice(0, index).join("").length / avgWordsPerSecond;
+        index === 0 ? 0 : sentences.slice(0, index).join("").length / avgWordsPerSecond;
       const endTime = Math.min(startTime + sentenceDuration, totalDuration);
 
       return {
@@ -290,8 +243,7 @@ async function processPostTranscription(
         .equals(transcriptId)
         .and(
           (segment) =>
-            segment.start === processedSegment.start &&
-            segment.end === processedSegment.end,
+            segment.start === processedSegment.start && segment.end === processedSegment.end,
         )
         .modify({
           normalizedText: processedSegment.normalizedText,
@@ -336,23 +288,15 @@ async function updateTranscriptionProgress(
 /**
  * 获取转录进度 - 简化版本
  */
-export async function getTranscriptionProgress(
-  fileId: number,
-): Promise<TranscriptionProgress> {
+export async function getTranscriptionProgress(fileId: number): Promise<TranscriptionProgress> {
   try {
     const { db } = await import("../db/db");
-    const transcripts = await db.transcripts
-      .where("fileId")
-      .equals(fileId)
-      .toArray();
+    const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
 
-    const processingTranscript = transcripts.find(
-      (t) => t.status === "processing",
-    );
+    const processingTranscript = transcripts.find((t) => t.status === "processing");
 
     if (processingTranscript) {
-      const processingTime =
-        Date.now() - processingTranscript.createdAt.getTime();
+      const processingTime = Date.now() - processingTranscript.createdAt.getTime();
       const estimatedProgress = Math.min(95, Math.floor(processingTime / 1000));
 
       return {
@@ -363,9 +307,7 @@ export async function getTranscriptionProgress(
       };
     }
 
-    const completedTranscript = transcripts.find(
-      (t) => t.status === "completed",
-    );
+    const completedTranscript = transcripts.find((t) => t.status === "completed");
     if (completedTranscript) {
       return {
         fileId,
@@ -413,14 +355,9 @@ export async function postProcessSegmentsByTranscriptId(
 ) {
   try {
     const { db } = await import("../db/db");
-    const segments = await db.segments
-      .where("transcriptId")
-      .equals(transcriptId)
-      .toArray();
+    const segments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
 
-    console.log(
-      `后处理 ${segments.length} 个segments, transcriptId: ${transcriptId}`,
-    );
+    console.log(`后处理 ${segments.length} 个segments, transcriptId: ${transcriptId}`);
 
     return segments;
   } catch (error) {

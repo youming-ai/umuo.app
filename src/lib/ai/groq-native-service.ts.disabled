@@ -1,0 +1,370 @@
+/**
+ * Groq 原生转录服务
+ * 直接使用 Groq SDK 而不是 AI SDK，支持完整的 word-timestamps
+ */
+
+import Groq from "groq-sdk";
+import type { FileRow, TranscriptRow, Segment } from "@/types/db/database";
+import GroqFormatConverter, {
+  type GroqFullResponse,
+} from "@/lib/utils/groq-format-converter";
+
+export interface GroqTranscriptionConfig {
+  model?: string;
+  language?: string;
+  temperature?: number;
+  responseFormat?: "json" | "text" | "verbose_json" | "srt" | "vtt";
+  timestampGranularities?: Array<"word" | "segment">;
+  prompt?: string;
+}
+
+export interface GroqTranscriptionResult {
+  success: true;
+  transcript: TranscriptRow;
+  segments: Segment[];
+  metadata: {
+    processingTime: number;
+    audioSize: number;
+    model: string;
+    language: string;
+  };
+}
+
+export interface GroqTranscriptionError {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+  };
+}
+
+export class GroqNativeService {
+  private static readonly DEFAULT_CONFIG: GroqTranscriptionConfig = {
+    model: "whisper-large-v3-turbo",
+    language: "ja",
+    temperature: 0,
+    responseFormat: "verbose_json",
+    timestampGranularities: ["word", "segment"],
+  };
+
+  /**
+   * 直接使用 Groq API 进行转录
+   */
+  static async transcribe(
+    audioFile: File | Blob,
+    config: Partial<GroqTranscriptionConfig> = {},
+  ): Promise<GroqTranscriptionResult | GroqTranscriptionError> {
+    const startTime = Date.now();
+    const finalConfig = { ...this.DEFAULT_CONFIG, ...config };
+
+    console.log(`🚀 开始 Groq 原生转录:`, {
+      fileName: (audioFile as File).name || "unknown",
+      fileSize: audioFile.size,
+      model: finalConfig.model,
+      language: finalConfig.language,
+      responseFormat: finalConfig.responseFormat,
+      timestampGranularities: finalConfig.timestampGranularities,
+    });
+
+    // 检查 API 密钥
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        error: {
+          code: "API_KEY_MISSING",
+          message: "Groq API 密钥未配置",
+        },
+      };
+    }
+
+    try {
+      // 创建 Groq 客户端
+      const groq = new Groq({
+        apiKey,
+      });
+
+      // 使用 Groq SDK 的 transcription 方法
+      const transcription = await groq.audio.transcriptions.create({
+        file: audioFile as File,
+        model: (finalConfig.model || "whisper-large-v3-turbo") as any, // 类型转换
+        language: finalConfig.language,
+        temperature: finalConfig.temperature,
+        response_format: (finalConfig.responseFormat || "verbose_json") as any, // 转换为 SDK 期望的格式
+        timestamp_granularities: (finalConfig.timestampGranularities || [
+          "segment",
+        ]) as any[],
+      });
+
+      // 构建 Groq 响应格式以匹配现有的转换器
+      const groqResponse: GroqFullResponse = {
+        success: true,
+        id: `groq-${Date.now()}`,
+        object: "transcription",
+        created: new Date().toISOString(),
+        model: finalConfig.model || "whisper-large-v3-turbo",
+        choices: [
+          {
+            index: 0,
+            transcript: transcription.text,
+            words: (transcription as any).words || [],
+            segments: (transcription as any).segments || [],
+            avg_logprob: (transcription as any).avg_logprob,
+            compression_ratio: (transcription as any).compression_ratio,
+            no_speech_prob: (transcription as any).no_speech_prob,
+            temperature: finalConfig.temperature,
+          },
+        ],
+      };
+
+      console.log(`📥 收到 Groq 响应:`, {
+        responseId: groqResponse.id,
+        model: groqResponse.model,
+        hasTranscript: !!groqResponse.choices?.[0]?.transcript,
+        segmentCount: groqResponse.choices?.[0]?.segments?.length || 0,
+        wordCount: groqResponse.choices?.[0]?.words?.length || 0,
+      });
+
+      // 验证响应格式
+      if (!GroqFormatConverter.validateResponse(groqResponse)) {
+        return {
+          success: false,
+          error: {
+            code: "INVALID_RESPONSE_FORMAT",
+            message: "Groq API 返回了无效的响应格式",
+            details: { response: groqResponse },
+          },
+        };
+      }
+
+      // 转换为标准格式
+      const processingTime = Date.now() - startTime;
+      const metadata = GroqFormatConverter.extractMetadata(groqResponse);
+      const segments =
+        GroqFormatConverter.convertToStandardSegments(groqResponse);
+
+      // 创建 transcript 记录
+      const now = new Date();
+      const transcript: TranscriptRow = {
+        id: 0, // 将在数据库操作中设置
+        fileId: 0, // 将在调用方设置
+        status: "completed",
+        rawText: metadata.rawText || "",
+        text: metadata.text || "",
+        language: metadata.language || finalConfig.language || "auto",
+        duration: metadata.duration || 0,
+        processingTime: processingTime / 1000, // 转换为秒
+        createdAt: metadata.createdAt || now,
+        updatedAt: metadata.updatedAt || now,
+      };
+
+      // 为 segments 设置 transcriptId
+      segments.forEach((segment) => {
+        segment.transcriptId = 0; // 将在数据库操作中设置
+      });
+
+      // 记录转换详情
+      GroqFormatConverter.logConversionDetails(groqResponse, segments);
+
+      console.log(`✅ Groq 转录完成:`, {
+        processingTime: processingTime,
+        segmentCount: segments.length,
+        totalDuration: metadata.duration,
+        language: transcript.language,
+      });
+
+      return {
+        success: true,
+        transcript,
+        segments,
+        metadata: {
+          processingTime: processingTime / 1000,
+          audioSize: audioFile.size,
+          model: groqResponse.model,
+          language: transcript.language || "auto",
+        },
+      };
+    } catch (error) {
+      const processingTime = Date.now() - startTime;
+      console.error(`❌ Groq 转录失败 (${processingTime}ms):`, error);
+
+      // 尝试解析错误信息
+      let errorCode = "TRANSCRIPTION_ERROR";
+      let errorMessage = "转录处理失败";
+
+      if (error instanceof Error) {
+        if (error.message.includes("quota")) {
+          errorCode = "QUOTA_EXCEEDED";
+          errorMessage = "API 配额已用完";
+        } else if (error.message.includes("file too large")) {
+          errorCode = "FILE_TOO_LARGE";
+          errorMessage = "音频文件过大";
+        } else if (error.message.includes("unsupported")) {
+          errorCode = "UNSUPPORTED_FORMAT";
+          errorMessage = "不支持的音频格式";
+        } else if (
+          error.message.includes("api key") ||
+          error.message.includes("authentication")
+        ) {
+          errorCode = "INVALID_API_KEY";
+          errorMessage = "API 密钥无效";
+        } else if (error.message.includes("rate limit")) {
+          errorCode = "RATE_LIMIT_EXCEEDED";
+          errorMessage = "API 请求过于频繁";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      return {
+        success: false,
+        error: {
+          code: errorCode,
+          message: errorMessage,
+          details:
+            error instanceof Error
+              ? {
+                  error: error.message,
+                  stack:
+                    process.env.NODE_ENV === "development"
+                      ? error.stack
+                      : undefined,
+                  processingTime: processingTime,
+                }
+              : undefined,
+        },
+      };
+    }
+  }
+
+  /**
+   * 便捷方法：从 FileRow 进行转录
+   */
+  static async transcribeFileRow(
+    file: FileRow,
+    config?: Partial<GroqTranscriptionConfig>,
+  ): Promise<GroqTranscriptionResult | GroqTranscriptionError> {
+    if (!file.blob) {
+      return {
+        success: false,
+        error: {
+          code: "FILE_DATA_MISSING",
+          message: "文件数据不完整：缺少音频数据",
+        },
+      };
+    }
+
+    const result = await this.transcribe(file.blob, config);
+
+    // 如果成功，设置文件 ID
+    if (result.success) {
+      result.transcript.fileId = file.id!;
+      result.segments.forEach((segment) => {
+        segment.transcriptId = 0; // 将在数据库操作中设置
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * 批量转录
+   */
+  static async transcribeBatch(
+    files: FileRow[],
+    config?: Partial<GroqTranscriptionConfig>,
+    concurrency: number = 2,
+  ): Promise<Array<GroqTranscriptionResult | GroqTranscriptionError>> {
+    console.log(`📦 开始批量转录:`, {
+      fileCount: files.length,
+      concurrency,
+      model: config?.model || this.DEFAULT_CONFIG.model,
+    });
+
+    const results: Array<GroqTranscriptionResult | GroqTranscriptionError> = [];
+
+    // 分批处理
+    for (let i = 0; i < files.length; i += concurrency) {
+      const batch = files.slice(i, i + concurrency);
+      const batchPromises = batch.map((file) =>
+        this.transcribeFileRow(file, config),
+      );
+
+      const batchResults = await Promise.allSettled(batchPromises);
+
+      batchResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          results.push(result.value);
+        } else {
+          console.error(
+            `批量转录失败 - 文件 ${batch[index].name}:`,
+            result.reason,
+          );
+          results.push({
+            success: false,
+            error: {
+              code: "BATCH_TRANSCRIPTION_ERROR",
+              message: "批量转录处理失败",
+              details: {
+                fileName: batch[index].name,
+                error:
+                  result.reason instanceof Error
+                    ? result.reason.message
+                    : String(result.reason),
+              },
+            },
+          });
+        }
+      });
+    }
+
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.length - successCount;
+
+    console.log(`📊 批量转录完成:`, {
+      total: results.length,
+      success: successCount,
+      failure: failureCount,
+      successRate: `${((successCount / results.length) * 100).toFixed(1)}%`,
+    });
+
+    return results;
+  }
+
+  /**
+   * 检查模型是否支持 word-timestamps
+   */
+  static supportsWordTimestamps(model: string): boolean {
+    const supportedModels = [
+      "whisper-large-v3",
+      "whisper-large-v3-turbo",
+      "whisper-medium",
+      "whisper-large",
+    ];
+
+    return supportedModels.some((supportedModel) =>
+      model.toLowerCase().includes(supportedModel.toLowerCase()),
+    );
+  }
+
+  /**
+   * 获取推荐的配置
+   */
+  static getRecommendedConfig(
+    language: string = "ja",
+    model: string = "whisper-large-v3-turbo",
+  ): GroqTranscriptionConfig {
+    return {
+      model,
+      language,
+      temperature: 0,
+      responseFormat: "verbose_json",
+      timestampGranularities: this.supportsWordTimestamps(model)
+        ? ["word", "segment"]
+        : ["segment"],
+    };
+  }
+}
+
+export default GroqNativeService;

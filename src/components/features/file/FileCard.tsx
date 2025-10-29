@@ -5,63 +5,55 @@
 
 "use client";
 
-import { formatFileSize, formatDate } from "@/lib/utils/utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { CheckCircle, Clock, Loader2, Play, Trash2, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Play,
-  Trash2,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Loader2,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { formatDate, formatFileSize } from "@/lib/utils/utils";
 import type { FileRow } from "@/types/db/database";
-import type { TranscriptionTask } from "@/types/transcription";
+import { FileStatus } from "@/types/db/database";
 
 interface FileCardProps {
   file: FileRow;
-  transcriptionTask?: TranscriptionTask;
   onPlay?: (fileId: number) => void;
   onDelete?: (fileId: number) => void;
   onTranscribe?: (fileId: number) => void;
+  transcriptionProgress?: number;
 }
 
 export default function FileCard({
   file,
-  transcriptionTask,
   onPlay,
   onDelete,
   onTranscribe,
+  transcriptionProgress,
 }: FileCardProps) {
-  const getStatusDisplay = () => {
-    if (!transcriptionTask) {
-      return {
-        icon: Clock,
-        color: "text-gray-500",
-        label: "未转录",
-        variant: "secondary" as const,
-      };
-    }
+  // 优雅地处理可能缺失的 file.id
+  if (!file.id) {
+    console.warn("FileCard: file.id is missing", file);
+    return null;
+  }
 
-    switch (transcriptionTask.status) {
-      case "processing":
+  const getStatusDisplay = () => {
+    const status = file.status || FileStatus.UPLOADED;
+
+    switch (status) {
+      case FileStatus.TRANSCRIBING:
         return {
           icon: Loader2,
           color: "text-blue-500",
           label: "转录中",
           variant: "default" as const,
         };
-      case "completed":
+      case FileStatus.COMPLETED:
         return {
           icon: CheckCircle,
           color: "text-green-500",
           label: "已完成",
           variant: "default" as const,
         };
-      case "failed":
+      case FileStatus.ERROR:
         return {
           icon: XCircle,
           color: "text-red-500",
@@ -91,14 +83,14 @@ export default function FileCard({
               {file.name}
             </h3>
             <p className="text-xs text-gray-500">
-              {formatFileSize(file.size)} • {formatDate(file.createdAt)}
+              {formatFileSize(file.size)} • {formatDate(file.uploadedAt)}
             </p>
           </div>
 
           {/* 转录状态 */}
           <div className="flex items-center gap-2">
             <StatusIcon
-              className={`h-4 w-4 ${status.color} ${transcriptionTask?.status === "processing" ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${status.color} ${file.status === FileStatus.TRANSCRIBING ? "animate-spin" : ""}`}
             />
             <Badge variant={status.variant} className="text-xs">
               {status.label}
@@ -106,37 +98,29 @@ export default function FileCard({
           </div>
 
           {/* 转录进度 */}
-          {transcriptionTask?.status === "processing" && (
+          {file.status === FileStatus.TRANSCRIBING && transcriptionProgress !== undefined && (
             <div className="space-y-1">
               <div className="flex justify-between text-xs text-gray-500">
                 <span>转录进度</span>
-                <span>{transcriptionTask.progress.progress}%</span>
+                <span>{transcriptionProgress}%</span>
               </div>
-              <Progress
-                value={transcriptionTask.progress.progress}
-                className="h-1"
-              />
-              {transcriptionTask.progress.message && (
-                <p className="text-xs text-gray-500 truncate">
-                  {transcriptionTask.progress.message}
-                </p>
-              )}
+              <Progress value={transcriptionProgress} className="h-1" />
             </div>
           )}
 
           {/* 操作按钮 */}
           <div className="flex gap-2 pt-2">
-            {transcriptionTask?.status === "completed" ? (
+            {file.status === FileStatus.COMPLETED ? (
               <Button
                 size="sm"
                 variant="default"
                 className="flex-1"
-                onClick={() => onPlay?.(file.id!)}
+                onClick={() => file.id && onPlay?.(file.id)}
               >
                 <Play className="h-3 w-3 mr-1" />
                 播放
               </Button>
-            ) : transcriptionTask?.status === "processing" ? (
+            ) : file.status === FileStatus.TRANSCRIBING ? (
               <Button size="sm" variant="outline" disabled className="flex-1">
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 转录中
@@ -146,18 +130,14 @@ export default function FileCard({
                 size="sm"
                 variant="default"
                 className="flex-1"
-                onClick={() => onTranscribe?.(file.id!)}
+                onClick={() => file.id && onTranscribe?.(file.id)}
               >
                 <Play className="h-3 w-3 mr-1" />
                 转录
               </Button>
             )}
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete?.(file.id!)}
-            >
+            <Button size="sm" variant="outline" onClick={() => file.id && onDelete?.(file.id)}>
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>

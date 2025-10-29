@@ -3,7 +3,7 @@
  * 提供防抖、节流、批量事件发射等功能
  */
 
-import { debounce, throttle } from "./performance-utils";
+import { debounce, throttle } from "./performance-monitoring";
 
 export interface EventListener<T = any> {
   callback: (data: T) => void;

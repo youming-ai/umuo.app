@@ -8,6 +8,24 @@ pnpm-debug.log*
 # Environment variables
 .env*
 .env.local
+.dev.vars
+
+# Cloudflare
+.wrangler/
+.wrangler.toml
+
+# OpenNext build artifacts (except config files)
+.open-next/
+!open-next.config.ts
+
+# Temporary files
+*.tmp
+temp/
+test-*.txt
+
+# API Keys and Secrets
+*api-key*
+*secret*
 
 # Logs
 *.log

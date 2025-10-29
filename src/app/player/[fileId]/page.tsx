@@ -39,12 +39,8 @@ export default function PlayerPage() {
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-full p-3 mb-4">
             <span className="text-red-600 dark:text-red-400">!</span>
           </div>
-          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">
-            加载失败
-          </h3>
-          <p className="text-sm text-red-600 dark:text-red-400 max-w-md">
-            {error}
-          </p>
+          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400">加载失败</h3>
+          <p className="text-sm text-red-600 dark:text-red-400 max-w-md">{error}</p>
           <div className="flex flex-wrap gap-3 mt-6">
             <button
               type="button"
@@ -56,9 +52,7 @@ export default function PlayerPage() {
             <button
               type="button"
               onClick={() =>
-                error && !transcript
-                  ? resetAutoTranscription()
-                  : startTranscription()
+                error && !transcript ? resetAutoTranscription() : startTranscription()
               }
               className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-md text-sm transition-colors"
             >
@@ -73,9 +67,7 @@ export default function PlayerPage() {
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full p-3 mb-4">
             <span className="text-gray-600 dark:text-gray-400">?</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400">
-            文件不存在
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400">文件不存在</h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 max-w-md">
             找不到指定的音频文件。请检查文件是否已被删除。
           </p>
@@ -96,9 +88,7 @@ export default function PlayerPage() {
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-full p-3 mb-4">
             <span className="text-blue-600 dark:text-blue-400">🎵</span>
           </div>
-          <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">
-            准备转录
-          </h3>
+          <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">准备转录</h3>
           <p className="text-sm text-blue-600 dark:text-blue-400 max-w-md mb-6">
             此文件尚未转录，将自动开始转录处理。转录完成后，您就可以播放带字幕的音频。
           </p>
@@ -148,9 +138,7 @@ export default function PlayerPage() {
         </div>
       )}
 
-      {file && audioUrl && transcript && segments && (
-        <PlayerPageComponent fileId={fileId} />
-      )}
+      {file && audioUrl && transcript && segments && <PlayerPageComponent fileId={fileId} />}
     </PlayerErrorBoundary>
   );
 }

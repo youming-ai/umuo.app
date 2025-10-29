@@ -379,7 +379,7 @@ export default function PlayerDrawer({
           {/* 调整大小的手柄 */}
           {!state.isFullscreen && (
             <div
-              className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize transition-colors hover:bg-primary/20"
+              className="absolute top-0 bottom-0 left-0 w-2 cursor-ew-resize transition-colors hover:bg-primary/20 border-0 bg-transparent"
               onMouseDown={handleMouseDown}
               role="separator"
               tabIndex={0}

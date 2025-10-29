@@ -50,9 +50,7 @@ export async function setServerProgress(
 /**
  * 获取进度数据
  */
-export async function getServerProgress(
-  fileId: number,
-): Promise<ServerProgress | undefined> {
+export async function getServerProgress(fileId: number): Promise<ServerProgress | undefined> {
   return progressStore.get(fileId);
 }
 
@@ -71,16 +69,11 @@ export async function clearServerProgress(fileId: number): Promise<void> {
 }
 
 // 向后兼容：提供同步版本
-export function setServerProgressSync(
-  fileId: number,
-  progress: Partial<ServerProgress>,
-): void {
+export function setServerProgressSync(fileId: number, progress: Partial<ServerProgress>): void {
   setServerProgress(fileId, progress).catch(console.error);
 }
 
-export function getServerProgressSync(
-  fileId: number,
-): ServerProgress | undefined {
+export function getServerProgressSync(fileId: number): ServerProgress | undefined {
   return progressStore.get(fileId);
 }
 

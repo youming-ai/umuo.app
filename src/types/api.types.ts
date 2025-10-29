@@ -38,10 +38,9 @@ export interface TranscriptionResponseData {
   transcript?: {
     text: string;
     durationInSeconds?: number;
-    segments?: TranscriptionSegment[];
-    words?: TranscriptionWord[];
+    segments?: import("./transcription").TranscriptionSegment[];
   };
-  processedSegments?: ProcessedSegment[];
+  processedSegments?: import("./transcription").ProcessedSegment[];
   error?: {
     code: string;
     message: string;
@@ -49,14 +48,7 @@ export interface TranscriptionResponseData {
   };
 }
 
-export interface TranscriptionSegment {
-  id: number;
-  start: number;
-  end: number;
-  text: string;
-  confidence?: number;
-  words?: TranscriptionWord[];
-}
+// TranscriptionSegment 已移至 types/transcription.ts 以避免重复
 
 export interface TranscriptionWord {
   word: string;

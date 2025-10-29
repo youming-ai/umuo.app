@@ -34,7 +34,7 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
         let results = await db.files.toArray();
 
         // 默认按创建时间倒序
-        results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        results.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
 
         // 应用分页
         if (options?.offset) {
@@ -63,7 +63,7 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
           name: data.name,
           size: data.size || 0,
           type: data.type || "",
-          createdAt: now,
+          uploadedAt: now,
           updatedAt: now,
         };
 
@@ -180,7 +180,9 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
       "findRecent",
       async () => {
         const allFiles = await db.files.toArray();
-        allFiles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        allFiles.sort(
+          (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
+        );
         return limit ? allFiles.slice(0, limit) : allFiles;
       },
       { limit },

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 import { ThemeProvider } from "@/components/layout/contexts/ThemeContext";
 import { QueryProvider } from "@/components/layout/providers/QueryProvider";
-import { ClarityProvider } from "@/components/providers/ClarityProvider";
+// import { ClarityProvider } from "@/components/providers/ClarityProvider";
 import { PageErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
@@ -26,7 +26,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
@@ -57,17 +61,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider defaultTheme="dark">
-          <ClarityProvider projectId="tx4r6c5h9b">
-            <MonitoringInitializer />
-            <QueryProvider>
-              <PageErrorBoundary>
-                <div className="relative min-h-screen">{children}</div>
-              </PageErrorBoundary>
-            </QueryProvider>
-            <ThemeDebuggerToggle />
-            <PwaRegister />
-            <ToastContainer>{null}</ToastContainer>
-          </ClarityProvider>
+          {/* <ClarityProvider projectId="tx4r6c5h9b"> */}
+          <MonitoringInitializer />
+          <QueryProvider>
+            <PageErrorBoundary>
+              <div className="relative min-h-screen">{children}</div>
+            </PageErrorBoundary>
+          </QueryProvider>
+          <ThemeDebuggerToggle />
+          <PwaRegister />
+          <ToastContainer>{null}</ToastContainer>
+          {/* </ClarityProvider> */}
         </ThemeProvider>
       </body>
     </html>

@@ -1,0 +1,14 @@
+"use client";
+
+import React from "react";
+import { Toaster } from "sonner";
+
+// Note: This provider has been temporarily disabled for Cloudflare Pages deployment
+// It will be restored once the application is fully deployed and functional
+
+export function ClarityProvider({ projectId, children }: ClarityProviderProps) {
+  // Clarity integration is temporarily disabled
+  console.log("ClarityProvider is temporarily disabled during Cloudflare Pages deployment");
+
+  return <>{children}</>;
+}

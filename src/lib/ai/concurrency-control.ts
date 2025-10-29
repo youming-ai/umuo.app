@@ -22,11 +22,7 @@ export class ConcurrencyController {
   /**
    * 执行任务，带并发控制
    */
-  async execute<T>(
-    taskId: string,
-    taskFn: () => Promise<T>,
-    priority: number = 0,
-  ): Promise<T> {
+  async execute<T>(taskId: string, taskFn: () => Promise<T>, priority: number = 0): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const task: QueuedTask<T> = {
         id: taskId,

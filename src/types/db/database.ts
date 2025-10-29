@@ -1,3 +1,13 @@
+/**
+ * 统一的文件状态枚举
+ */
+export enum FileStatus {
+  UPLOADED = "uploaded", // 已上传，待转录
+  TRANSCRIBING = "transcribing", // 转录中
+  COMPLETED = "completed", // 转录完成
+  ERROR = "error", // 转录失败
+}
+
 export interface FileRow {
   id?: number;
   name: string;
@@ -8,8 +18,10 @@ export interface FileRow {
   chunkSize?: number; // 每个分块的大小
   totalChunks?: number; // 总分块数
   duration?: number;
-  createdAt: Date;
+  uploadedAt: Date; // 与数据库 schema 保持一致
   updatedAt: Date;
+  // 统一文件状态字段
+  status?: FileStatus;
 }
 
 /**

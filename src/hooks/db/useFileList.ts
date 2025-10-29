@@ -4,7 +4,7 @@ import type { FileRow, ProcessingStatus, TranscriptRow } from "@/types/db/databa
 interface FileListState {
   selectedFiles: Set<number>;
   searchQuery: string;
-  sortBy: "name" | "size" | "duration" | "createdAt";
+  sortBy: "name" | "size" | "duration" | "uploadedAt";
   sortOrder: "asc" | "desc";
   statusFilter: ProcessingStatus | "all";
 }
@@ -18,7 +18,7 @@ interface UseFileListReturn {
   // State
   selectedFiles: Set<number>;
   searchQuery: string;
-  sortBy: "name" | "size" | "duration" | "createdAt";
+  sortBy: "name" | "size" | "duration" | "uploadedAt";
   sortOrder: "asc" | "desc";
   statusFilter: ProcessingStatus | "all";
 
@@ -29,19 +29,19 @@ interface UseFileListReturn {
   // Actions
   setSelectedFiles: (files: Set<number>) => void;
   setSearchQuery: (query: string) => void;
-  setSortBy: (field: "name" | "size" | "duration" | "createdAt") => void;
+  setSortBy: (field: "name" | "size" | "duration" | "uploadedAt") => void;
   setSortOrder: (order: "asc" | "desc") => void;
   setStatusFilter: (filter: ProcessingStatus | "all") => void;
   handleSelectAll: () => void;
   handleSelectFile: (fileId: number) => void;
-  handleSort: (field: "name" | "size" | "duration" | "createdAt") => void;
+  handleSort: (field: "name" | "size" | "duration" | "uploadedAt") => void;
 }
 
 export function useFileList({ files, transcripts }: UseFileListProps): UseFileListReturn {
   const [state, setState] = useState<FileListState>({
     selectedFiles: new Set(),
     searchQuery: "",
-    sortBy: "createdAt",
+    sortBy: "uploadedAt",
     sortOrder: "desc",
     statusFilter: "all",
   });
@@ -101,10 +101,10 @@ export function useFileList({ files, transcripts }: UseFileListProps): UseFileLi
         return file.size;
       case "duration":
         return file.duration || 0;
-      case "createdAt":
-        return file.createdAt.getTime();
+      case "uploadedAt":
+        return file.uploadedAt.getTime();
       default:
-        return file.createdAt.getTime();
+        return file.uploadedAt.getTime();
     }
   }, []);
 
@@ -176,7 +176,7 @@ export function useFileList({ files, transcripts }: UseFileListProps): UseFileLi
 
   // 处理排序
   const handleSort = useCallback(
-    (field: "name" | "size" | "duration" | "createdAt") => {
+    (field: "name" | "size" | "duration" | "uploadedAt") => {
       if (state.sortBy === field) {
         setStateField("sortOrder", state.sortOrder === "asc" ? "desc" : "asc");
       } else {
