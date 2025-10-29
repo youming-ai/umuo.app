@@ -1,6 +1,7 @@
-import { ReactElement } from "react";
-import { render, RenderOptions } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { type RenderOptions, render } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { vi } from "vitest";
 
 // 创建测试用的 QueryClient
 export const createTestQueryClient = () => {
@@ -51,8 +52,8 @@ export { customRender as render };
 // 专门的文件上传测试工具
 export const createFileDropEvent = (files: File[]) => {
   return {
-    preventDefault: jest.fn(),
-    stopPropagation: jest.fn(),
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
     dataTransfer: {
       files,
       items: files.map((file) => ({
@@ -67,9 +68,9 @@ export const createFileDropEvent = (files: File[]) => {
 // 音频播放测试工具
 export const createMockAudioElement = () => {
   const audio = {
-    play: jest.fn().mockResolvedValue(undefined),
-    pause: jest.fn(),
-    load: jest.fn(),
+    play: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn(),
+    load: vi.fn(),
     src: "",
     currentTime: 0,
     duration: 0,
@@ -79,9 +80,9 @@ export const createMockAudioElement = () => {
     ended: false,
     loop: false,
     playbackRate: 1,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   } as any;
 
   Object.defineProperty(audio, "readyState", {
@@ -104,11 +105,11 @@ export const createMockTranscriptionTask = (overrides: Partial<any> = {}) => ({
   fileId: 1,
   fileName: "test-audio.mp3",
   fileSize: 1024,
-  status: "completed",
-  priority: "normal",
+  status: "completed" as const,
+  priority: "normal" as const,
   progress: {
     fileId: 1,
-    status: "completed",
+    status: "completed" as const,
     progress: 100,
     message: "转录完成",
     createdAt: new Date(),
@@ -152,4 +153,4 @@ export const fireMouseEvent = (
 };
 
 // 导出常用工具
-export { vi };
+export type { vi };

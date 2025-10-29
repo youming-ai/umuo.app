@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { beforeAll, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
@@ -191,6 +191,10 @@ global.IntersectionObserver = vi.fn(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
+  root: null,
+  rootMargin: "",
+  thresholds: [],
+  takeRecords: vi.fn(() => []),
 }));
 
 // Mock WebSocket
@@ -250,8 +254,13 @@ Object.defineProperty(window, "matchMedia", {
 // 全局测试设置
 beforeAll(() => {
   // 设置测试环境变量
-  process.env.NODE_ENV = "test";
-  process.env.GROQ_API_KEY = "test-api-key";
+  Object.defineProperty(process, "env", {
+    value: {
+      ...process.env,
+      NODE_ENV: "test",
+      GROQ_API_KEY: "test-api-key",
+    },
+  });
 });
 
 beforeEach(() => {
@@ -285,7 +294,7 @@ export const createMockTranscript = (overrides: Partial<any> = {}) => ({
   id: 1,
   fileId: 1,
   text: "这是一个测试转录文本",
-  status: "completed",
+  status: "completed" as const,
   language: "ja",
   createdAt: new Date(),
   updatedAt: new Date(),

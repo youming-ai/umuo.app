@@ -3,7 +3,7 @@
  * 提供数据访问的统一接口，支持 CRUD 操作和高级查询
  */
 
-import type { FileRow, TranscriptRow, Segment } from "@/types/db/database";
+import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 // 基础查询选项
 export interface QueryOptions {

@@ -1,10 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockSegment, createMockTranscript } from "@/__tests__/setup";
+import { createMockFile } from "@/__tests__/utils/test-helpers";
 import { db } from "@/lib/db/db";
-import {
-  createMockFile,
-  createMockTranscript,
-  createMockSegment,
-} from "@/__tests__/utils/test-helpers";
 
 describe("数据库操作", () => {
   beforeEach(() => {
@@ -52,18 +49,17 @@ describe("数据库操作", () => {
       const mockFiles = [{ id: 1, name: "search-test.mp3", size: 1024, type: "audio/mpeg" }];
 
       const mockWhere = {
-        insensitive: vi.fn().mockReturnThis(),
         equals: vi.fn().mockReturnThis(),
         toArray: vi.fn().mockResolvedValue(mockFiles),
       };
 
       (db.files.where as any).mockReturnValue(mockWhere);
 
-      const files = await db.files.where("name").insensitive("search-test").toArray();
+      const files = await db.files.where("name").equals("search-test").toArray();
 
       expect(files).toEqual(mockFiles);
       expect(db.files.where).toHaveBeenCalledWith("name");
-      expect(mockWhere.insensitive).toHaveBeenCalledWith("search-test");
+      expect(mockWhere.equals).toHaveBeenCalledWith("search-test");
     });
 
     it("应该删除文件", async () => {
@@ -113,7 +109,10 @@ describe("数据库操作", () => {
     });
 
     it("应该更新转录状态", async () => {
-      const updateData = { status: "completed", updatedAt: new Date() };
+      const updateData = {
+        status: "completed" as const,
+        updatedAt: new Date(),
+      };
       (db.transcripts.update as any).mockResolvedValue(1);
 
       const updatedCount = await db.transcripts.update(1, updateData);
@@ -207,7 +206,8 @@ describe("数据库操作", () => {
         segments: { bulkAdd: vi.fn().mockResolvedValue([1]) },
       };
 
-      (db.transaction as any).mockImplementation((tables, callback) => {
+      (db.transaction as any).mockImplementation((...args: any[]) => {
+        const callback = args[args.length - 1];
         return callback(mockTransaction);
       });
 
@@ -240,17 +240,32 @@ describe("数据库操作", () => {
     it("应该回滚失败的事务", async () => {
       const mockTransaction = {
         files: { add: vi.fn().mockResolvedValue(1) },
-        transcripts: { add: vi.fn().mockRejectedValue(new Error("Database error")) },
+        transcripts: {
+          add: vi.fn().mockRejectedValue(new Error("Database error")),
+        },
       };
 
-      (db.transaction as any).mockImplementation((tables, callback) => {
+      (db.transaction as any).mockImplementation((...args: any[]) => {
+        const callback = args[args.length - 1];
         return callback(mockTransaction);
       });
 
       await expect(
         db.transaction("rw", db.files, db.transcripts, async (tx) => {
-          await tx.files.add({ name: "test.mp3" });
-          await tx.transcripts.add({ text: "test" });
+          await tx.files.add({
+            name: "test.mp3",
+            size: 1024,
+            type: "audio/mpeg",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          await tx.transcripts.add({
+            fileId: 1,
+            text: "test",
+            status: "completed" as const,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         }),
       ).rejects.toThrow("Database error");
     });
@@ -324,13 +339,16 @@ describe("数据库操作", () => {
       (db.transcripts.where as any).mockReturnValue(mockWhere);
       (db.transcripts.delete as any).mockResolvedValue(1);
 
-      const orphanTranscripts = await db.transcripts.where("fileId").equals(null).toArray();
+      const orphanTranscripts = await db.transcripts
+        .where("fileId")
+        .equals(undefined as any)
+        .toArray();
       for (const transcript of orphanTranscripts) {
         await db.transcripts.delete(transcript.id);
       }
 
       expect(db.transcripts.where).toHaveBeenCalledWith("fileId");
-      expect(mockWhere.equals).toHaveBeenCalledWith(null);
+      expect(mockWhere.equals).toHaveBeenCalledWith(undefined as any);
       expect(db.transcripts.delete).toHaveBeenCalledWith(1);
     });
   });

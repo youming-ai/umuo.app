@@ -4,7 +4,7 @@
 
 /* Material Icons基础样式 */
 .material-symbols-outlined {
-  font-family: "Material Symbols Outlined";
+  font-family: "Material Symbols Outlined", sans-serif;
   font-weight: normal;
   font-style: normal;
   font-size: 24px;
@@ -277,11 +277,6 @@
     --card-background: var(--surface-card);
 
     /* 强制应用关键变量 */
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --surface-base: #0f172a;
-    --surface-card: #1e293b;
-    --color-primary: #166534;
   }
 
   /* ===================================
@@ -483,16 +478,6 @@
     --card-background: var(--surface-card);
 
     /* 强制应用浅色主题关键变量 */
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --text-tertiary: #6b7280;
-    --text-muted: #9ca3af;
-    --surface-base: #ffffff;
-    --surface-card: #ffffff;
-    --surface-muted: #f9fafb;
-    --color-primary: #22c55e;
-    --border-default: #e5e7eb;
-    --border-focus: #22c55e;
   }
 
   /* ===================================
@@ -566,21 +551,6 @@
     --player-accent-color: var(--brand-500);
 
     /* 强制应用高对比度主题关键变量 */
-    --text-primary: #ffffff;
-    --text-secondary: #e0e0e0;
-    --text-tertiary: #c0c0c0;
-    --text-muted: #a0a0a0;
-    --surface-base: #000000;
-    --surface-card: #1a1a1a;
-    --surface-muted: #2d2d2d;
-    --border-default: #ffffff;
-    --border-strong: #ffffff;
-    --border-focus: #00ff00;
-    --border-error: #ff0000;
-    --state-success-text: #00ff00;
-    --state-error-text: #ff0000;
-    --state-warning-text: #ffff00;
-    --state-info-text: #00ffff;
   }
 
   /* 状态色工具类 */
@@ -1274,8 +1244,8 @@
 
   @media (max-width: 640px) {
     .player-subtitle-words {
-      gap-x: 0.5rem;
-      gap-y: 0.75rem;
+      column-gap: 0.5rem;
+      row-gap: 0.75rem;
     }
   }
 

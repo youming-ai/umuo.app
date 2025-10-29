@@ -1,11 +1,11 @@
-import { FileRepository } from "./implementations/file.repository";
-import { TranscriptRepository } from "./implementations/transcript.repository";
-import { SegmentRepository } from "./implementations/segment.repository";
 import { SimplePerformanceService } from "@/lib/monitoring/simple-performance.service";
+import { FileRepository } from "./implementations/file.repository";
+import { SegmentRepository } from "./implementations/segment.repository";
+import { TranscriptRepository } from "./implementations/transcript.repository";
 import type {
   IFileRepository,
-  ITranscriptRepository,
   ISegmentRepository,
+  ITranscriptRepository,
 } from "./interfaces/repository.interface";
 
 /**

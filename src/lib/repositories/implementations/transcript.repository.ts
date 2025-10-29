@@ -1,7 +1,7 @@
-import { BaseRepository } from "../base.repository";
-import { type ITranscriptRepository, type QueryOptions } from "../interfaces/repository.interface";
 import { db } from "@/lib/db/db";
-import type { TranscriptRow, Segment } from "@/types/db/database";
+import type { Segment, TranscriptRow } from "@/types/db/database";
+import { BaseRepository } from "../base.repository";
+import type { ITranscriptRepository, QueryOptions } from "../interfaces/repository.interface";
 
 /**
  * 转录Repository实现

@@ -1,7 +1,7 @@
-import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import type React from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSimplePerformanceMonitor } from "@/hooks/useSimplePerformanceMonitor";
 
 export const SimplePerformanceDashboard: React.FC = () => {
@@ -136,7 +136,10 @@ export const SimplePerformanceDashboard: React.FC = () => {
           <CardContent>
             <div className="space-y-2">
               {apiMetrics.slice(-10).map((metric, index) => (
-                <div key={index} className="flex justify-between text-sm">
+                <div
+                  key={`${metric.operationName || metric.name}-${index}`}
+                  className="flex justify-between text-sm"
+                >
                   <span className="text-muted-foreground">
                     {metric.operationName?.replace("api_", "") || metric.name}
                   </span>
@@ -158,7 +161,10 @@ export const SimplePerformanceDashboard: React.FC = () => {
           <CardContent>
             <div className="space-y-2">
               {transcriptionMetrics.slice(-10).map((metric, index) => (
-                <div key={index} className="flex justify-between text-sm">
+                <div
+                  key={`transcription-${metric.id || index}`}
+                  className="flex justify-between text-sm"
+                >
                   <span className="text-muted-foreground">
                     {metric.metadata?.success === false ? "转录失败" : "转录成功"}
                   </span>

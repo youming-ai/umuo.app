@@ -1,7 +1,7 @@
-import { BaseRepository } from "../base.repository";
-import { type ISegmentRepository, type QueryOptions } from "../interfaces/repository.interface";
 import { db } from "@/lib/db/db";
 import type { Segment } from "@/types/db/database";
+import { BaseRepository } from "../base.repository";
+import type { ISegmentRepository, QueryOptions } from "../interfaces/repository.interface";
 
 /**
  * 片段Repository实现

@@ -120,7 +120,6 @@ umuo.app/
 │
 ├── 🔧 开发配置
 │   ├── .git/                        # Git 配置
-│   ├── .husky/                      # Git hooks
 │   ├── .vscode/                      # VSCode 配置
 │   └── .wrangler/                    # Wrangler 配置
 │

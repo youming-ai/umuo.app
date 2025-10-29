@@ -1,7 +1,7 @@
-import { BaseRepository } from "../base.repository";
-import { type IFileRepository, type QueryOptions } from "../interfaces/repository.interface";
 import { db } from "@/lib/db/db";
 import type { FileRow } from "@/types/db/database";
+import { BaseRepository } from "../base.repository";
+import type { IFileRepository, QueryOptions } from "../interfaces/repository.interface";
 
 /**
  * 文件Repository实现

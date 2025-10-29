@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 describe("基础测试", () => {
   it("应该能够运行简单测试", () => {
@@ -28,7 +28,7 @@ describe("项目配置测试", () => {
   });
 
   it("应该能够导入组件", async () => {
-    const { FileUpload } = await import("@/components/features/file/FileUpload");
-    expect(FileUpload).toBeDefined();
+    const FileUploadModule = await import("@/components/features/file/FileUpload");
+    expect(FileUploadModule.default).toBeDefined();
   });
 });

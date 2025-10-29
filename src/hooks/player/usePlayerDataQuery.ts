@@ -204,7 +204,10 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
     try {
       console.log("📡 发送转录请求到 API");
-      await transcriptionMutation.mutateAsync({ file: file!, language: "ja" });
+      await transcriptionMutation.mutateAsync({
+        fileId: file!.id!,
+        language: "ja",
+      });
       console.log("✅ 转录 API 调用成功");
       setTranscriptionProgress(100);
 

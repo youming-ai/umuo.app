@@ -20,6 +20,48 @@ export function formatFileSize(bytes: number): string {
   return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
 }
 
+export function formatDate(date: Date | string | number): string {
+  const d = new Date(date);
+
+  // 检查日期是否有效
+  if (isNaN(d.getTime())) {
+    return "无效日期";
+  }
+
+  const now = new Date();
+  const diffTime = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    // 今天
+    return d.toLocaleTimeString("zh-CN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } else if (diffDays === 1) {
+    // 昨天
+    return "昨天";
+  } else if (diffDays < 7) {
+    // 本周
+    return d.toLocaleDateString("zh-CN", {
+      weekday: "short",
+    });
+  } else if (diffDays < 365) {
+    // 今年
+    return d.toLocaleDateString("zh-CN", {
+      month: "short",
+      day: "numeric",
+    });
+  } else {
+    // 更早
+    return d.toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+}
+
 export function formatDuration(seconds: number): string {
   if (seconds < 60) {
     return `${seconds}s`;

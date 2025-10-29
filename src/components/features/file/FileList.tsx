@@ -5,8 +5,8 @@ import FileCard from "./FileCard";
 
 interface FileListProps {
   files: FileRow[];
-  onPlayFile: (fileId: string) => void;
-  onDeleteFile: (fileId: string) => void;
+  onPlayFile: (fileId: number) => void;
+  onDeleteFile: (fileId: number) => void;
   isPlaying?: boolean;
   currentFileId?: string;
   className?: string;
@@ -32,8 +32,6 @@ export default function FileList({
               file={file}
               onPlay={onPlayFile}
               onDelete={onDeleteFile}
-              isPlaying={isPlaying}
-              isCurrentFile={currentFileId === file.id?.toString()}
             />
           );
         })}

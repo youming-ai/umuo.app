@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import { PageLoadingState } from "@/components/ui/LoadingState";
-import FileManager from "./FileManager";
+import FileManagerEnhanced from "@/components/features/file/FileManagerEnhanced";
 
 export default function HomePage() {
   return (
     <Suspense fallback={<PageLoadingState />}>
-      <FileManager />
+      <FileManagerEnhanced />
     </Suspense>
   );
 }

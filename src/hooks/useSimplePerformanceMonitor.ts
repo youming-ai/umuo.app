@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { SimplePerformanceService } from "@/lib/monitoring/simple-performance.service";
 
 export interface UseSimplePerformanceMonitorReturn {

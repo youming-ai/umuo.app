@@ -97,9 +97,7 @@ export class BatchProcessor<T, R> {
       await this.semaphore.acquire();
 
       try {
-        console.log(
-          `🚀 开始处理批次 ${batchIndex + 1}/${batches.length}, 包含 ${batch.length} 项`,
-        );
+        console.log(`🚀 开始处理批次 ${batchIndex + 1}/${batches.length}, 包含 ${batch.length} 项`);
 
         // 顺序处理批次内的项目（保持顺序）
         const batchResults: R[] = [];
@@ -141,10 +139,7 @@ export class BatchProcessor<T, R> {
     return results;
   }
 
-  private async executeWithRetry(
-    item: T,
-    processor: (item: T) => Promise<R>,
-  ): Promise<R> {
+  private async executeWithRetry(item: T, processor: (item: T) => Promise<R>): Promise<R> {
     let lastError: unknown;
 
     for (let attempt = 0; attempt <= this.options.retryAttempts; attempt++) {
@@ -154,7 +149,7 @@ export class BatchProcessor<T, R> {
         lastError = error;
 
         if (attempt < this.options.retryAttempts) {
-          const delay = this.options.retryDelay * Math.pow(2, attempt);
+          const delay = this.options.retryDelay * 2 ** attempt;
           console.warn(
             `批处理项目失败，${delay}ms 后重试 (${attempt + 1}/${this.options.retryAttempts}):`,
             error,
@@ -309,11 +304,7 @@ export function throttle<T extends (...args: any[]) => any>(
 
   function shouldInvoke(time: number) {
     const timeSinceLastCall = time - lastInvokeTime;
-    return (
-      lastInvokeTime === undefined ||
-      timeSinceLastCall >= wait ||
-      timeSinceLastCall < 0
-    );
+    return lastInvokeTime === undefined || timeSinceLastCall >= wait || timeSinceLastCall < 0;
   }
 
   function timerExpired() {
@@ -372,10 +363,7 @@ export function throttle<T extends (...args: any[]) => any>(
 
 // 内存优化的缓存管理
 export class LRUCache<K, V> {
-  private cache = new Map<
-    K,
-    { value: V; timestamp: number; accessCount: number }
-  >();
+  private cache = new Map<K, { value: V; timestamp: number; accessCount: number }>();
   private maxSize: number;
   private ttl: number; // 生存时间（毫秒）
 

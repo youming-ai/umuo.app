@@ -1,6 +1,10 @@
+/**
+ * 简化的文件管理钩子
+ * 移除复杂的文件上传逻辑，保留基本功能
+ */
+
 import { useCallback, useEffect, useState } from "react";
-import { FileUploadUtils } from "@/lib/ai/file-upload";
-import { handleAndShowError } from "@/lib/utils/error-handler";
+import { DBUtils } from "@/lib/db/db";
 import type { FileRow } from "@/types/db/database";
 
 export interface UseFilesReturn {
@@ -8,30 +12,25 @@ export interface UseFilesReturn {
   isLoading: boolean;
   loadFiles: () => Promise<void>;
   refreshFiles: () => Promise<void>;
-  addFiles: (files: File[] | FileList) => Promise<FileRow[]>;
+  addFiles: (files: File[]) => Promise<void>;
   deleteFile: (fileId: string) => Promise<void>;
+  error: string | null;
 }
 
-export interface FileUploadState {
-  selectedFiles: File[];
-  isUploading: boolean;
-  uploadProgress: number;
-}
-
-/**
- * Custom hook for managing file data
- */
-export function useFiles(setFileUploadState?: (state: FileUploadState) => void): UseFilesReturn {
+export function useFiles(): UseFilesReturn {
   const [files, setFiles] = useState<FileRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      const loadedFiles = await FileUploadUtils.getAllFiles();
-      setFiles(loadedFiles);
-    } catch (error) {
-      handleAndShowError(error, "loadFiles");
+      setError(null);
+      const allFiles = await DBUtils.getAllFiles();
+      setFiles(allFiles);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "加载文件失败";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -41,89 +40,60 @@ export function useFiles(setFileUploadState?: (state: FileUploadState) => void):
     await loadFiles();
   }, [loadFiles]);
 
-  // Load files on mount
-  useEffect(() => {
-    loadFiles();
-  }, [loadFiles]);
-
   const addFiles = useCallback(
-    async (files: File[] | FileList) => {
+    async (newFiles: File[]) => {
       try {
-        setIsLoading(true);
-        // 统一处理 File[] 或 FileList
-        const fileArray = Array.from(files);
-        const uploadedFiles: FileRow[] = [];
+        setError(null);
 
-        // 更新上传状态
-        setFileUploadState?.({
-          selectedFiles: fileArray,
-          isUploading: true,
-          uploadProgress: 0,
-        });
+        for (const file of newFiles) {
+          const now = new Date();
+          const fileRow: Omit<FileRow, "id"> = {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            blob: file,
+            isChunked: false,
+            createdAt: now,
+            updatedAt: now,
+          };
 
-        // 调用实际的文件上传逻辑
-        for (let i = 0; i < fileArray.length; i++) {
-          const file = fileArray[i];
-          const fileId = await FileUploadUtils.uploadFile(file);
-
-          // 获取上传的文件信息
-          const uploadedFile = await FileUploadUtils.getFileInfo(fileId);
-          uploadedFiles.push(uploadedFile);
-
-          // 更新上传进度
-          const progress = Math.round(((i + 1) / fileArray.length) * 100);
-          setFileUploadState?.({
-            selectedFiles: fileArray,
-            isUploading: true,
-            uploadProgress: progress,
-          });
+          await DBUtils.addFile(fileRow);
         }
 
-        // 刷新文件列表
-        await loadFiles();
-
-        // 重置上传状态
-        setFileUploadState?.({
-          selectedFiles: [],
-          isUploading: false,
-          uploadProgress: 0,
-        });
-
-        // 返回上传的文件列表
-        return uploadedFiles;
-      } catch (error) {
-        handleAndShowError(error, "addFiles");
-        // 重置上传状态
-        setFileUploadState?.({
-          selectedFiles: [],
-          isUploading: false,
-          uploadProgress: 0,
-        });
-        throw error;
-      } finally {
-        setIsLoading(false);
+        await loadFiles(); // 重新加载文件列表
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "添加文件失败";
+        setError(errorMessage);
+        throw err;
       }
     },
-    [loadFiles, setFileUploadState],
+    [loadFiles],
   );
 
   const deleteFile = useCallback(
     async (fileId: string) => {
       try {
-        setIsLoading(true);
-        // 调用实际的文件删除逻辑
-        await FileUploadUtils.deleteFile(parseInt(fileId, 10));
-
-        // 刷新文件列表
-        await loadFiles();
-      } catch (error) {
-        handleAndShowError(error, "deleteFile");
-      } finally {
-        setIsLoading(false);
+        setError(null);
+        const id = parseInt(fileId, 10);
+        if (!isNaN(id)) {
+          await DBUtils.deleteFile(id);
+          await loadFiles(); // 重新加载文件列表
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "删除文件失败";
+        setError(errorMessage);
+        throw err;
       }
     },
     [loadFiles],
   );
+
+  // 初始加载
+  useEffect(() => {
+    loadFiles();
+  }, [loadFiles]);
 
   return {
     files,
@@ -132,5 +102,6 @@ export function useFiles(setFileUploadState?: (state: FileUploadState) => void):
     refreshFiles,
     addFiles,
     deleteFile,
+    error,
   };
 }

@@ -98,7 +98,7 @@ export function TranscriptionStatusPanel({
       return Math.ceil(remaining);
     }
     return null;
-  }, [task?.progress]);
+  }, [task]);
 
   if (!task) {
     return (

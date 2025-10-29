@@ -22,7 +22,11 @@ export class ConcurrencyController {
   /**
    * 执行任务，带并发控制
    */
-  async execute<T>(taskId: string, taskFn: () => Promise<T>, priority: number = 0): Promise<T> {
+  async execute<T>(
+    taskId: string,
+    taskFn: () => Promise<T>,
+    priority: number = 0,
+  ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const task: QueuedTask<T> = {
         id: taskId,
@@ -55,7 +59,7 @@ export class ConcurrencyController {
    */
   private enqueueTask<T>(task: QueuedTask<T>): void {
     // 检查是否可以立即执行
-    if (this.runningTasks.size < this.config.maxConcurrency) {
+    if (this.runningTasks.size < (this.config.maxConcurrency || 2)) {
       this.executeTask(task);
     } else {
       // 按优先级排序加入队列
@@ -104,7 +108,7 @@ export class ConcurrencyController {
       return;
     }
 
-    if (this.runningTasks.size < this.config.maxConcurrency) {
+    if (this.runningTasks.size < (this.config.maxConcurrency || 2)) {
       const nextTask = this.taskQueue.shift();
       if (nextTask) {
         this.executeTask(nextTask);
@@ -123,7 +127,7 @@ export class ConcurrencyController {
     return {
       runningTasks: this.runningTasks.size,
       queuedTasks: this.taskQueue.length,
-      maxConcurrency: this.config.maxConcurrency,
+      maxConcurrency: this.config.maxConcurrency || 2,
     };
   }
 
