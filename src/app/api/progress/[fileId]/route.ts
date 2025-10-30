@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerProgress } from "@/lib/ai/server-progress";
 
+export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ fileId: string }> },

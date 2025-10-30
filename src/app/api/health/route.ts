@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiSuccess } from "@/lib/utils/api-response";
 
-export const runtime = "nodejs"; // OpenNext.js 使用 Node.js 运行时
+export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
 
 /**
  * Cloudflare Workers 健康检查 API
