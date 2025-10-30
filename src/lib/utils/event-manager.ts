@@ -204,7 +204,7 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
       if (!eventGroups.has(type)) {
         eventGroups.set(type, []);
       }
-      eventGroups.get(type)!.push(data);
+      eventGroups.get(type)?.push(data);
     }
 
     // 批量发射事件

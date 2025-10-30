@@ -6,7 +6,6 @@
 
 import { groq } from "@ai-sdk/groq";
 import { experimental_transcribe as transcribe } from "ai";
-import type { Segment } from "@/types/db/database";
 
 export interface TranscriptionOptions {
   language?: string;
@@ -173,7 +172,7 @@ async function transcribeWithAISDK(
 async function saveTranscriptionResult(
   fileId: number,
   result: TranscriptionResult,
-  options: TranscriptionOptions,
+  _options: TranscriptionOptions,
   startTime: number,
 ): Promise<number> {
   const { db } = await import("../db/db");
@@ -323,7 +322,7 @@ export async function getTranscriptionProgress(fileId: number): Promise<Transcri
       progress: 0,
       message: "未开始转录",
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       fileId,
       status: "error",

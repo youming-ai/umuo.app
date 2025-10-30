@@ -24,7 +24,7 @@ export function formatDate(date: Date | string | number): string {
   const d = new Date(date);
 
   // 检查日期是否有效
-  if (isNaN(d.getTime())) {
+  if (Number.isNaN(d.getTime())) {
     return "无效日期";
   }
 

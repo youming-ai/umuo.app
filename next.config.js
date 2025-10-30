@@ -64,17 +64,15 @@ const nextConfig = {
       // 增强的后处理方法 - 修复 vendors.js 和 webpack-runtime.js
       config.plugins.push({
         apply: (compiler) => {
-          compiler.hooks.afterEmit.tapAsync(
-            "FixVendorsPlugin",
-            (compilation, callback) => {
-              const fs = require("fs");
+          compiler.hooks.afterEmit.tapAsync("FixVendorsPlugin", (_compilation, callback) => {
+            const fs = require("node:fs");
 
-              // 修复所有 vendors-* 文件的 self 问题
-              try {
-                const serverDir = ".next/server";
-                if (fs.existsSync(serverDir)) {
-                  const files = fs.readdirSync(serverDir);
-                  const polyfill = `
+            // 修复所有 vendors-* 文件的 self 问题
+            try {
+              const serverDir = ".next/server";
+              if (fs.existsSync(serverDir)) {
+                const files = fs.readdirSync(serverDir);
+                const polyfill = `
                     // 修复 self 未定义错误
                     if (typeof self === 'undefined') {
                       self = typeof globalThis !== 'undefined' ? globalThis : (typeof global !== 'undefined' ? global : this);
@@ -84,28 +82,25 @@ const nextConfig = {
                     }
                   `;
 
-                  files.forEach((file) => {
-                    if (file.startsWith("vendors-") && file.endsWith(".js")) {
-                      const filePath = `${serverDir}/${file}`;
-                      let content = fs.readFileSync(filePath, "utf8");
-                      content = polyfill + content;
-                      fs.writeFileSync(filePath, content);
-                      console.log(`✅ Fixed ${file} self polyfill`);
-                    }
-                  });
+                for (const file of files) {
+                  if (file.startsWith("vendors-") && file.endsWith(".js")) {
+                    const filePath = `${serverDir}/${file}`;
+                    let content = fs.readFileSync(filePath, "utf8");
+                    content = polyfill + content;
+                    fs.writeFileSync(filePath, content);
+                    console.log(`✅ Fixed ${file} self polyfill`);
+                  }
                 }
-              } catch (error) {
-                console.error("Error fixing vendor files:", error);
               }
+            } catch (error) {
+              console.error("Error fixing vendor files:", error);
+            }
 
-              // 暂时跳过 webpack-runtime.js 修改以避免语法错误
-              console.log(
-                "⚠️ Skipping webpack-runtime.js modifications to prevent syntax errors",
-              );
+            // 暂时跳过 webpack-runtime.js 修改以避免语法错误
+            console.log("⚠️ Skipping webpack-runtime.js modifications to prevent syntax errors");
 
-              callback();
-            },
-          );
+            callback();
+          });
         },
       });
 

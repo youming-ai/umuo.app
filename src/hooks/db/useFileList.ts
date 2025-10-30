@@ -50,21 +50,21 @@ export function useFileList({ files, transcripts }: UseFileListProps): UseFileLi
   const transcriptStatusMap = useMemo(() => {
     const statusMap = new Map<number, ProcessingStatus>();
 
-    files.forEach((file) => {
+    for (const file of files) {
       if (!file.id) return;
 
       const fileTranscripts = transcripts.filter((t) => t.fileId === file.id);
 
       if (fileTranscripts.length === 0) {
         statusMap.set(file.id, "pending");
-        return;
+        continue;
       }
 
       const latestTranscript = fileTranscripts.reduce((latest, current) =>
         current.createdAt > latest.createdAt ? current : latest,
       );
       statusMap.set(file.id, latestTranscript.status);
-    });
+    }
 
     return statusMap;
   }, [files, transcripts]);

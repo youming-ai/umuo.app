@@ -29,7 +29,7 @@ export class AppDatabase extends Dexie {
         transcripts: "++id, fileId, status, language, createdAt, updatedAt",
         segments: "++id, transcriptId, start, end, text, [transcriptId+start], [transcriptId+end]",
       })
-      .upgrade((tx) => {
+      .upgrade((_tx) => {
         // Initial setup - no migration needed
         console.log("Database version 1 initialized");
       });
@@ -41,7 +41,7 @@ export class AppDatabase extends Dexie {
         segments:
           "++id, transcriptId, start, end, text, wordTimestamps, [transcriptId+start], [transcriptId+end]",
       })
-      .upgrade(async (tx) => {
+      .upgrade(async (_tx) => {
         // Add wordTimestamps to existing segments if needed
         console.log("Database migrated to version 2: Added wordTimestamps support");
       });
@@ -53,7 +53,7 @@ export class AppDatabase extends Dexie {
         segments:
           "++id, transcriptId, start, end, text, wordTimestamps, normalizedText, translation, annotations, furigana, [transcriptId+start], [transcriptId+end]",
       })
-      .upgrade(async (tx) => {
+      .upgrade(async (_tx) => {
         // Add enhanced segment fields for better transcription features
         console.log("Database migrated to version 3: Added enhanced transcription features");
       });

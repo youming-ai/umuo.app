@@ -12,7 +12,7 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
     super("FileRepository");
   }
 
-  async findById(id: number, options?: QueryOptions): Promise<FileRow | null> {
+  async findById(id: number, _options?: QueryOptions): Promise<FileRow | null> {
     this.validateId(id);
 
     return this.executeWithMetrics(
@@ -51,7 +51,7 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
     );
   }
 
-  async create(data: Partial<FileRow>, options?: QueryOptions): Promise<FileRow> {
+  async create(data: Partial<FileRow>, _options?: QueryOptions): Promise<FileRow> {
     this.validateData(data);
 
     return this.executeWithMetrics(
@@ -80,7 +80,7 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
     );
   }
 
-  async update(id: number, data: Partial<FileRow>, options?: QueryOptions): Promise<FileRow> {
+  async update(id: number, data: Partial<FileRow>, _options?: QueryOptions): Promise<FileRow> {
     this.validateId(id);
     this.validateData(data);
 
@@ -105,7 +105,7 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
     );
   }
 
-  async delete(id: number, options?: QueryOptions): Promise<boolean> {
+  async delete(id: number, _options?: QueryOptions): Promise<boolean> {
     this.validateId(id);
 
     return this.executeWithMetrics(

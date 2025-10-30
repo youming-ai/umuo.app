@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { apiSuccess } from "@/lib/utils/api-response";
 
 export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
@@ -7,12 +7,60 @@ export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
  * Cloudflare Workers 健康检查 API
  * 用于监控系统运行状态和依赖服务
  */
-export async function GET(request: NextRequest) {
+interface HealthData {
+  status: "healthy" | "unhealthy";
+  timestamp: string;
+  uptime: number;
+  environment: string;
+  platform: string;
+  opennext: boolean;
+  version: string;
+  services: {
+    groq: {
+      available: boolean;
+      configured: boolean;
+    };
+    database: {
+      available: boolean;
+      type: string;
+    };
+    cache: {
+      available: boolean;
+      type: string;
+    };
+    storage: {
+      available: boolean;
+      type: string;
+    };
+  };
+  performance?: {
+    responseTime: number;
+    memoryUsage?: {
+      used: number;
+      total: number;
+    };
+  };
+}
+
+interface SystemInfo {
+  platform: string;
+  architecture: string;
+  region: string;
+  datacenter: string;
+}
+
+interface RuntimeInfo {
+  name: string;
+  version: string;
+  environment?: string;
+}
+
+export async function GET(_request: NextRequest) {
   try {
     const startTime = Date.now();
 
     // 检查基本信息
-    const healthData: any = {
+    const healthData: HealthData = {
       status: "healthy",
       timestamp: new Date().toISOString(),
       uptime: process.uptime?.() || 0,
@@ -127,9 +175,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { detailed = false, testConnections = false } = body;
+    const { testConnections = false } = body;
 
-    const healthData: any = {
+    const healthData: HealthData & {
+      detailed: boolean;
+      system: SystemInfo;
+      runtime: RuntimeInfo;
+    } = {
       status: "healthy",
       timestamp: new Date().toISOString(),
       detailed: true,

@@ -93,9 +93,9 @@ function createSubtitleSynchronizer(
   function updateActiveSubtitles() {
     const activeSubtitles = findActiveSubtitles();
 
-    subtitles.forEach((subtitle) => {
+    for (const subtitle of subtitles) {
       subtitle.isActive = activeSubtitles.some((active) => active.id === subtitle.id);
-    });
+    }
 
     notifyUpdate();
   }

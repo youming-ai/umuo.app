@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom";
 import { afterEach, beforeAll, beforeEach, vi } from "vitest";
+import type { Segment, TranscriptRow } from "@/types/db/database";
 
 // Mock Next.js router
 vi.mock("next/navigation", () => ({
@@ -131,17 +132,17 @@ const mockAudioContext = {
   destination: {},
 };
 
-global.AudioContext = vi.fn(() => mockAudioContext) as any;
-global.OfflineAudioContext = vi.fn(() => mockAudioContext) as any;
+global.AudioContext = vi.fn(() => mockAudioContext) as unknown as typeof AudioContext;
+global.OfflineAudioContext = vi.fn(() => mockAudioContext) as unknown as typeof OfflineAudioContext;
 
 // Mock File API
 global.File = class File {
   constructor(
-    public bits: any[],
+    public bits: BlobPart[],
     public name: string,
     public options: { type: string; lastModified?: number } = { type: "" },
   ) {
-    this.size = bits.reduce((acc, bit) => acc + bit.length, 0);
+    this.size = bits.reduce((acc, bit) => acc + (bit as ArrayBuffer).byteLength, 0);
     this.type = options.type;
     this.lastModified = options.lastModified || Date.now();
   }
@@ -165,19 +166,19 @@ global.File = class File {
   arrayBuffer() {
     return Promise.resolve(new ArrayBuffer(0));
   }
-} as any;
+} as unknown as typeof File;
 
 global.FileReader = class FileReader {
   public result: string | ArrayBuffer | null = null;
-  public error: any = null;
+  public error: ProgressEvent<FileReader>["error"] = null;
   public readyState: number = 0;
-  public onload: ((event: any) => void) | null = null;
-  public onerror: ((event: any) => void) | null = null;
+  public onload: ((event: ProgressEvent<FileReader>) => void) | null = null;
+  public onerror: ((event: ProgressEvent<FileReader>) => void) | null = null;
 
   readAsDataURL() {}
   readAsText() {}
   readAsArrayBuffer() {}
-} as any;
+} as unknown as typeof FileReader;
 
 // Mock ResizeObserver
 global.ResizeObserver = vi.fn(() => ({
@@ -208,7 +209,7 @@ global.WebSocket = vi.fn(() => ({
   OPEN: 1,
   CLOSING: 2,
   CLOSED: 3,
-})) as any;
+})) as unknown as typeof WebSocket;
 
 // Mock localStorage
 const localStorageMock = {
@@ -301,7 +302,7 @@ export {
 // 为了向后兼容，保留旧的导出（已弃用）
 // 建议使用 MockDataGenerator.createMockTranscript() 代替
 /** @deprecated 使用 MockDataGenerator.createMockTranscript() 代替 */
-export const createMockTranscript = (overrides: Partial<any> = {}) => {
+export const createMockTranscript = (overrides: Partial<TranscriptRow> = {}) => {
   console.warn(
     "createMockTranscript is deprecated, use MockDataGenerator.createMockTranscript() instead",
   );
@@ -310,7 +311,7 @@ export const createMockTranscript = (overrides: Partial<any> = {}) => {
 };
 
 /** @deprecated 使用 MockDataGenerator.createMockSegment() 代替 */
-export const createMockSegment = (overrides: Partial<any> = {}) => {
+export const createMockSegment = (overrides: Partial<Segment> = {}) => {
   console.warn(
     "createMockSegment is deprecated, use MockDataGenerator.createMockSegment() instead",
   );

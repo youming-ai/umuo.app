@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderOptions, render } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { vi } from "vitest";
+import type { TranscriptionTask } from "@/types/transcription";
 
 // 创建测试用的 QueryClient
 export const createTestQueryClient = () => {
@@ -83,7 +84,7 @@ export const createMockAudioElement = () => {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  } as any;
+  } as unknown as HTMLAudioElement;
 
   Object.defineProperty(audio, "readyState", {
     value: 4, // HAVE_ENOUGH_DATA
@@ -100,7 +101,7 @@ export const createMockFile = (name: string, type: string, size: number = 1024):
 };
 
 // 创建模拟转录任务
-export const createMockTranscriptionTask = (overrides: Partial<any> = {}) => ({
+export const createMockTranscriptionTask = (overrides: Partial<TranscriptionTask> = {}) => ({
   id: "test-task-1",
   fileId: 1,
   fileName: "test-audio.mp3",

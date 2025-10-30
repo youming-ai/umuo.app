@@ -78,13 +78,13 @@ export function getActiveUrlCount(): number {
  * 清理所有活跃的URLs
  */
 export function revokeAllUrls(): void {
-  activeUrls.forEach((url) => {
+  for (const url of activeUrls) {
     try {
       URL.revokeObjectURL(url);
     } catch (error) {
       handleSilently(error, "url-revoke");
     }
-  });
+  }
   activeUrls.clear();
 }
 

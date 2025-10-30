@@ -287,6 +287,10 @@ function FileCardWrapper({
   onPlay: (fileId: number) => void;
   onDelete: (fileId: number) => void;
 }) {
+  // Hooks must be called before any early returns
+  const { data: statusData, isLoading } = useFileStatus(file.id);
+  const { startTranscription, isTranscribing } = useFileStatusManager(file.id);
+
   // 优雅地处理可能缺失的 file.id
   if (!file.id) {
     console.warn("FileCardWrapper: file.id is missing", file);
@@ -298,9 +302,6 @@ function FileCardWrapper({
       </Card>
     );
   }
-
-  const { data: statusData, isLoading } = useFileStatus(file.id);
-  const { startTranscription, isTranscribing } = useFileStatusManager(file.id);
 
   if (isLoading || !statusData) {
     return (

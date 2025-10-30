@@ -209,7 +209,7 @@ export interface ITransactionManager {
 }
 
 // 事务接口
-export interface ITransaction<T> {
+export interface ITransaction<_T> {
   getRepository<R>(repository: R): R;
   add<R>(repository: R, action: (repo: R) => Promise<R>): Promise<R>;
   execute<R>(action: (repositories: any) => Promise<R>): Promise<R>;

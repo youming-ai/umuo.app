@@ -197,9 +197,9 @@ export abstract class BaseRepository<T> implements IRepository<T> {
 
   protected createResult<TData>(
     data: TData,
-    success = true,
-    message?: string,
-    metadata?: Record<string, unknown>,
+    _success = true,
+    _message?: string,
+    _metadata?: Record<string, unknown>,
   ): TData {
     return data;
   }
@@ -224,16 +224,11 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   }
 
   protected async executeWithMetrics<TData>(
-    operation: string,
+    _operation: string,
     fn: () => Promise<TData>,
-    metadata?: Record<string, unknown>,
+    _metadata?: Record<string, unknown>,
   ): Promise<TData> {
-    // Simplified version without performance tracking
-    try {
-      return await fn();
-    } catch (error) {
-      throw error;
-    }
+    return await fn();
   }
 
   /**

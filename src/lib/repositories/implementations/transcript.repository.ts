@@ -15,7 +15,7 @@ export class TranscriptRepository
     super("TranscriptRepository");
   }
 
-  async findById(id: number, options?: QueryOptions): Promise<TranscriptRow | null> {
+  async findById(id: number, _options?: QueryOptions): Promise<TranscriptRow | null> {
     this.validateId(id);
 
     return this.executeWithMetrics(
@@ -52,7 +52,7 @@ export class TranscriptRepository
     );
   }
 
-  async create(data: Partial<TranscriptRow>, options?: QueryOptions): Promise<TranscriptRow> {
+  async create(data: Partial<TranscriptRow>, _options?: QueryOptions): Promise<TranscriptRow> {
     this.validateData(data);
 
     return this.executeWithMetrics(
@@ -88,7 +88,7 @@ export class TranscriptRepository
   async update(
     id: number,
     data: Partial<TranscriptRow>,
-    options?: QueryOptions,
+    _options?: QueryOptions,
   ): Promise<TranscriptRow> {
     this.validateId(id);
     this.validateData(data);
@@ -114,7 +114,7 @@ export class TranscriptRepository
     );
   }
 
-  async delete(id: number, options?: QueryOptions): Promise<boolean> {
+  async delete(id: number, _options?: QueryOptions): Promise<boolean> {
     this.validateId(id);
 
     return this.executeWithMetrics(
@@ -272,7 +272,7 @@ export class TranscriptRepository
     );
   }
 
-  async markAsCompleted(transcriptId: number, result: any): Promise<void> {
+  async markAsCompleted(transcriptId: number, _result: any): Promise<void> {
     await this.executeWithMetrics(
       "markAsCompleted",
       async () => {

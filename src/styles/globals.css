@@ -1262,13 +1262,13 @@
     color: var(--text-primary);
   }
 
+  player-word-group rt {
+    color: var(--text-tertiary);
+  }
+
   .player-word-group rt {
     @apply text-xs uppercase tracking-wide;
     color: var(--text-muted);
-  }
-
-  player-word-group rt {
-    color: var(--text-tertiary);
   }
 
   .player-romaji-word {

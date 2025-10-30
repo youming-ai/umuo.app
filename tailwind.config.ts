@@ -6,7 +6,7 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-    theme: {
+  theme: {
     extend: {
       colors: {
         // 品牌色系统
@@ -106,13 +106,13 @@ const config: Config = {
       spacing: {
         "card-sm": "var(--space-card-padding-sm)",
         "card-lg": "var(--space-card-padding-lg)",
-        "section": "var(--space-section-gap)",
+        section: "var(--space-section-gap)",
       },
       // 扩展圆角令牌
       borderRadius: {
-        "card": "var(--radius-card)",
+        card: "var(--radius-card)",
         "card-lg": "var(--radius-card-large)",
-        "control": "var(--radius-control)",
+        control: "var(--radius-control)",
       },
       // 扩展阴影令牌
       boxShadow: {

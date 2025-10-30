@@ -49,9 +49,9 @@ export function ThemeDebugger() {
         "--shadow-lg",
       ];
 
-      importantVars.forEach((varName) => {
+      for (const varName of importantVars) {
         cssVars[varName] = computedStyle.getPropertyValue(varName).trim();
-      });
+      }
 
       setThemeInfo({
         currentTheme: theme,

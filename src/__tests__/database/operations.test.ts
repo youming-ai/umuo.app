@@ -103,7 +103,7 @@ describe("数据库操作", () => {
       const mockDb = MockDatabaseTools.createMockDbOperations();
 
       db.transcripts.add = mockDb.transcripts.add;
-      db.transcripts.add.mockResolvedValue(mockTranscript.id!);
+      db.transcripts.add.mockResolvedValue(mockTranscript.id ?? 1);
 
       const transcriptId = await db.transcripts.add(mockTranscript);
 

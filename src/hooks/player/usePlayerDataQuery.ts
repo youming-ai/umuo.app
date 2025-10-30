@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   transcriptionKeys,
   useTranscription,
@@ -15,8 +15,9 @@ const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
 
 function createAudioUrl(blob: Blob): string {
   // 检查缓存
-  if (audioUrlCache.has(blob)) {
-    return audioUrlCache.get(blob)!;
+  const cachedUrl = audioUrlCache.get(blob);
+  if (cachedUrl) {
+    return cachedUrl;
   }
 
   const url = URL.createObjectURL(blob);
@@ -154,7 +155,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   // 统一计算是否应该开始自动转录
   // 优化：使用 useMemo 避免重复计算，统一状态判断逻辑
   const shouldStartTranscription = useMemo(() => {
-    const conditions = {
+    const _conditions = {
       isValidId,
       hasFile: !!file,
       hasTranscript: !!transcript,
@@ -192,7 +193,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
     try {
       await transcriptionMutation.mutateAsync({
-        fileId: file!.id!,
+        fileId: file?.id ?? 0,
         language: "ja",
       });
       setTranscriptionProgress(100);
@@ -322,8 +323,8 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   useEffect(() => {
     if (shouldAutoTranscribe && shouldStartTranscription) {
       console.log("🎵 检测到文件未转录，开始自动转录:", {
-        fileId: file!.id,
-        fileName: file!.name,
+        fileId: file?.id,
+        fileName: file?.name,
         condition: "shouldAutoTranscribe + shouldStartTranscription",
       });
 

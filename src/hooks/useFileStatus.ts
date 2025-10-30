@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranscription } from "@/hooks/api/useTranscription";
 import { db } from "@/lib/db/db";
 import { FileStatus } from "@/types/db/database";
@@ -70,10 +70,13 @@ export function useFileStatusManager(fileId: number) {
           const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
 
           if (transcripts.length > 0) {
-            await db.transcripts.update(transcripts[0].id!, {
-              status: "failed",
-              error,
-            });
+            const transcriptId = transcripts[0].id;
+            if (transcriptId) {
+              await db.transcripts.update(transcriptId, {
+                status: "failed",
+                error,
+              });
+            }
           }
         }
 

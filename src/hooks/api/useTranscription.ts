@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db/db";
-import type { FileRow } from "@/types/db/database";
-import type { ProcessedSegment } from "@/types/transcription";
 
 // 转录响应类型
 interface TranscriptionResponse {
@@ -151,7 +149,7 @@ export function useTranscription() {
         throw error;
       }
     },
-    onSuccess: (result, variables) => {
+    onSuccess: (_result, variables) => {
       // 转录完成并保存
 
       // 使查询缓存失效，触发重新查询

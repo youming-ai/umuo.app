@@ -91,7 +91,7 @@ export function useFiles(): UseFilesReturn {
       try {
         setError(null);
         const id = parseInt(fileId, 10);
-        if (!isNaN(id)) {
+        if (!Number.isNaN(id)) {
           await DBUtils.deleteFile(id);
           await loadFiles(); // 重新加载文件列表
         }

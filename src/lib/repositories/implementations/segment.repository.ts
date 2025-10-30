@@ -12,7 +12,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
     super("SegmentRepository");
   }
 
-  async findById(id: number, options?: QueryOptions): Promise<Segment | null> {
+  async findById(id: number, _options?: QueryOptions): Promise<Segment | null> {
     this.validateId(id);
 
     return this.executeWithMetrics(
@@ -49,7 +49,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
     );
   }
 
-  async create(data: Partial<Segment>, options?: QueryOptions): Promise<Segment> {
+  async create(data: Partial<Segment>, _options?: QueryOptions): Promise<Segment> {
     this.validateData(data);
 
     return this.executeWithMetrics(
@@ -87,7 +87,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
     );
   }
 
-  async update(id: number, data: Partial<Segment>, options?: QueryOptions): Promise<Segment> {
+  async update(id: number, data: Partial<Segment>, _options?: QueryOptions): Promise<Segment> {
     this.validateId(id);
     this.validateData(data);
 
@@ -116,7 +116,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
     );
   }
 
-  async delete(id: number, options?: QueryOptions): Promise<boolean> {
+  async delete(id: number, _options?: QueryOptions): Promise<boolean> {
     this.validateId(id);
 
     return this.executeWithMetrics(

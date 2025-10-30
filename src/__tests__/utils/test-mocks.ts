@@ -161,9 +161,9 @@ export const MockDatabaseTools = {
 };
 
 // Mock 音频相关工具
-export class MockAudioTools {
+export const MockAudioTools = {
   // 创建 Mock AudioContext
-  static createMockAudioContext() {
+  createMockAudioContext() {
     return {
       createGain: vi.fn().mockReturnValue({
         gain: { value: 1 },
@@ -187,10 +187,10 @@ export class MockAudioTools {
       state: "running",
       currentTime: 0,
     };
-  }
+  },
 
   // 创建 Mock 音频元素
-  static createMockAudioElement() {
+  createMockAudioElement() {
     return {
       src: "",
       volume: 1,
@@ -219,13 +219,13 @@ export class MockAudioTools {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     };
-  }
-}
+  },
+};
 
 // Mock 存储工具
-export class MockStorageTools {
+export const MockStorageTools = {
   // 创建 Mock localStorage
-  static createMockLocalStorage() {
+  createMockLocalStorage() {
     const store: Record<string, string> = {};
     return {
       getItem: vi.fn().mockImplementation((key: string) => store[key] || null),
@@ -236,12 +236,14 @@ export class MockStorageTools {
         delete store[key];
       }),
       clear: vi.fn().mockImplementation(() => {
-        Object.keys(store).forEach((key) => delete store[key]);
+        for (const key of Object.keys(store)) {
+          delete store[key];
+        }
       }),
       key: vi.fn().mockImplementation((index: number) => Object.keys(store)[index] || null),
       get length() {
         return Object.keys(store).length;
       },
     };
-  }
-}
+  },
+};

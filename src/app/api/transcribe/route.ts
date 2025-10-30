@@ -1,8 +1,8 @@
+import { groq } from "@ai-sdk/groq";
+import { experimental_transcribe as transcribe } from "ai";
 import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, apiSuccess } from "@/lib/utils/api-response";
-import { experimental_transcribe as transcribe } from "ai";
-import { groq } from "@ai-sdk/groq";
 
 export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
 
