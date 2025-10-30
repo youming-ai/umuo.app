@@ -5,6 +5,8 @@
 
 "use client";
 
+export const runtime = "edge";
+
 import { useParams } from "next/navigation";
 import PlayerErrorBoundary from "@/components/features/player/PlayerErrorBoundary";
 import PlayerPageComponent from "@/components/features/player/PlayerPage";
