@@ -32,7 +32,8 @@
     "ci:build": "pnpm install --frozen-lockfile && pnpm test:run && pnpm lint && pnpm type-check && pnpm build",
     "ci:test": "pnpm install --frozen-lockfile && pnpm test:coverage && pnpm lint && pnpm type-check",
     "ci:opennext": "pnpm install --frozen-lockfile && pnpm test:run && pnpm lint && pnpm type-check && pnpm build:opennext",
-    "clean": "rm -rf .next .open-next node_modules/.cache coverage"
+    "clean": "rm -rf .next .open-next node_modules/.cache coverage",
+    "prepare": "husky"
   },
   "keywords": [
     "language-learning",
@@ -91,11 +92,18 @@
     "@vitest/coverage-v8": "^4.0.4",
     "@vitest/ui": "^4.0.4",
     "autoprefixer": "^10.4.21",
+    "husky": "^9.1.7",
     "jsdom": "^27.0.1",
+    "lint-staged": "^16.2.6",
     "postcss": "^8.5.6",
     "tailwindcss": "3.4.0",
     "vitest": "^4.0.4",
     "wrangler": "^4.45.1"
   },
-  "packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d"
+  "packageManager": "pnpm@10.18.3+sha512.bbd16e6d7286fd7e01f6b3c0b3c932cda2965c06a908328f74663f10a9aea51f1129eea615134bf992831b009eabe167ecb7008b597f40ff9bc75946aadfb08d",
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md}": [
+      "biome format --write --no-errors-on-unmatched"
+    ]
+  }
 }

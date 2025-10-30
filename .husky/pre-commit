@@ -1,0 +1,2 @@
+# Format all staged files with Biome
+pnpm exec lint-staged
