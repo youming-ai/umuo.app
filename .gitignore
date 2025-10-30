@@ -1,41 +1,51 @@
 # Dependencies
 node_modules/
 pnpm-debug.log*
+.pnpm-debug.log*
 
 # Next.js
 .next/
+.next/cache/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
 .dev.vars
+*.env.local.backup
 
 # Keep environment examples in git
 !.env.example
+!.env.template
 
 # Cloudflare
 .wrangler/
 .wrangler.toml
+.wrangler.state/
 
 # OpenNext build artifacts (except config files)
 .open-next/
+.open-next/cache/
+.open-next/assets/
+!.open-next/cloudflare/
 !open-next.config.ts
-
-# Temporary files
-*.tmp
-temp/
-test-*.txt
 
 # API Keys and Secrets
 *api-key*
 *secret*
+*.key
+*.pem
+*.p12
+*.pfx
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+.pnpm-debug.log*
 
 # Testing
 coverage/
@@ -43,11 +53,13 @@ coverage/
 .nyc_output
 test-results/
 playwright-report/
+test-results.xml
 
 # Build outputs
 dist/
 build/
 *.tsbuildinfo
+*.tsbuildinfo.*
 
 # IDE & Editors
 .vscode/
@@ -55,6 +67,9 @@ build/
 *.swp
 *.swo
 *~
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
 
 # OS
 .DS_Store
@@ -64,22 +79,78 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # Temporary files
 *.tmp
 *.temp
-.cache
+.cache/
+temp/
+tmp/
+test-*.txt
 
 # Claude AI
 .claude/
 .claude/output/
-
-# Cloudflare
-.wrangler/
+.claude/session*
 
 # Package manager lock files (keep pnpm-lock.yaml)
 yarn.lock
 package-lock.json
+bun.lockb
 
 # SWC cache
 .swc/
+.parcel-cache/
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.local
+.env.production
+
+# Vite
+.vite/
+
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+# Local development
+.local
