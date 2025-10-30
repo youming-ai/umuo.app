@@ -2,11 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db/db";
 import type { FileRow } from "@/types/db/database";
 import type { ProcessedSegment } from "@/types/transcription";
-import {
-  useGroqNativeTranscription,
-  useGroqTranscriptionStatus,
-  groqTranscriptionKeys,
-} from "./useGroqNativeTranscription";
 
 // 转录响应类型
 interface TranscriptionResponse {
@@ -310,26 +305,41 @@ export function useConfigurableTranscription() {
         config,
       });
 
+      // 准备表单数据
+      const formData = new FormData();
+      formData.append("audio", file.blob, file.name);
+      formData.append("meta", JSON.stringify({ fileId: fileId.toString() }));
+
       if (method === "groq-native") {
-        // 使用 Groq 原生转录
-        const groqMutation = useGroqNativeTranscription();
-        const result = await groqMutation.mutateAsync({
-          fileId,
-          config: {
-            model: config.model,
-            language: config.language,
-            useWordTimestamps: config.useWordTimestamps,
-            temperature: config.temperature,
-            prompt: config.prompt,
-          },
+        // 使用 Groq 原生转录 API
+        const params = new URLSearchParams({
+          fileId: fileId.toString(),
+          language: config.language || "ja",
+          model: config.model || "whisper-large-v3-turbo",
+          useWordTimestamps: String(config.useWordTimestamps !== false),
         });
-        return result;
+
+        const response = await fetch(`/api/transcribe?${params.toString()}`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message || `转录失败: ${response.statusText} (${response.status})`,
+          );
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.data?.text || "转录请求失败");
+        }
+
+        await saveTranscriptionResults(fileId, result.data);
+        return result.data;
       } else {
         // 使用原有的 AI SDK 转录
-        const formData = new FormData();
-        formData.append("audio", file.blob, file.name);
-        formData.append("meta", JSON.stringify({ fileId: fileId.toString() }));
-
         const params = new URLSearchParams({
           fileId: fileId.toString(),
           language: config.language || "ja",

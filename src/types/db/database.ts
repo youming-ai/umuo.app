@@ -24,19 +24,6 @@ export interface FileRow {
   status?: FileStatus;
 }
 
-/**
- * 文件分块存储行
- */
-export interface FileChunkRow {
-  id?: number;
-  fileId: number;
-  chunkIndex: number;
-  chunkSize: number;
-  offset: number;
-  data: Blob;
-  createdAt: Date;
-}
-
 export interface TranscriptRow {
   id?: number;
   fileId: number;

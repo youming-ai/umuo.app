@@ -3,6 +3,7 @@
  * 提供类型安全的 mock 工具，避免使用 any 类型
  */
 
+import { vi } from "vitest";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 // Mock 数据生成器
