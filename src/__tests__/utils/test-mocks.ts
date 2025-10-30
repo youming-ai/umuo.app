@@ -22,7 +22,7 @@ export const MockDataGenerator = {
       ...defaultFile,
       ...overrides,
     } as FileRow;
-  }
+  },
 
   // 生成 Mock 转录记录
   createMockTranscript(overrides: Partial<TranscriptRow> = {}): TranscriptRow {
@@ -43,7 +43,7 @@ export const MockDataGenerator = {
       ...defaultTranscript,
       ...overrides,
     } as TranscriptRow;
-  }
+  },
 
   // 生成 Mock 字幕段
   createMockSegment(overrides: Partial<Segment> = {}): Segment {
@@ -139,7 +139,7 @@ export const MockDatabaseTools = {
         return callback(mockTransaction);
       }),
     };
-  }
+  },
 
   // 创建类型安全的 Mock Where 回调
   createMockWhereCallback<T>(results: T[]) {
@@ -156,8 +156,8 @@ export const MockDatabaseTools = {
         toArray: vi.fn().mockResolvedValue(results),
       }),
     };
-  }
-}
+  },
+};
 
 // Mock 音频相关工具
 export class MockAudioTools {

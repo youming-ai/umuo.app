@@ -6,9 +6,13 @@ pnpm-debug.log*
 .next/
 
 # Environment variables
-.env*
+.env
 .env.local
+.env.*.local
 .dev.vars
+
+# Keep environment examples in git
+!.env.example
 
 # Cloudflare
 .wrangler/

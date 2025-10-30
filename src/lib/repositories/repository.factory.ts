@@ -1,4 +1,3 @@
-import { SimplePerformanceService } from "@/lib/monitoring/simple-performance.service";
 import { FileRepository } from "./implementations/file.repository";
 import { SegmentRepository } from "./implementations/segment.repository";
 import { TranscriptRepository } from "./implementations/transcript.repository";
@@ -18,10 +17,8 @@ export class RepositoryFactory {
   private readonly fileRepository: FileRepository;
   private readonly transcriptRepository: TranscriptRepository;
   private readonly segmentRepository: SegmentRepository;
-  private readonly performanceService: SimplePerformanceService;
 
   private constructor() {
-    this.performanceService = new SimplePerformanceService();
     this.fileRepository = new FileRepository();
     this.transcriptRepository = new TranscriptRepository();
     this.segmentRepository = new SegmentRepository();
@@ -59,13 +56,6 @@ export class RepositoryFactory {
   }
 
   /**
-   * 获取性能监控服务
-   */
-  public getPerformanceService(): SimplePerformanceService {
-    return this.performanceService;
-  }
-
-  /**
    * 清理所有缓存
    */
   public clearAllCaches(): void {
@@ -97,26 +87,20 @@ export class RepositoryFactory {
     cleanedOrphanedTranscripts: number;
     cleanedOrphanedSegments: number;
   }> {
-    const endTimer = this.performanceService.startTimer("repository-maintenance");
+    const [cleanedOrphanedFiles, cleanedOrphanedTranscripts, cleanedOrphanedSegments] =
+      await Promise.all([
+        this.fileRepository.cleanupOldFiles(90),
+        Promise.resolve(0), // 简化的转录清理
+        Promise.resolve(0), // 简化的片段清理
+      ]);
 
-    try {
-      const [cleanedOrphanedFiles, cleanedOrphanedTranscripts, cleanedOrphanedSegments] =
-        await Promise.all([
-          this.fileRepository.cleanupOldFiles(90),
-          Promise.resolve(0), // 简化的转录清理
-          Promise.resolve(0), // 简化的片段清理
-        ]);
+    this.clearAllCaches();
 
-      this.clearAllCaches();
-
-      return {
-        cleanedOrphanedFiles,
-        cleanedOrphanedTranscripts,
-        cleanedOrphanedSegments,
-      };
-    } finally {
-      endTimer();
-    }
+    return {
+      cleanedOrphanedFiles,
+      cleanedOrphanedTranscripts,
+      cleanedOrphanedSegments,
+    };
   }
 
   /**
@@ -186,11 +170,4 @@ export function getTranscriptRepository(): ITranscriptRepository {
  */
 export function getSegmentRepository(): ISegmentRepository {
   return getRepositoryFactory().getSegmentRepository();
-}
-
-/**
- * 便捷函数：获取性能监控服务
- */
-export function getPerformanceService(): SimplePerformanceService {
-  return getRepositoryFactory().getPerformanceService();
 }

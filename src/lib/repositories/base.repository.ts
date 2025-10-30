@@ -1,4 +1,3 @@
-import { SimplePerformanceService } from "@/lib/monitoring/simple-performance.service";
 import type { IRepository, PaginatedResult, QueryOptions } from "./interfaces/repository.interface";
 
 /**
@@ -6,15 +5,10 @@ import type { IRepository, PaginatedResult, QueryOptions } from "./interfaces/re
  * 提供通用的CRUD操作和缓存逻辑
  */
 export abstract class BaseRepository<T> implements IRepository<T> {
-  protected performanceService: SimplePerformanceService;
   protected cache: Map<string, { data: T; timestamp: number }>;
   protected readonly cacheTimeout = 5 * 60 * 1000; // 5分钟缓存
 
-  constructor(
-    protected readonly entityName: string,
-    performanceService?: SimplePerformanceService,
-  ) {
-    this.performanceService = performanceService || new SimplePerformanceService();
+  constructor(protected readonly entityName: string) {
     this.cache = new Map();
   }
 
@@ -27,63 +21,30 @@ export abstract class BaseRepository<T> implements IRepository<T> {
 
   // 批量操作的默认实现
   async createMany(data: Partial<T>[]): Promise<T[]> {
-    const operation = `createMany-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "createMany",
-      count: data.length,
-    });
-
-    try {
-      const results: T[] = [];
-      for (const item of data) {
-        const result = await this.create(item);
-        results.push(result);
-      }
-      return results;
-    } finally {
-      endTimer();
+    const results: T[] = [];
+    for (const item of data) {
+      const result = await this.create(item);
+      results.push(result);
     }
+    return results;
   }
 
   async updateMany(updates: Array<{ id: number; data: Partial<T> }>): Promise<T[]> {
-    const operation = `updateMany-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "updateMany",
-      count: updates.length,
-    });
-
-    try {
-      const results: T[] = [];
-      for (const { id, data } of updates) {
-        const result = await this.update(id, data);
-        results.push(result);
-      }
-      return results;
-    } finally {
-      endTimer();
+    const results: T[] = [];
+    for (const { id, data } of updates) {
+      const result = await this.update(id, data);
+      results.push(result);
     }
+    return results;
   }
 
   async deleteMany(ids: number[]): Promise<number> {
-    const operation = `deleteMany-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "deleteMany",
-      count: ids.length,
-    });
-
-    try {
-      let deletedCount = 0;
-      for (const id of ids) {
-        const deleted = await this.delete(id);
-        if (deleted) deletedCount++;
-      }
-      return deletedCount;
-    } finally {
-      endTimer();
+    let deletedCount = 0;
+    for (const id of ids) {
+      const deleted = await this.delete(id);
+      if (deleted) deletedCount++;
     }
+    return deletedCount;
   }
 
   // 查询操作的默认实现
@@ -98,40 +59,18 @@ export abstract class BaseRepository<T> implements IRepository<T> {
 
   // 高级查询的默认实现
   async findWhere(predicate: (item: T) => boolean, options?: QueryOptions): Promise<T[]> {
-    const operation = `findWhere-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "findWhere",
-    });
-
-    try {
-      const all = await this.findAll(options);
-      return all.filter(predicate);
-    } finally {
-      endTimer();
-    }
+    const all = await this.findAll(options);
+    return all.filter(predicate);
   }
 
   async search(searchTerm: string, fields: string[], options?: QueryOptions): Promise<T[]> {
-    const operation = `search-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "search",
-      searchTerm,
-      fields,
-    });
-
-    try {
-      const all = await this.findAll(options);
-      return all.filter((item) =>
-        fields.some((field) => {
-          const value = (item as any)[field];
-          return value && String(value).toLowerCase().includes(searchTerm.toLowerCase());
-        }),
-      );
-    } finally {
-      endTimer();
-    }
+    const all = await this.findAll(options);
+    return all.filter((item) =>
+      fields.some((field) => {
+        const value = (item as any)[field];
+        return value && String(value).toLowerCase().includes(searchTerm.toLowerCase());
+      }),
+    );
   }
 
   // 分页查询的默认实现
@@ -140,32 +79,20 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     limit: number,
     options?: QueryOptions,
   ): Promise<PaginatedResult<T>> {
-    const operation = `findPaginated-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "findPaginated",
+    const offset = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+      this.findAll({ ...options, limit, offset }),
+      this.count(options),
+    ]);
+
+    return {
+      data,
+      total,
       page,
       limit,
-    });
-
-    try {
-      const offset = (page - 1) * limit;
-      const [data, total] = await Promise.all([
-        this.findAll({ ...options, limit, offset }),
-        this.count(options),
-      ]);
-
-      return {
-        data,
-        total,
-        page,
-        limit,
-        hasNext: offset + limit < total,
-        hasPrev: page > 1,
-      };
-    } finally {
-      endTimer();
-    }
+      hasNext: offset + limit < total,
+      hasPrev: page > 1,
+    };
   }
 
   // 事务支持的默认实现（简化版）
@@ -184,12 +111,6 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     message: string;
     metrics?: any;
   }> {
-    const operation = `healthCheck-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "healthCheck",
-    });
-
     try {
       const count = await this.count();
       return {
@@ -202,61 +123,24 @@ export abstract class BaseRepository<T> implements IRepository<T> {
         status: "unhealthy",
         message: error instanceof Error ? error.message : "Unknown error",
       };
-    } finally {
-      endTimer();
     }
   }
 
   async findMany(criteria: Partial<T>, options?: QueryOptions): Promise<T[]> {
-    const operation = `findMany-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "findMany",
-    });
+    const all = await this.findAll(options);
+    const filtered = this.filterByCriteria(all, criteria);
 
-    try {
-      const all = await this.findAll(options);
-      const filtered = this.filterByCriteria(all, criteria);
-
-      if (options?.limit) {
-        const start = options.offset || 0;
-        return filtered.slice(start, start + options.limit);
-      }
-
-      return filtered;
-    } catch (error) {
-      this.performanceService.recordError("repository", `findMany-${this.entityName}`, error);
-      throw error;
-    } finally {
-      const duration = endTimer();
-      this.performanceService.recordMetric("repository_operation", duration, {
-        repository: this.entityName,
-        operation: "findMany",
-        result_count: (await this.findMany(criteria, options)).length,
-      });
+    if (options?.limit) {
+      const start = options.offset || 0;
+      return filtered.slice(start, start + options.limit);
     }
+
+    return filtered;
   }
 
   async exists(id: number, options?: QueryOptions): Promise<boolean> {
-    const operation = `exists-${this.entityName}`;
-    const endTimer = this.performanceService.startTimer(operation, {
-      repository: this.entityName,
-      operation: "exists",
-    });
-
-    try {
-      const entity = await this.findById(id, options);
-      return entity !== null;
-    } catch (error) {
-      this.performanceService.recordError("repository", `exists-${this.entityName}`, error);
-      throw error;
-    } finally {
-      const duration = endTimer();
-      this.performanceService.recordMetric("repository_operation", duration, {
-        repository: this.entityName,
-        operation: "exists",
-      });
-    }
+    const entity = await this.findById(id, options);
+    return entity !== null;
   }
 
   protected getCacheKey(id: number, operation?: string): string {
@@ -344,27 +228,10 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     fn: () => Promise<TData>,
     metadata?: Record<string, unknown>,
   ): Promise<TData> {
-    const endTimer = this.performanceService.startTimer(`${this.entityName}.${operation}`, {
-      repository: this.entityName,
-      operation,
-      ...metadata,
-    });
-
+    // Simplified version without performance tracking
     try {
-      const result = await fn();
-      const duration = endTimer();
-
-      this.performanceService.recordMetric("repository_operation", duration, {
-        repository: this.entityName,
-        operation,
-        success: true,
-        ...metadata,
-      });
-
-      return result;
+      return await fn();
     } catch (error) {
-      this.performanceService.recordError("repository", `${this.entityName}.${operation}`, error);
-      endTimer();
       throw error;
     }
   }
