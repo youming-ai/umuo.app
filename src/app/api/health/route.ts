@@ -92,11 +92,15 @@ export async function GET(_request: NextRequest) {
       // 性能指标
       performance: {
         responseTime: Date.now() - startTime,
-        memoryUsage: process.memoryUsage?.() || {
-          rss: 0,
-          heapUsed: 0,
-          heapTotal: 0,
-        },
+        memoryUsage: process.memoryUsage?.()
+          ? {
+              used: process.memoryUsage().heapUsed,
+              total: process.memoryUsage().heapTotal,
+            }
+          : {
+              used: 0,
+              total: 0,
+            },
       },
 
       // 功能支持检查
