@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 describe("Button Component", () => {
   it("should render button with text", () => {
@@ -31,7 +31,11 @@ describe("Button Component", () => {
 
   it("should be disabled when disabled prop is true", () => {
     const handleClick = vi.fn();
-    render(<Button disabled onClick={handleClick}>Disabled</Button>);
+    render(
+      <Button disabled onClick={handleClick}>
+        Disabled
+      </Button>,
+    );
 
     const button = screen.getByRole("button", { name: /disabled/i });
     expect(button).toBeDisabled();
@@ -44,7 +48,7 @@ describe("Button Component", () => {
     render(
       <Button asChild>
         <a href="/test">Link Button</a>
-      </Button>
+      </Button>,
     );
 
     const link = screen.getByRole("link", { name: /link button/i });

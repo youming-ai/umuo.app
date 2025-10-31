@@ -1,8 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { apiSuccess } from "@/lib/utils/api-response";
 
-export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
-
 /**
  * Cloudflare Workers 健康检查 API
  * 用于监控系统运行状态和依赖服务

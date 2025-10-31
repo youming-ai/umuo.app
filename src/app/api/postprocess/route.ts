@@ -5,8 +5,6 @@ import { z } from "zod";
 import { apiError, apiFromError, apiSuccess } from "@/lib/utils/api-response";
 import { validationError } from "@/lib/utils/error-handler";
 
-export const runtime = "edge"; // Cloudflare Pages 需要 Edge Runtime
-
 const GROQ_MODEL = "openai/gpt-oss-20b";
 
 // Type definitions for processed segments
@@ -60,7 +58,10 @@ const postProcessSchema = z.object({
 function validateRequestData(body: unknown) {
   const validation = postProcessSchema.safeParse(body);
   if (!validation.success) {
-    const error = validationError("Invalid request data", validation.error.format());
+    const error = validationError(
+      "Invalid request data",
+      validation.error.format(),
+    );
     return { isValid: false, error };
   }
   return { isValid: true, data: validation.data };
@@ -69,7 +70,9 @@ function validateRequestData(body: unknown) {
 /**
  * 验证segments数据
  */
-function validateSegments(segments: Array<{ text: string; start: number; end: number }>) {
+function validateSegments(
+  segments: Array<{ text: string; start: number; end: number }>,
+) {
   if (!segments || segments.length === 0) {
     return {
       isValid: false,
@@ -95,7 +98,11 @@ function validateSegments(segments: Array<{ text: string; start: number; end: nu
   // 验证每个segment的必需字段
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (!segment.text || typeof segment.start !== "number" || typeof segment.end !== "number") {
+    if (
+      !segment.text ||
+      typeof segment.start !== "number" ||
+      typeof segment.end !== "number"
+    ) {
       return {
         isValid: false,
         error: {
@@ -274,7 +281,10 @@ async function postProcessSegmentWithGroq(
     };
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`单个segment AI SDK处理失败，耗时: ${processingTime}ms，错误:`, error);
+    console.error(
+      `单个segment AI SDK处理失败，耗时: ${processingTime}ms，错误:`,
+      error,
+    );
 
     // 抛出错误让上层处理fallback
     throw error;
@@ -351,10 +361,13 @@ Return format (JSON):
       console.log(`批量AI SDK处理完成，耗时: ${processingTime}ms`);
 
       return shortTextSegments.map((originalSegment, index) => {
-        const processedSegment = response.segments.find((s: ProcessedSegment) => s.id === index);
+        const processedSegment = response.segments.find(
+          (s: ProcessedSegment) => s.id === index,
+        );
         return {
           originalText: originalSegment.text,
-          normalizedText: processedSegment?.normalizedText || originalSegment.text,
+          normalizedText:
+            processedSegment?.normalizedText || originalSegment.text,
           translation: processedSegment?.translation || "",
           annotations: processedSegment?.annotations || [],
           furigana: processedSegment?.furigana || "",
@@ -366,7 +379,9 @@ Return format (JSON):
 
     // Fallback: 如果解析失败，返回原始文本
     const processingTime = Date.now() - startTime;
-    console.warn(`批量AI SDK处理解析失败，使用fallback，耗时: ${processingTime}ms`);
+    console.warn(
+      `批量AI SDK处理解析失败，使用fallback，耗时: ${processingTime}ms`,
+    );
 
     return shortTextSegments.map((segment) => ({
       originalText: segment.text,
@@ -379,7 +394,10 @@ Return format (JSON):
     }));
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`批量AI SDK处理失败，耗时: ${processingTime}ms，错误:`, error);
+    console.error(
+      `批量AI SDK处理失败，耗时: ${processingTime}ms，错误:`,
+      error,
+    );
 
     // 返回fallback结果
     return shortTextSegments.map((segment) => ({
@@ -427,14 +445,22 @@ async function postProcessSegmentsWithGroq(
     BATCH_SIZE = 6;
   }
 
-  console.log(`开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`);
+  console.log(
+    `开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`,
+  );
   const startTime = Date.now();
 
   // 分离短文本和长文本
-  const shortTextSegments = segments.filter((seg) => seg.text.length <= SHORT_TEXT_THRESHOLD);
-  const longTextSegments = segments.filter((seg) => seg.text.length > SHORT_TEXT_THRESHOLD);
+  const shortTextSegments = segments.filter(
+    (seg) => seg.text.length <= SHORT_TEXT_THRESHOLD,
+  );
+  const longTextSegments = segments.filter(
+    (seg) => seg.text.length > SHORT_TEXT_THRESHOLD,
+  );
 
-  console.log(`短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`);
+  console.log(
+    `短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`,
+  );
 
   const allResults: PostProcessResult[] = [];
 
@@ -464,11 +490,20 @@ async function postProcessSegmentsWithGroq(
 
       const batchPromises = batch.map(async (segment, segmentIndex) => {
         try {
-          const processed = await postProcessSegmentWithGroq(segment, sourceLanguage, finalOptions);
-          console.log(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`);
+          const processed = await postProcessSegmentWithGroq(
+            segment,
+            sourceLanguage,
+            finalOptions,
+          );
+          console.log(
+            `长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`,
+          );
           return processed;
         } catch (error) {
-          console.error(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`, error);
+          console.error(
+            `长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`,
+            error,
+          );
           return {
             originalText: segment.text,
             normalizedText: segment.text,
@@ -550,7 +585,13 @@ export async function POST(request: NextRequest) {
         statusCode: 400,
       });
     }
-    const { segments, language, targetLanguage, enableAnnotations, enableFurigana } = data;
+    const {
+      segments,
+      language,
+      targetLanguage,
+      enableAnnotations,
+      enableFurigana,
+    } = data;
 
     // 验证输入数据
     const segmentValidation = validateSegments(segments);
@@ -564,11 +605,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const processedSegments = await postProcessSegmentsWithGroq(segments, language, {
-      targetLanguage,
-      enableAnnotations,
-      enableFurigana,
-    });
+    const processedSegments = await postProcessSegmentsWithGroq(
+      segments,
+      language,
+      {
+        targetLanguage,
+        enableAnnotations,
+        enableFurigana,
+      },
+    );
 
     // Return processed segments with original metadata preserved
     const finalSegments = processedSegments.map((processedSegment, index) => ({

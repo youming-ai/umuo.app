@@ -25,10 +25,18 @@ export interface PerformanceMetrics {
   crashCount?: number; // 崩溃次数
 }
 
+// 性能监控配置接口
+export interface PerformanceConfig {
+  enabled: boolean;
+  sampleRate: number;
+  reportThreshold: number;
+  reportUrl?: string;
+}
+
 // 性能监控器类
-export class PerformanceObserver {
+export class PerformanceMonitor {
   private metrics: PerformanceMetrics = {};
-  private observers: PerformanceObserver[] = [];
+  private observers: (globalThis.PerformanceObserver | null)[] = [];
   private config: PerformanceConfig;
 
   constructor(config: Partial<PerformanceConfig> = {}) {
@@ -37,7 +45,7 @@ export class PerformanceObserver {
       sampleRate: 0.1, // 10% 采样率
       reportThreshold: 1000, // 1秒阈值
       reportUrl: "/api/performance",
-      ...config
+      ...config,
     };
 
     if (this.config.enabled && typeof window !== "undefined") {
@@ -57,7 +65,7 @@ export class PerformanceObserver {
   private observeCoreWebVitals(): void {
     // LCP - 最大内容绘制
     if ("PerformanceObserver" in window) {
-      const lcpObserver = new PerformanceObserver((list) => {
+      const lcpObserver = new globalThis.PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1] as PerformanceEntry;
         this.metrics.lcp = lastEntry.startTime;
@@ -66,7 +74,7 @@ export class PerformanceObserver {
       this.observers.push(lcpObserver);
 
       // FID - 首次输入延迟
-      const fidObserver = new PerformanceObserver((list) => {
+      const fidObserver = new globalThis.PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           this.metrics.fid = entry.processingStart - entry.startTime;
@@ -77,7 +85,7 @@ export class PerformanceObserver {
 
       // CLS - 累积布局偏移
       let clsValue = 0;
-      const clsObserver = new PerformanceObserver((list) => {
+      const clsObserver = new globalThis.PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           if (!entry.hadRecentInput) {
@@ -91,7 +99,9 @@ export class PerformanceObserver {
     }
 
     // FCP - 首次内容绘制
-    const fcpEntry = performance.getEntriesByName("first-contentful-paint")[0] as PerformanceEntry;
+    const fcpEntry = performance.getEntriesByName(
+      "first-contentful-paint",
+    )[0] as PerformanceEntry;
     if (fcpEntry) {
       this.metrics.fcp = fcpEntry.startTime;
     }
@@ -100,7 +110,7 @@ export class PerformanceObserver {
   // 监控用户计时
   private observeUserTiming(): void {
     if ("PerformanceObserver" in window) {
-      const userTimingObserver = new PerformanceObserver((list) => {
+      const userTimingObserver = new globalThis.PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           if (entry.name.startsWith("transcription-")) {
@@ -120,7 +130,7 @@ export class PerformanceObserver {
   // 监控资源加载
   private observeResourceTiming(): void {
     if ("PerformanceObserver" in window) {
-      const resourceObserver = new PerformanceObserver((list) => {
+      const resourceObserver = new globalThis.PerformanceObserver((list) => {
         const entries = list.getEntries();
         let totalSize = 0;
         entries.forEach((entry: any) => {
@@ -137,10 +147,15 @@ export class PerformanceObserver {
 
   // 监控导航时间
   private observeNavigationTiming(): void {
-    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+    const navigation = performance.getEntriesByType(
+      "navigation",
+    )[0] as PerformanceNavigationTiming;
     if (navigation) {
       // 可以计算更多导航相关指标
-      console.log("页面加载时间:", navigation.loadEventEnd - navigation.fetchStart);
+      console.log(
+        "页面加载时间:",
+        navigation.loadEventEnd - navigation.fetchStart,
+      );
     }
   }
 
@@ -158,7 +173,7 @@ export class PerformanceObserver {
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
-        stack: event.error?.stack
+        stack: event.error?.stack,
       });
     });
 
@@ -168,7 +183,7 @@ export class PerformanceObserver {
       this.reportError({
         type: "promise",
         message: event.reason?.message || "Promise rejected",
-        stack: event.reason?.stack
+        stack: event.reason?.stack,
       });
     });
   }
@@ -214,7 +229,7 @@ export class PerformanceObserver {
       threshold: this.config.reportThreshold,
       url: window.location.href,
       userAgent: navigator.userAgent,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     // 发送到监控服务
@@ -224,7 +239,9 @@ export class PerformanceObserver {
 
     // 开发环境下输出到控制台
     if (process.env.NODE_ENV === "development") {
-      console.warn(`Performance issue detected: ${metric} = ${value}ms (threshold: ${this.config.reportThreshold}ms)`);
+      console.warn(
+        `Performance issue detected: ${metric} = ${value}ms (threshold: ${this.config.reportThreshold}ms)`,
+      );
     }
   }
 
@@ -233,7 +250,7 @@ export class PerformanceObserver {
     if (Math.random() < this.config.sampleRate) {
       this.sendMetrics({
         ...this.metrics,
-        lastError: error
+        lastError: error,
       });
     }
   }
@@ -252,8 +269,8 @@ export class PerformanceObserver {
           metrics: data,
           url: window.location.href,
           timestamp: Date.now(),
-          userAgent: navigator.userAgent
-        })
+          userAgent: navigator.userAgent,
+        }),
       });
     } catch (error) {
       // 静默处理上报错误
@@ -275,76 +292,70 @@ export class PerformanceObserver {
 
   // 销毁观察器
   destroy(): void {
-    this.observers.forEach(observer => observer.disconnect());
+    this.observers.forEach((observer) => observer?.disconnect());
     this.observers = [];
   }
 }
 
-// 性能配置接口
-interface PerformanceConfig {
-  enabled: boolean;
-  sampleRate: number;
-  reportThreshold: number;
-  reportUrl?: string;
-}
-
 // 单例实例
-let performanceObserver: PerformanceObserver | null = null;
+let performanceMonitor: PerformanceMonitor | null = null;
 
 // 获取性能监控实例
-export function getPerformanceObserver(config?: Partial<PerformanceConfig>): PerformanceObserver {
-  if (!performanceObserver) {
-    performanceObserver = new PerformanceObserver(config);
+export function getPerformanceMonitor(
+  config?: Partial<PerformanceConfig>,
+): PerformanceMonitor {
+  if (!performanceMonitor) {
+    performanceMonitor = new PerformanceMonitor(config);
   }
-  return performanceObserver;
+  return performanceMonitor;
 }
 
 // Hook 方式使用
-export function usePerformanceObserver(config?: Partial<PerformanceConfig>) {
+export function usePerformanceMonitor(config?: Partial<PerformanceConfig>) {
   if (typeof window !== "undefined") {
-    return getPerformanceObserver(config);
+    return getPerformanceMonitor(config);
   }
   return null;
 }
 
 // 性能标记工具函数
-export const performance = {
+export const performanceUtils = {
   // 标记转录开始
   startTranscription: (fileId: number) => {
-    const observer = getPerformanceObserver();
-    observer.mark(`transcription-${fileId}`);
+    const monitor = getPerformanceMonitor();
+    monitor.mark(`transcription-${fileId}`);
   },
 
   // 标记转录结束
   endTranscription: (fileId: number) => {
-    const observer = getPerformanceObserver();
-    observer.measure(`transcription-${fileId}`);
+    const monitor = getPerformanceMonitor();
+    monitor.measure(`transcription-${fileId}`);
   },
 
   // 标记上传开始
   startUpload: (fileName: string) => {
-    const observer = getPerformanceObserver();
-    observer.mark(`upload-${fileName}`);
+    const monitor = getPerformanceMonitor();
+    monitor.mark(`upload-${fileName}`);
   },
 
   // 标记上传结束
   endUpload: (fileName: string) => {
-    const observer = getPerformanceObserver();
-    observer.measure(`upload-${fileName}`);
+    const monitor = getPerformanceMonitor();
+    monitor.measure(`upload-${fileName}`);
   },
 
   // 记录API响应时间
   recordApiResponse: (endpoint: string, duration: number) => {
-    const observer = getPerformanceObserver();
-    observer.recordMetric("apiResponseTime", duration);
+    const monitor = getPerformanceMonitor();
+    monitor.recordMetric("apiResponseTime", duration);
   },
 
   // 记录内存使用
   recordMemoryUsage: () => {
     if ("memory" in performance) {
       const memory = (performance as any).memory;
-      const observer = getPerformanceObserver();
-      observer.recordMetric("memoryUsage", memory.usedJSHeapSize);
+      const monitor = getPerformanceMonitor();
+      monitor.recordMetric("memoryUsage", memory.usedJSHeapSize);
     }
-  }
+  },
 };

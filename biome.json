@@ -8,24 +8,10 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "suspicious": {
-        "noUnknownAtRules": "off"
-      },
-      "correctness": {
-        "useExhaustiveDependencies": "warn"
-      },
-      "a11y": {
-        "useSemanticElements": "warn",
-        "useAriaPropsSupportedByRole": "warn"
-      },
-      "complexity": {
-        "noForEach": "warn"
-      }
+      "recommended": true
     }
   },
   "files": {
-    "ignoreUnknown": false,
-    "includes": ["src/**/*", "*.{ts,tsx,js,jsx}"]
+    "include": ["src/**/*", "*.{ts,tsx,js,jsx}"]
   }
 }

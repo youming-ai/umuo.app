@@ -84,11 +84,6 @@ const config: Config = {
           muted: "var(--surface-muted)",
           inverse: "var(--surface-inverse)",
         },
-        // 卡片颜色
-        card: {
-          DEFAULT: "var(--surface-card)",
-          dark: "var(--surface-card)",
-        },
         // 播放器专用颜色
         player: {
           accent: "var(--player-accent-color)",

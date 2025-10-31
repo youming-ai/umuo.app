@@ -55,11 +55,9 @@ pnpm test:coverage    # Run tests with coverage report
 pnpm test:security    # Run security audit
 pnpm test:performance # Run Lighthouse performance audit
 
-# Deployment (Cloudflare Pages)
-pnpm cf:login         # Login to Cloudflare
-pnpm cf:deploy:prod   # Deploy to production
-pnpm cf:deploy:preview # Deploy to preview
+# Deployment (Vercel)
 pnpm deploy           # Build and deploy to production
+pnpm deploy:prod      # Build and deploy to production
 pnpm deploy:preview   # Build and deploy to preview
 
 # CI/Quality Pipeline
@@ -196,8 +194,8 @@ TRANSCRIPTION_MAX_CONCURRENCY=2          # Concurrent processing
 
 ## Deployment & CI
 
-### Cloudflare Pages Deployment
-The application is configured for deployment on Cloudflare Pages:
+### Vercel Deployment
+The application is configured for deployment on Vercel:
 
 ```bash
 # Deploy to production
@@ -207,7 +205,7 @@ pnpm deploy           # Build and deploy to production
 pnpm deploy:preview   # Build and deploy to preview
 
 # Manual deployment steps
-pnpm build && wrangler pages deploy .next --project-name umuo
+pnpm build && vercel --prod
 ```
 
 ### CI Pipeline
@@ -219,15 +217,15 @@ The `ci:build` command runs the complete quality assurance pipeline:
 5. **Build Validation**: `pnpm build` (Production build)
 
 ### Build Configuration
-- **Next.js Config**: Optimized for static export and client-side deployment
+- **Next.js Config**: Optimized for Vercel deployment with serverless functions
 - **Bundle Analysis**: Available via `pnpm build:analyze`
-- **Image Optimization**: Disabled (`unoptimized: true`) for static hosting
-- **Package Optimization**: Experimental package imports for Radix icons and Lucide React
+- **Image Optimization**: Enabled with Vercel's Image Optimization API
+- **Package Optimization**: Standard Next.js optimization for serverless deployment
 
 ### Performance Monitoring
 - **Lighthouse Integration**: Automated performance audits
 - **Bundle Analysis**: Webpack bundle analyzer for optimization
-- **Production Optimization**: Standalone output mode for PWA deployment
+- **Production Optimization**: Standard Next.js optimization for Vercel serverless functions
 
 ## Styling System
 
