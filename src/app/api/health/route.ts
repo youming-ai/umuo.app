@@ -40,6 +40,38 @@ interface HealthData {
       total: number;
     };
   };
+  features?: {
+    serverSideRendering: boolean;
+    apiRoutes: boolean;
+    middleware: boolean;
+    imageOptimization: boolean;
+    isr: boolean;
+    edgeFunctions: boolean;
+    webSockets: boolean;
+    streaming: boolean;
+  };
+  runtime?: {
+    name: string;
+    version: string;
+    platform: string;
+    architecture: string;
+  };
+  issues?: string[];
+  dependencies?: {
+    [key: string]: string;
+  };
+  configuration?: {
+    features?: {
+      [key: string]: boolean;
+    };
+    [key: string]: any;
+  };
+  connections?: {
+    timestamp: string;
+    tests: {
+      [key: string]: any;
+    };
+  };
 }
 
 interface SystemInfo {
@@ -127,27 +159,43 @@ export async function GET(_request: NextRequest) {
     // 检查关键依赖
     const criticalServices = ["groq"];
     const unavailableServices = criticalServices.filter(
-      (service) => !healthData.services[service as keyof typeof healthData.services].available,
+      (service) =>
+        !healthData.services[service as keyof typeof healthData.services]
+          .available,
     );
 
     if (unavailableServices.length > 0) {
-      healthData.status = "degraded";
-      healthData.issues = [`Missing critical services: ${unavailableServices.join(", ")}`];
+      healthData.status = "unhealthy"; // 修复类型错误
+      healthData.issues = [
+        `Missing critical services: ${unavailableServices.join(", ")}`,
+      ];
     }
 
     const responseTime = Date.now() - startTime;
-    healthData.performance.responseTime = responseTime;
+    if (healthData.performance) {
+      healthData.performance.responseTime = responseTime;
+    }
 
-    // 设置响应头
-    const response = NextResponse.json(apiSuccess("Health check completed", healthData), {
-      status: healthData.status === "healthy" ? 200 : 503,
-      headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "X-Health-Check": "OpenNext.js",
-        "X-Response-Time": `${responseTime}ms`,
-        "X-Platform": "cloudflare-workers",
+    // 根据健康状态确定状态码
+    const statusCode = healthData.status === "healthy" ? 200 : 503;
+
+    // 使用 NextResponse.json 直接创建响应，避免只读属性问题
+    const response = NextResponse.json(
+      {
+        success: true,
+        data: healthData,
+        timestamp: new Date().toISOString(),
       },
-    });
+      {
+        status: statusCode,
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "X-Health-Check": "OpenNext.js",
+          "X-Response-Time": `${responseTime}ms`,
+          "X-Platform": "cloudflare-workers",
+        },
+      },
+    );
 
     return response;
   } catch (error) {
@@ -188,7 +236,32 @@ export async function POST(request: NextRequest) {
     } = {
       status: "healthy",
       timestamp: new Date().toISOString(),
+      uptime: process.uptime?.() || 0,
+      environment: process.env.NODE_ENV || "unknown",
+      platform: "cloudflare-workers",
+      opennext: true,
+      version: "1.0.0",
       detailed: true,
+
+      // 基本服务状态
+      services: {
+        groq: {
+          available: true,
+          configured: !!process.env.GROQ_API_KEY,
+        },
+        database: {
+          available: true,
+          type: "indexeddb",
+        },
+        cache: {
+          available: true,
+          type: "memory",
+        },
+        storage: {
+          available: true,
+          type: "indexeddb",
+        },
+      },
 
       // 系统信息
       system: {
@@ -203,6 +276,8 @@ export async function POST(request: NextRequest) {
         name: "Node.js",
         version: process.version,
         environment: process.env.NODE_ENV,
+        platform: process.platform,
+        architecture: process.arch,
       },
 
       // 依赖项版本
@@ -244,7 +319,8 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         healthData.connections.tests.kv = {
           success: false,
-          error: error instanceof Error ? error.message : "KV connection failed",
+          error:
+            error instanceof Error ? error.message : "KV connection failed",
         };
       }
 
@@ -255,18 +331,23 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         healthData.connections.tests.d1 = {
           success: false,
-          error: error instanceof Error ? error.message : "D1 connection failed",
+          error:
+            error instanceof Error ? error.message : "D1 connection failed",
         };
       }
     }
 
-    return NextResponse.json(apiSuccess("Detailed health check completed", healthData), {
-      headers: {
-        "Cache-Control": "no-cache, no-store, must-revalidate",
-        "X-Health-Check": "OpenNext.js-Detailed",
-        "X-Platform": "cloudflare-workers",
-      },
-    });
+    const response = apiSuccess(healthData);
+
+    // 添加详细的健康检查响应头
+    response.headers.set(
+      "Cache-Control",
+      "no-cache, no-store, must-revalidate",
+    );
+    response.headers.set("X-Health-Check", "OpenNext.js-Detailed");
+    response.headers.set("X-Platform", "cloudflare-workers");
+
+    return response;
   } catch (error) {
     console.error("❌ Detailed health check failed:", error);
 

@@ -33,7 +33,9 @@ export default function FileManager({ className }: FileManagerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
-  const [filterBy, setFilterBy] = useState<"all" | "transcribed" | "untranscribed">("all");
+  const [filterBy, setFilterBy] = useState<
+    "all" | "transcribed" | "untranscribed"
+  >("all");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -97,7 +99,7 @@ export default function FileManager({ className }: FileManagerProps) {
             }
             return prev + 10;
           });
-        }, 100);
+        }, 200); // 从100ms增加到200ms，减少轮询频率
 
         await addFiles(filesToAdd);
 
@@ -116,7 +118,9 @@ export default function FileManager({ className }: FileManagerProps) {
       } catch (error) {
         console.error("❌ 文件上传失败:", error);
         const { toast } = await import("sonner");
-        toast.error(`文件上传失败: ${error instanceof Error ? error.message : "未知错误"}`);
+        toast.error(
+          `文件上传失败: ${error instanceof Error ? error.message : "未知错误"}`,
+        );
         setIsUploading(false);
         setUploadProgress(0);
       }
@@ -156,7 +160,9 @@ export default function FileManager({ className }: FileManagerProps) {
         case "size":
           return (b.size || 0) - (a.size || 0);
         default:
-          return (b.uploadedAt?.getTime() || 0) - (a.uploadedAt?.getTime() || 0);
+          return (
+            (b.uploadedAt?.getTime() || 0) - (a.uploadedAt?.getTime() || 0)
+          );
       }
     });
   }, [files, searchQuery, sortBy, filterBy]);
@@ -190,7 +196,9 @@ export default function FileManager({ className }: FileManagerProps) {
         {/* 过滤器 */}
         <Select
           value={filterBy}
-          onValueChange={(value: "all" | "transcribed" | "untranscribed") => setFilterBy(value)}
+          onValueChange={(value: "all" | "transcribed" | "untranscribed") =>
+            setFilterBy(value)
+          }
         >
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="状态过滤" />
@@ -248,7 +256,9 @@ export default function FileManager({ className }: FileManagerProps) {
                 {searchQuery ? "没有找到匹配的文件" : "还没有上传任何文件"}
               </h3>
               <p className="text-muted-foreground text-center mb-4">
-                {searchQuery ? "尝试调整搜索条件或过滤器" : "上传音频文件开始使用转录功能"}
+                {searchQuery
+                  ? "尝试调整搜索条件或过滤器"
+                  : "上传音频文件开始使用转录功能"}
               </p>
             </CardContent>
           </Card>
@@ -287,9 +297,11 @@ function FileCardWrapper({
   onPlay: (fileId: number) => void;
   onDelete: (fileId: number) => void;
 }) {
-  // Hooks must be called before any early returns
-  const { data: statusData, isLoading } = useFileStatus(file.id);
-  const { startTranscription, isTranscribing } = useFileStatusManager(file.id);
+  // Hooks must be called before any early returns - 添加空值检查
+  const { data: statusData, isLoading } = useFileStatus(file.id || 0);
+  const { startTranscription, isTranscribing } = useFileStatusManager(
+    file.id || 0,
+  );
 
   // 优雅地处理可能缺失的 file.id
   if (!file.id) {

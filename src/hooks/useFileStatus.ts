@@ -8,6 +8,10 @@ import { useCallback, useState } from "react";
 import { useTranscription } from "@/hooks/api/useTranscription";
 import { db } from "@/lib/db/db";
 import { FileStatus } from "@/types/db/database";
+import {
+  handleTranscriptionError,
+  handleTranscriptionSuccess,
+} from "@/lib/utils/transcription-error-handler";
 
 // 查询键定义
 export const fileStatusKeys = {
@@ -27,7 +31,10 @@ export function useFileStatus(fileId: number) {
       }
 
       // 检查是否有转录记录
-      const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+      const transcripts = await db.transcripts
+        .where("fileId")
+        .equals(fileId)
+        .toArray();
 
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
@@ -47,8 +54,8 @@ export function useFileStatus(fileId: number) {
         file,
       };
     },
-    staleTime: 1000 * 60 * 5, // 5分钟缓存
-    gcTime: 1000 * 60 * 10, // 10分钟垃圾回收
+    staleTime: 1000 * 60 * 15, // 15分钟缓存 - 减少网络请求
+    gcTime: 1000 * 60 * 30, // 30分钟垃圾回收
   });
 }
 
@@ -67,7 +74,10 @@ export function useFileStatusManager(fileId: number) {
 
         // 如果是错误状态，也更新转录记录
         if (status === FileStatus.ERROR && error) {
-          const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(fileId)
+            .toArray();
 
           if (transcripts.length > 0) {
             const transcriptId = transcripts[0].id;
@@ -105,8 +115,12 @@ export function useFileStatusManager(fileId: number) {
       // 转录成功后设置状态为完成
       await updateFileStatus(FileStatus.COMPLETED);
     } catch (error) {
-      console.error("转录失败:", error);
       const errorMessage = error instanceof Error ? error.message : "转录失败";
+      handleTranscriptionError(error, {
+        fileId,
+        operation: "transcribe",
+        language: "ja",
+      });
       await updateFileStatus(FileStatus.ERROR, errorMessage);
       throw error;
     }
@@ -143,10 +157,13 @@ export function useBatchFileStatus() {
             });
 
             // 调用转录 API
-            const response = await fetch(`/api/transcribe?fileId=${fileId}&language=ja`, {
-              method: "POST",
-              body: await createFormData(fileId),
-            });
+            const response = await fetch(
+              `/api/transcribe?fileId=${fileId}&language=ja`,
+              {
+                method: "POST",
+                body: await createFormData(fileId),
+              },
+            );
 
             if (!response.ok) {
               throw new Error(`转录失败: ${response.statusText}`);
@@ -160,7 +177,13 @@ export function useBatchFileStatus() {
 
             return { fileId, success: true };
           } catch (error) {
-            console.error(`文件 ${fileId} 转录失败:`, error);
+            // 统一错误处理
+            handleTranscriptionError(error, {
+              fileId,
+              operation: "transcribe",
+              language: "ja",
+            });
+
             // 设置状态为错误
             await db.files.update(fileId, { status: FileStatus.ERROR });
             queryClient.invalidateQueries({

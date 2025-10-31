@@ -8,6 +8,10 @@ import {
 import { postProcessText } from "@/lib/ai/text-postprocessor";
 import { db } from "@/lib/db/db";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
+import {
+  handleTranscriptionError,
+  handleTranscriptionProgress,
+} from "@/lib/utils/transcription-error-handler";
 
 // 音频URL缓存管理 - 使用 WeakMap 防止内存泄漏
 const audioUrlCache = new WeakMap<Blob, string>();
@@ -149,7 +153,8 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 计算加载状态
   const loading = fileQuery.isLoading || transcriptionQuery.isLoading;
-  const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
+  const error =
+    fileQuery.error?.message || transcriptionQuery.error?.message || null;
   const isTranscribing = transcriptionMutation.isPending;
 
   // 统一计算是否应该开始自动转录
@@ -165,7 +170,13 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
     // 调试信息：自动转录状态检查
 
-    return isValidId && !loading && file && !transcript && !transcriptionMutation.isPending;
+    return (
+      isValidId &&
+      !loading &&
+      file &&
+      !transcript &&
+      !transcriptionMutation.isPending
+    );
   }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
 
   // 组件卸载时清理资源
@@ -198,14 +209,17 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       });
       setTranscriptionProgress(100);
 
-      // 重新获取转录数据以获得新的 transcript ID
+      // 重新获取转录数据以获得新的 transcript ID - 批量失效相关查询
       await queryClient.invalidateQueries({
         queryKey: transcriptionKeys.forFile(parsedFileId),
       });
       const freshData = await queryClient.fetchQuery({
         queryKey: transcriptionKeys.forFile(parsedFileId),
         queryFn: async () => {
-          const transcripts = await db.transcripts.where("fileId").equals(parsedFileId).toArray();
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(parsedFileId)
+            .toArray();
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           if (transcript && typeof transcript.id === "number") {
@@ -251,7 +265,11 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           });
 
           // 更新字幕段，添加处理后的信息
-          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
+          for (
+            let i = 0;
+            i < segments.length && i < processedResult.segments.length;
+            i++
+          ) {
             const originalSegment = segments[i];
             const processedSegment = processedResult.segments[i];
 
@@ -261,7 +279,9 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
               .where("[transcriptId+start]")
               .equals([newTranscript.id, originalSegment.start])
               .modify((segment) => {
-                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
+                segment.romaji = (
+                  processedSegment as ProcessedTranscriptionSegment
+                )?.romaji;
                 segment.translation = (
                   processedSegment as ProcessedTranscriptionSegment
                 )?.translation;
@@ -281,7 +301,13 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
         console.log("⚠️ 没有segments数据，跳过后处理");
       }
     } catch (error) {
-      console.error("转录失败:", error);
+      // 统一错误处理
+      handleTranscriptionError(error, {
+        fileId: parsedFileId,
+        operation: "transcribe",
+        language: "ja",
+      });
+
       setTranscriptionProgress(0);
 
       // 转录失败后的恢复机制：允许用户重新触发自动转录
@@ -335,7 +361,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       const timer = setTimeout(() => {
         console.log("⏰ 延迟结束，开始执行转录");
         startTranscription();
-      }, 500); // 500ms延迟，让用户有准备时间
+      }, 2000); // 增加到2000ms延迟，减少频繁触发，提升用户体验
 
       return () => {
         console.log("🧹 清理转录定时器");
@@ -375,9 +401,17 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
             clearInterval(interval);
             return prev;
           }
-          return prev + 10;
+          const newProgress = prev + 10;
+
+          // 统一进度处理
+          handleTranscriptionProgress(newProgress, {
+            fileId: parsedFileId,
+            operation: "transcribe",
+          });
+
+          return newProgress;
         });
-      }, 500);
+      }, 1000); // 从500ms增加到1000ms，减少轮询频率
 
       return () => clearInterval(interval);
     } else if (transcript?.status === "completed") {

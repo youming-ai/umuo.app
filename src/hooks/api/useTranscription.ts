@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { db } from "@/lib/db/db";
+import {
+  handleTranscriptionError,
+  handleTranscriptionSuccess,
+} from "@/lib/utils/transcription-error-handler";
 
 // 转录响应类型
 interface TranscriptionResponse {
@@ -25,8 +29,10 @@ interface TranscriptionResponse {
 // 查询转录状态的查询键
 export const transcriptionKeys = {
   all: ["transcription"] as const,
-  forFile: (fileId: number) => [...transcriptionKeys.all, "file", fileId] as const,
-  progress: (fileId: number) => [...transcriptionKeys.forFile(fileId), "progress"] as const,
+  forFile: (fileId: number) =>
+    [...transcriptionKeys.all, "file", fileId] as const,
+  progress: (fileId: number) =>
+    [...transcriptionKeys.forFile(fileId), "progress"] as const,
 };
 
 // 获取文件转录状态的查询 - 简化版本
@@ -34,11 +40,17 @@ export function useTranscriptionStatus(fileId: number) {
   return useQuery({
     queryKey: transcriptionKeys.forFile(fileId),
     queryFn: async () => {
-      const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+      const transcripts = await db.transcripts
+        .where("fileId")
+        .equals(fileId)
+        .toArray();
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
       if (transcript && typeof transcript.id === "number") {
-        const segments = await db.segments.where("transcriptId").equals(transcript.id).toArray();
+        const segments = await db.segments
+          .where("transcriptId")
+          .equals(transcript.id)
+          .toArray();
         return {
           transcript,
           segments,
@@ -50,8 +62,8 @@ export function useTranscriptionStatus(fileId: number) {
         segments: [],
       };
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes - 增加缓存时间以减少不必要的查询
-    gcTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes - 增加缓存时间减少网络请求
+    gcTime: 1000 * 60 * 30, // 30 minutes
   });
 }
 
@@ -91,7 +103,13 @@ export function useTranscription() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ fileId, language = "ja" }: { fileId: number; language?: string }) => {
+    mutationFn: async ({
+      fileId,
+      language = "ja",
+    }: {
+      fileId: number;
+      language?: string;
+    }) => {
       // 获取文件数据
       const file = await db.files.get(fileId);
       if (!file || !file.blob) {
@@ -103,7 +121,10 @@ export function useTranscription() {
       // 准备表单数据
       const formData = new FormData();
       formData.append("audio", file.blob, file.name);
-      formData.append("meta", JSON.stringify({ fileId: file.id?.toString() || "" }));
+      formData.append(
+        "meta",
+        JSON.stringify({ fileId: file.id?.toString() || "" }),
+      );
 
       try {
         // 调用服务器端 API 路由
@@ -115,10 +136,13 @@ export function useTranscription() {
           fileSize: file.size,
         });
 
-        const response = await fetch(`/api/transcribe?fileId=${fileId}&language=${language}`, {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetch(
+          `/api/transcribe?fileId=${fileId}&language=${language}`,
+          {
+            method: "POST",
+            body: formData,
+          },
+        );
 
         console.log("📡 API 响应状态:", {
           status: response.status,
@@ -130,7 +154,8 @@ export function useTranscription() {
           const errorData = await response.json().catch(() => ({}));
           console.error("❌ API 错误响应:", errorData);
           throw new Error(
-            errorData.message || `转录失败: ${response.statusText} (${response.status})`,
+            errorData.message ||
+              `转录失败: ${response.statusText} (${response.status})`,
           );
         }
 
@@ -145,32 +170,35 @@ export function useTranscription() {
 
         return result.data;
       } catch (error) {
-        console.error("❌ 转录失败:", error);
+        handleTranscriptionError(error, {
+          fileId,
+          operation: "transcribe",
+          language,
+        });
         throw error;
       }
     },
     onSuccess: (_result, variables) => {
       // 转录完成并保存
+      handleTranscriptionSuccess({
+        fileId: variables.fileId,
+        operation: "transcribe",
+        language: variables.language,
+      });
 
-      // 使查询缓存失效，触发重新查询
+      // 使查询缓存失效，触发重新查询 - 优化缓存策略
       queryClient.invalidateQueries({
         queryKey: transcriptionKeys.forFile(variables.fileId),
       });
-
-      // 显示成功通知
-      import("sonner").then(({ toast }) => {
-        toast.success("转录完成");
-      });
     },
     onError: (error, variables) => {
-      console.error("❌ 转录失败:", error);
-
-      // 显示错误通知
-      import("sonner").then(({ toast }) => {
-        toast.error(`转录失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      handleTranscriptionError(error, {
+        fileId: variables.fileId,
+        operation: "transcribe",
+        language: variables.language,
       });
 
-      // 刷新查询状态
+      // 刷新查询状态 - 合并缓存失效调用，减少网络请求
       queryClient.invalidateQueries({
         queryKey: transcriptionKeys.forFile(variables.fileId),
       });
