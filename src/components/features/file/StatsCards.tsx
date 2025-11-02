@@ -1,6 +1,7 @@
 "use client";
 
 import { useFiles } from "@/hooks";
+import { FileStatus } from "@/types/db/database";
 
 interface StatsCardsProps {
   className?: string;
@@ -24,6 +25,16 @@ export default function StatsCards({ className }: StatsCardsProps) {
     return `${minutes}m`;
   };
 
+  // 计算当前状态
+  const getProcessingStatus = () => {
+    if (!files || files.length === 0) return "空闲";
+
+    const processingFiles = files.filter((file) => file.status === FileStatus.TRANSCRIBING);
+
+    if (processingFiles.length > 0) return "转录中";
+    return "空闲";
+  };
+
   // 统计卡片数据
   const stats = [
     {
@@ -36,16 +47,18 @@ export default function StatsCards({ className }: StatsCardsProps) {
       value: formatDuration(totalDuration),
       icon: "schedule",
     },
+    {
+      label: "当前状态",
+      value: getProcessingStatus(),
+      icon: "status",
+    },
   ];
 
   return (
-    <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 mb-8 ${className}`}>
+    <div className={`grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8 ${className}`}>
       {stats.map((stat) => (
-        <div key={stat.label} className="stats-card">
-          <div className="flex items-center justify-between">
-            <p className="text-stats-label">{stat.label}</p>
-            <span className="material-symbols-outlined text-3xl text-gray-400">{stat.icon}</span>
-          </div>
+        <div key={stat.label} className="card-default">
+          <p className="text-stats-label">{stat.label}</p>
           <p className="text-stats-value">{stat.value}</p>
         </div>
       ))}

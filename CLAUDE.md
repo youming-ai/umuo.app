@@ -17,9 +17,10 @@ umuo.app is a language learning application focused on shadowing practice with A
 - **Database**: IndexedDB via Dexie (client-side)
 
 ### AI Integration
-- **Primary**: AI SDK with Groq provider (Whisper-large-v3-turbo for transcription)
-- **Text Processing**: AI SDK + Groq models for text normalization and enhancement
+- **Primary**: Groq SDK (direct integration, not via AI SDK) with Whisper-large-v3-turbo for transcription
+- **Text Processing**: Groq SDK for text normalization and enhancement via `/api/postprocess`
 - **Processing**: Server-side API routes with client-side state management
+- **Migration**: Recently migrated from AI SDK to direct Groq SDK for simplified integration and better performance
 
 ### Data Flow
 ```
@@ -48,20 +49,12 @@ pnpm lint             # Run Biome.js linter
 pnpm format           # Format code with Biome.js
 pnpm type-check       # TypeScript type checking
 
-# Testing
-pnpm test             # Run Vitest tests
-pnpm test:ui          # Run Vitest with UI
-pnpm test:coverage    # Run tests with coverage report
-pnpm test:security    # Run security audit
-pnpm test:performance # Run Lighthouse performance audit
-
 # Deployment (Vercel)
 pnpm deploy           # Build and deploy to production
-pnpm deploy:prod      # Build and deploy to production
 pnpm deploy:preview   # Build and deploy to preview
 
-# CI/Quality Pipeline
-pnpm ci:build         # Complete CI pipeline (install, security, lint, type-check, build)
+# CI/Quality Pipeline  
+pnpm ci:build         # Complete CI pipeline (install, lint, type-check, build)
 ```
 
 ## Key Directories
@@ -76,11 +69,16 @@ pnpm ci:build         # Complete CI pipeline (install, security, lint, type-chec
 ## Database Schema
 
 The application uses Dexie (IndexedDB) with the following main tables:
-- `files` - Audio file metadata and storage
+- `files` - Audio file metadata and storage with blob data
 - `transcripts` - Transcription status and metadata
-- `segments` - Time-coded transcript segments with word timestamps
+- `segments` - Time-coded transcript segments with word timestamps, normalized text, translations, and annotations
 
-**Database Version**: Currently at version 3 with migration support for word timestamps and enhanced metadata.
+**Database Version**: Currently at version 3 with migration support for:
+- Enhanced transcription features (normalizedText, translation, annotations, furigana)
+- Word timestamps for precise playback synchronization
+- Comprehensive indexing for performance optimization
+
+**Database Utilities**: Simplified DBUtils class with batch processing support for large segment datasets
 
 ## API Routes Structure
 
@@ -97,8 +95,9 @@ The application uses Dexie (IndexedDB) with the following main tables:
 
 ### File Management
 - `FileUpload` - Drag-and-drop file upload with validation
-- `FileList` - Grid/list view of uploaded files
+- `FileManager` - Simplified file management with search, filtering, and sorting (removed grid/list view toggle)
 - `FileCard` - Individual file display with real-time transcription status
+- `useFileList` - Custom hook for file filtering, sorting, and selection state management
 
 ### Data Management Components
 - `QueryProvider` - TanStack Query provider with caching configuration
@@ -118,8 +117,12 @@ export const transcriptionKeys = {
 ### Key Hooks
 - `useTranscriptionStatus(fileId)` - Query transcription status for a file
 - `useTranscription()` - Mutation for starting transcription
-- `usePlayerDataQuery(fileId)` - Complete player data management
+- `usePlayerDataQuery(fileId)` - Complete player data management with auto-transcription
 - `useTranscriptionSummary(fileIds)` - Batch status for multiple files
+- `useFiles()` - Unified file management with real-time updates
+- `useFileStatus(fileId)` - Individual file status management
+- `useFileList()` - Advanced file filtering, sorting, and selection
+- `useFileStatusManager(fileId)` - File status operations and transcription control
 
 ### Automatic Transcription Flow
 1. User navigates to player page
@@ -194,8 +197,8 @@ TRANSCRIPTION_MAX_CONCURRENCY=2          # Concurrent processing
 
 ## Deployment & CI
 
-### Vercel Deployment
-The application is configured for deployment on Vercel:
+### Vercel Deployment (Recent Migration from Cloudflare Pages)
+The application has been migrated from Cloudflare Pages to Vercel deployment for better performance and developer experience:
 
 ```bash
 # Deploy to production
@@ -208,13 +211,18 @@ pnpm deploy:preview   # Build and deploy to preview
 pnpm build && vercel --prod
 ```
 
+**Vercel Configuration**:
+- Regions: Hong Kong, Singapore, San Francisco for global coverage
+- Function timeout: 30 seconds for API routes
+- Optimized caching headers for static assets and API endpoints
+- Automatic HTTPS and CDN distribution
+
 ### CI Pipeline
 The `ci:build` command runs the complete quality assurance pipeline:
 1. **Dependency Installation**: `pnpm install --frozen-lockfile`
-2. **Security Audit**: `pnpm audit --audit-level high`
-3. **Code Quality**: `pnpm lint` (Biome.js checks)
-4. **Type Safety**: `pnpm type-check` (TypeScript compilation)
-5. **Build Validation**: `pnpm build` (Production build)
+2. **Code Quality**: `pnpm lint` (Biome.js checks)
+3. **Type Safety**: `pnpm type-check` (TypeScript compilation)
+4. **Build Validation**: `pnpm build` (Production build)
 
 ### Build Configuration
 - **Next.js Config**: Optimized for Vercel deployment with serverless functions
@@ -230,14 +238,25 @@ The `ci:build` command runs the complete quality assurance pipeline:
 ## Styling System
 
 ### Design Tokens
-- Complete CSS custom properties system in `/src/app/globals.css`
-- Dark theme optimized with semantic color variables
+- Complete CSS custom properties system in `/src/styles/globals.css`
+- Comprehensive theme system with 4 distinct themes: Dark, Light, System, High Contrast
+- WCAG AA compliant color contrast ratios
 - Status-based color classes (`.status-success`, `.status-error`, etc.)
+
+### Theme Architecture
+- **Dark Theme**: Default dark mode with high contrast (AAA rating for primary text)
+- **Light Theme**: Clean light interface with optimal readability
+- **System Theme**: Automatically follows OS preference
+- **High Contrast Theme**: Enhanced contrast for accessibility
+- CSS custom properties with dynamic theme switching
+- Local storage persistence for theme preferences
+- Theme debugger available with `Ctrl+Shift+T`
 
 ### Component Styling
 - Tailwind CSS utility classes with custom design tokens
 - Consistent spacing and typography scales
 - Player-specific styling variables for audio interface
+- All shadcn/ui components are theme-aware
 
 ### Responsive Design
 - Mobile-first approach with Tailwind responsive breakpoints
@@ -255,15 +274,27 @@ The application includes intelligent auto-transcription:
 
 ## Testing and Quality Assurance
 
+**Note**: Test files have been removed from the project as of the latest cleanup. The codebase focuses on type safety and code quality through automated linting and formatting.
+
 ### Type Safety
 - Strict TypeScript configuration
 - Comprehensive type definitions in `/src/types/`
 - Zod schemas for API request/response validation
+- Repository pattern with TypeScript interfaces for data access
 
 ### Code Quality
 - Biome.js for linting and formatting
 - Automatic import sorting and cleanup
 - Consistent code style across the codebase
+- Comprehensive error handling with unified error utilities
+
+### Recent Cleanup and Optimization
+- **Migration to Groq SDK**: Simplified AI integration by removing AI SDK abstraction layer
+- **File Management Simplification**: Removed grid/list view toggle, implemented unified FileManager component
+- **Repository Pattern**: Implemented clean data access layer with base repository and factory pattern
+- **Memory Management**: Added WeakMap for audio URL caching to prevent memory leaks
+- **State Management Optimization**: Consolidated transcription hooks and removed redundant state management
+- **Performance Optimization**: Streamlined database operations and improved indexing
 
 ## Theme System & Debugging
 

@@ -1,11 +1,10 @@
 /**
- * 统一的转录服务 - 基于 AI SDK 的简化版本
+ * 统一的转录服务 - 基于 Groq SDK 的简化版本
  * 合并了 transcription-service.ts 和 transcription-service-ai-sdk.ts 的功能
- * 移除了复杂的音频分块处理，使用统一的 AI SDK 接口
+ * 移除了复杂的音频分块处理，使用统一的 Groq SDK 接口
  */
 
-import { groq } from "@ai-sdk/groq";
-import { experimental_transcribe as transcribe } from "ai";
+import Groq from "groq-sdk";
 
 export interface TranscriptionOptions {
   language?: string;
@@ -52,7 +51,7 @@ export async function transcribeAudio(
     await updateTranscriptionProgress(fileId, 30, "开始转录处理...", "processing", options);
 
     // 使用 AI SDK 进行转录
-    const result = await transcribeWithAISDK(fileRecord, options);
+    const result = await transcribeWithGroqSDK(fileRecord, options);
 
     // 保存结果
     await updateTranscriptionProgress(fileId, 90, "保存转录结果...", "processing", options);
@@ -77,9 +76,9 @@ export async function transcribeAudio(
 }
 
 /**
- * AI SDK 转录实现 - 简化版本
+ * Groq SDK 转录实现 - 简化版本
  */
-async function transcribeWithAISDK(
+async function transcribeWithGroqSDK(
   fileRecord: import("@/types/db/database").FileRow,
   options: TranscriptionOptions,
 ): Promise<TranscriptionResult> {
@@ -95,46 +94,61 @@ async function transcribeWithAISDK(
     options,
   );
 
-  // 将 File 转换为 Uint8Array
+  // 检查 API 密钥
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("Groq API 密钥未配置");
+  }
+
+  // 初始化 Groq 客户端
+  const groq = new Groq({ apiKey });
+
+  // 检查文件数据
   if (!fileRecord.blob) {
     throw new Error("文件数据不存在");
   }
-  const arrayBuffer = await fileRecord.blob.arrayBuffer();
-  const audioData = new Uint8Array(arrayBuffer);
 
-  const transcript = await transcribe({
-    model: groq.transcription("whisper-large-v3-turbo"),
-    audio: audioData,
-    providerOptions: {
-      groq: {
-        language: options.language || "auto",
-        temperature: 0,
-        response_format: "verbose_json",
-        timestamp_granularities: ["word", "segment"],
-      },
-    },
+  // 将 Blob 转换为 File 对象
+  const file = new File([fileRecord.blob], fileRecord.name, {
+    type: fileRecord.type,
+    lastModified: fileRecord.uploadedAt.getTime(),
+  });
+
+  const transcription = await groq.audio.transcriptions.create({
+    file: file, // 使用转换后的 File 对象
+    model: "whisper-large-v3-turbo",
+    temperature: 0,
+    response_format: "verbose_json",
+    language: options.language === "auto" ? undefined : options.language,
+    timestamp_granularities: ["word", "segment"],
   });
 
   // 处理转录结果 - 简化逻辑
+  const transcriptionData = transcription as any;
   let processedSegments: TranscriptionResult["segments"] = [];
 
-  if (Array.isArray(transcript.segments) && transcript.segments.length > 0) {
-    processedSegments = transcript.segments.map((segment: any, index: number) => ({
-      start: segment.start || segment.timestamp?.[0] || 0,
-      end: segment.end || segment.timestamp?.[1] || 0,
-      text: segment.text || segment.word || "",
-      wordTimestamps: segment.words || [],
-      confidence: segment.confidence,
+  if (transcriptionData.segments && transcriptionData.segments.length > 0) {
+    processedSegments = transcriptionData.segments.map((segment: any, index: number) => ({
+      start: segment.start || 0,
+      end: segment.end || 0,
+      text: segment.text || "",
+      wordTimestamps:
+        segment.words?.map((word: any) => ({
+          word: word.word,
+          start: word.start,
+          end: word.end,
+        })) || [],
+      confidence: segment.confidence || 0.95,
       id: segment.id || index + 1,
     }));
-  } else if (transcript.text) {
+  } else if (transcription.text) {
     // 生成基本的segments - 简化逻辑
-    const sentences = transcript.text
+    const sentences = transcription.text
       .split(/[。！？.!?]+/)
       .filter((s: string) => s.trim().length > 0);
     const avgWordsPerSecond = 2.5;
     const totalDuration =
-      transcript.durationInSeconds || transcript.text.length / avgWordsPerSecond;
+      transcriptionData.duration || transcription.text.length / avgWordsPerSecond;
 
     processedSegments = sentences.map((sentence: string, index: number) => {
       const words = sentence.trim().split(/\s+/);
@@ -159,9 +173,9 @@ async function transcribeWithAISDK(
   }
 
   return {
-    text: transcript.text || "",
-    language: transcript.language || options.language || "auto",
-    duration: transcript.durationInSeconds,
+    text: transcription.text || "",
+    language: transcriptionData.language || options.language || "auto",
+    duration: transcriptionData.duration,
     segments: processedSegments,
   };
 }

@@ -6,29 +6,26 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const progressRingVariants = cva(
-  "relative inline-flex items-center justify-center",
-  {
-    variants: {
-      size: {
-        xs: "h-8 w-8",
-        sm: "h-10 w-10",
-        md: "h-12 w-12",
-        lg: "h-16 w-16",
-        xl: "h-20 w-20",
-      },
-      thickness: {
-        thin: "stroke-1",
-        normal: "stroke-2",
-        thick: "stroke-3",
-      },
+const progressRingVariants = cva("relative inline-flex items-center justify-center", {
+  variants: {
+    size: {
+      xs: "h-8 w-8",
+      sm: "h-10 w-10",
+      md: "h-12 w-12",
+      lg: "h-16 w-16",
+      xl: "h-20 w-20",
     },
-    defaultVariants: {
-      size: "md",
-      thickness: "normal",
+    thickness: {
+      thin: "stroke-1",
+      normal: "stroke-2",
+      thick: "stroke-3",
     },
-  }
-);
+  },
+  defaultVariants: {
+    size: "md",
+    thickness: "normal",
+  },
+});
 
 export interface ProgressRingProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -53,19 +50,17 @@ export function ProgressRing({
   color = "currentColor",
   ...props
 }: ProgressRingProps) {
-  const radius = size === "xs" ? 12 : size === "sm" ? 16 : size === "md" ? 20 : size === "lg" ? 28 : 36;
+  const radius =
+    size === "xs" ? 12 : size === "sm" ? 16 : size === "md" ? 20 : size === "lg" ? 28 : 36;
   const circumference = 2 * Math.PI * radius;
   const progress = (value / max) * 100;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
-  const actualStrokeWidth = strokeWidth || (thickness === "thin" ? 2 : thickness === "thick" ? 4 : 3);
+  const actualStrokeWidth =
+    strokeWidth || (thickness === "thin" ? 2 : thickness === "thick" ? 4 : 3);
 
   return (
     <div className={cn(progressRingVariants({ size, thickness }), className)} {...props}>
-      <svg
-        className="transform -rotate-90"
-        width={radius * 2}
-        height={radius * 2}
-      >
+      <svg className="transform -rotate-90" width={radius * 2} height={radius * 2}>
         {/* 背景圆环 */}
         <circle
           cx={radius}

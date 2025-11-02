@@ -28,7 +28,7 @@ const loadingSpinnerVariants = cva(
       size: "md",
       variant: "default",
     },
-  }
+  },
 );
 
 export interface LoadingSpinnerProps

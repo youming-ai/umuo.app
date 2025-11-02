@@ -29,10 +29,8 @@ interface TranscriptionResponse {
 // 查询转录状态的查询键
 export const transcriptionKeys = {
   all: ["transcription"] as const,
-  forFile: (fileId: number) =>
-    [...transcriptionKeys.all, "file", fileId] as const,
-  progress: (fileId: number) =>
-    [...transcriptionKeys.forFile(fileId), "progress"] as const,
+  forFile: (fileId: number) => [...transcriptionKeys.all, "file", fileId] as const,
+  progress: (fileId: number) => [...transcriptionKeys.forFile(fileId), "progress"] as const,
 };
 
 // 获取文件转录状态的查询 - 简化版本
@@ -40,17 +38,11 @@ export function useTranscriptionStatus(fileId: number) {
   return useQuery({
     queryKey: transcriptionKeys.forFile(fileId),
     queryFn: async () => {
-      const transcripts = await db.transcripts
-        .where("fileId")
-        .equals(fileId)
-        .toArray();
+      const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
       if (transcript && typeof transcript.id === "number") {
-        const segments = await db.segments
-          .where("transcriptId")
-          .equals(transcript.id)
-          .toArray();
+        const segments = await db.segments.where("transcriptId").equals(transcript.id).toArray();
         return {
           transcript,
           segments,
@@ -103,13 +95,7 @@ export function useTranscription() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      fileId,
-      language = "ja",
-    }: {
-      fileId: number;
-      language?: string;
-    }) => {
+    mutationFn: async ({ fileId, language = "ja" }: { fileId: number; language?: string }) => {
       // 获取文件数据
       const file = await db.files.get(fileId);
       if (!file || !file.blob) {
@@ -121,10 +107,7 @@ export function useTranscription() {
       // 准备表单数据
       const formData = new FormData();
       formData.append("audio", file.blob, file.name);
-      formData.append(
-        "meta",
-        JSON.stringify({ fileId: file.id?.toString() || "" }),
-      );
+      formData.append("meta", JSON.stringify({ fileId: file.id?.toString() || "" }));
 
       try {
         // 调用服务器端 API 路由
@@ -136,13 +119,10 @@ export function useTranscription() {
           fileSize: file.size,
         });
 
-        const response = await fetch(
-          `/api/transcribe?fileId=${fileId}&language=${language}`,
-          {
-            method: "POST",
-            body: formData,
-          },
-        );
+        const response = await fetch(`/api/transcribe?fileId=${fileId}&language=${language}`, {
+          method: "POST",
+          body: formData,
+        });
 
         console.log("📡 API 响应状态:", {
           status: response.status,
@@ -154,8 +134,7 @@ export function useTranscription() {
           const errorData = await response.json().catch(() => ({}));
           console.error("❌ API 错误响应:", errorData);
           throw new Error(
-            errorData.message ||
-              `转录失败: ${response.statusText} (${response.status})`,
+            errorData.message || `转录失败: ${response.statusText} (${response.status})`,
           );
         }
 

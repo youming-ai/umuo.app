@@ -116,7 +116,7 @@ export default function FileUpload({
         />
 
         <span
-          className="material-symbols-outlined text-6xl text-[var(--text-color)]"
+          className="material-symbols-outlined text-6xl text-[var(--state-success-text)]"
           aria-hidden="true"
         >
           cloud_upload
@@ -126,14 +126,7 @@ export default function FileUpload({
           <p className="text-xl font-bold text-[var(--text-primary)]" id={uploadDescriptionId}>
             {currentFileCount >= maxFiles ? "已达到文件数量上限" : "拖拽文件到这里"}
           </p>
-          <p className="text-sm text-[var(--text-muted)]">
-            {currentFileCount >= maxFiles
-              ? `最多支持 ${maxFiles} 个文件`
-              : `支持 MP3、WAV、M4A、OGG、FLAC 格式 (${currentFileCount}/${maxFiles})`}
-          </p>
-          {currentFileCount < maxFiles && remainingSlots > 0 && (
-            <p className="text-xs text-[var(--text-muted)]">还可添加 {remainingSlots} 个文件</p>
-          )}
+          <p className="text-md text-[var(--text-secondary)]">或者</p>
         </div>
 
         <button
@@ -145,6 +138,17 @@ export default function FileUpload({
         >
           <span>{currentFileCount >= maxFiles ? "已达到上限" : "选择文件"}</span>
         </button>
+
+        <div className="flex flex-col items-center gap-1 mt-4">
+          <p className="text-sm text-[var(--text-muted)]">
+            {currentFileCount >= maxFiles
+              ? `最多支持 ${maxFiles} 个文件`
+              : `支持 MP3、WAV、M4A、OGG、FLAC 格式`}
+          </p>
+          {currentFileCount < maxFiles && remainingSlots > 0 && (
+            <p className="text-xs text-[var(--text-muted)]">还可添加 {remainingSlots} 个文件</p>
+          )}
+        </div>
       </section>
 
       {/* 上传进度指示器 */}

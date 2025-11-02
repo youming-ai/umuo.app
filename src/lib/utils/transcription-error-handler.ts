@@ -16,10 +16,7 @@ export interface TranscriptionErrorContext {
 /**
  * 统一的转录错误处理函数
  */
-export function handleTranscriptionError(
-  error: unknown,
-  context: TranscriptionErrorContext,
-): void {
+export function handleTranscriptionError(error: unknown, context: TranscriptionErrorContext): void {
   const errorMessage = error instanceof Error ? error.message : "未知错误";
   const { fileId, fileName, operation } = context;
 
@@ -73,11 +70,7 @@ function buildDetailedErrorMessage(
 ): string {
   const { fileId, fileName, operation } = context;
   const operationText =
-    operation === "transcribe"
-      ? "转录"
-      : operation === "postprocess"
-        ? "后处理"
-        : "数据获取";
+    operation === "transcribe" ? "转录" : operation === "postprocess" ? "后处理" : "数据获取";
 
   let message = `${operationText}失败: ${baseMessage}`;
 
@@ -95,10 +88,7 @@ function buildDetailedErrorMessage(
 /**
  * 获取用户友好的错误消息
  */
-function getUserFriendlyErrorMessage(
-  baseMessage: string,
-  operation: string,
-): string {
+function getUserFriendlyErrorMessage(baseMessage: string, operation: string): string {
   // 常见错误映射
   const commonErrors: Record<string, string> = {
     network: "网络连接失败，请检查网络连接后重试",
@@ -122,11 +112,7 @@ function getUserFriendlyErrorMessage(
 
   // 根据操作类型返回默认消息
   const operationText =
-    operation === "transcribe"
-      ? "转录"
-      : operation === "postprocess"
-        ? "文本处理"
-        : "数据处理";
+    operation === "transcribe" ? "转录" : operation === "postprocess" ? "文本处理" : "数据处理";
 
   return `${operationText}失败: ${baseMessage}`;
 }
@@ -143,11 +129,7 @@ export function handleTranscriptionSuccess(
   const { fileId, fileName, operation, duration, textLength } = context;
 
   const operationText =
-    operation === "transcribe"
-      ? "转录"
-      : operation === "postprocess"
-        ? "后处理"
-        : "处理";
+    operation === "transcribe" ? "转录" : operation === "postprocess" ? "后处理" : "处理";
 
   let successMessage = `${operationText}完成`;
 
@@ -184,11 +166,7 @@ export function handleTranscriptionProgress(
   if (process.env.NODE_ENV === "development") {
     const { fileId, fileName, operation } = context;
     const operationText =
-      operation === "transcribe"
-        ? "转录"
-        : operation === "postprocess"
-          ? "后处理"
-          : "处理";
+      operation === "transcribe" ? "转录" : operation === "postprocess" ? "后处理" : "处理";
 
     console.log(`📊 ${operationText}进度: ${progress}%`, { fileId, fileName });
   }

@@ -1,6 +1,5 @@
 "use client";
 
-import { Contrast, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/layout/contexts/ThemeContext";
 
 // 导航栏主题切换按钮（只显示图标）
@@ -9,22 +8,17 @@ export function ThemeToggleIcon() {
 
   const getIcon = () => {
     if (theme === "system") {
-      return <Monitor className="h-5 w-5" />;
+      return "desktop_windows";
     }
     if (theme === "high-contrast") {
-      return <Contrast className="h-5 w-5" />;
+      return "contrast";
     }
-    return theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
+    return theme === "dark" ? "dark_mode" : "light_mode";
   };
 
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      className="inline-flex items-center justify-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      title="切换主题"
-    >
-      {getIcon()}
+    <button type="button" onClick={toggleTheme} className="nav-button" title="切换主题">
+      <span className="material-symbols-outlined text-3xl">{getIcon()}</span>
       <span className="sr-only">切换主题</span>
     </button>
   );

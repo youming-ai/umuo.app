@@ -5,9 +5,9 @@
 
 "use client";
 
-import { Grid, List, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import React, { useCallback, useState } from "react";
-import { Button } from "@/components/ui/button";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,7 +31,6 @@ interface FileManagerProps {
 export default function FileManager({ className }: FileManagerProps) {
   // 基础状态
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "date" | "size">("date");
   const [filterBy, setFilterBy] = useState<
     "all" | "transcribed" | "untranscribed"
@@ -224,62 +223,41 @@ export default function FileManager({ className }: FileManagerProps) {
             <SelectItem value="size">按大小</SelectItem>
           </SelectContent>
         </Select>
-
-        {/* 视图切换 */}
-        <div className="flex border rounded-md">
-          <Button
-            size="sm"
-            variant={viewMode === "grid" ? "default" : "ghost"}
-            onClick={() => setViewMode("grid")}
-            className="rounded-r-none"
-          >
-            <Grid className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === "list" ? "default" : "ghost"}
-            onClick={() => setViewMode("list")}
-            className="rounded-l-none"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
       {/* 文件列表 */}
-      <div className="space-y-4">
-        {filteredFiles.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="text-6xl mb-4">🎵</div>
-              <h3 className="text-lg font-semibold mb-2">
-                {searchQuery ? "没有找到匹配的文件" : "还没有上传任何文件"}
-              </h3>
-              <p className="text-muted-foreground text-center mb-4">
-                {searchQuery
-                  ? "尝试调整搜索条件或过滤器"
-                  : "上传音频文件开始使用转录功能"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                : "space-y-4"
-            }
-          >
-            {filteredFiles.map((file) => (
-              <FileCardWrapper
-                key={file.id}
-                file={file}
-                onPlay={handlePlayFile}
-                onDelete={handleDeleteFile}
-              />
-            ))}
-          </div>
-        )}
+      <div>
+        <h2 className="text-2xl font-bold mb-4 text-[var(--text-primary)]">
+          文件列表
+        </h2>
+        <div className="space-y-4">
+          {filteredFiles.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <div className="text-6xl mb-4">🎵</div>
+                <h3 className="text-lg font-semibold mb-2">
+                  {searchQuery ? "没有找到匹配的文件" : "还没有上传任何文件"}
+                </h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  {searchQuery
+                    ? "尝试调整搜索条件或过滤器"
+                    : "上传音频文件开始使用转录功能"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {filteredFiles.map((file) => (
+                <FileCardWrapper
+                  key={file.id}
+                  file={file}
+                  onPlay={handlePlayFile}
+                  onDelete={handleDeleteFile}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -299,9 +277,7 @@ function FileCardWrapper({
 }) {
   // Hooks must be called before any early returns - 添加空值检查
   const { data: statusData, isLoading } = useFileStatus(file.id || 0);
-  const { startTranscription, isTranscribing } = useFileStatusManager(
-    file.id || 0,
-  );
+  const { startTranscription } = useFileStatusManager(file.id || 0);
 
   // 优雅地处理可能缺失的 file.id
   if (!file.id) {
@@ -341,7 +317,6 @@ function FileCardWrapper({
       onPlay={onPlay}
       onDelete={onDelete}
       onTranscribe={startTranscription}
-      transcriptionProgress={isTranscribing ? 50 : undefined} // 简化的进度显示
     />
   );
 }

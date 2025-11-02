@@ -43,15 +43,17 @@ export async function POST(request: NextRequest) {
       performanceStore.set(dateKey, []);
     }
 
-    const dailyData = performanceStore.get(dateKey)!;
-    dailyData.push({
-      ...data,
-      receivedAt: Date.now(),
-    });
+    const dailyData = performanceStore.get(dateKey);
+    if (dailyData) {
+      dailyData.push({
+        ...data,
+        receivedAt: Date.now(),
+      });
 
-    // 保持最近1000条记录
-    if (dailyData.length > 1000) {
-      dailyData.splice(0, dailyData.length - 1000);
+      // 保持最近1000条记录
+      if (dailyData.length > 1000) {
+        dailyData.splice(0, dailyData.length - 1000);
+      }
     }
 
     // 检测性能问题
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     if (sessionId) {
       // 获取特定会话的数据
-      for (const [dateKey, dailyData] of performanceStore.entries()) {
+      for (const [, dailyData] of performanceStore.entries()) {
         const sessionData = dailyData.filter(
           (item) => item.sessionId === sessionId,
         );
@@ -271,7 +273,7 @@ function calculateAverageSessionLength(data: any[]): number {
     if (!sessionLengths.has(sessionId)) {
       sessionLengths.set(sessionId, []);
     }
-    sessionLengths.get(sessionId)!.push(timestamp);
+    sessionLengths.get(sessionId)?.push(timestamp);
   });
 
   let totalLength = 0;

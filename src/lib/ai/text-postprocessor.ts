@@ -1,5 +1,4 @@
-import { groq } from "@ai-sdk/groq";
-import { generateText } from "ai";
+import Groq from "groq-sdk";
 
 interface PostProcessOptions {
   language?: string;
@@ -55,22 +54,31 @@ export async function postProcessText(
 文本内容：
 ${inputText}`;
 
-    // 使用 AI SDK 的 generateText 函数
-    const { text } = await generateText({
-      model: groq("openai/gpt-oss-20b"),
+    // 使用 Groq SDK 进行文本处理
+    const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const response = await groqClient.chat.completions.create({
+      model: "openai/gpt-oss-20b",
       temperature: 0.3,
-      system:
-        "你是一个专业的日语文本处理助手，专门为日语学习材料添加罗马音和中文翻译。请严格按照JSON格式返回结果。",
-      prompt,
-      maxRetries: 1,
+      messages: [
+        {
+          role: "system",
+          content:
+            "你是一个专业的日语文本处理助手，专门为日语学习材料添加罗马音和中文翻译。请严格按照JSON格式返回结果。",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
     });
 
-    if (!text) {
+    const responseText = response.choices[0]?.message?.content;
+    if (!responseText) {
       throw new Error("未收到有效的响应内容");
     }
 
     try {
-      const result = JSON.parse(text);
+      const result = JSON.parse(responseText);
       return {
         originalText: inputText,
         processedText: inputText,

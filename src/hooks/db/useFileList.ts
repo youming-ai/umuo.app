@@ -1,9 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import type {
-  FileRow,
-  ProcessingStatus,
-  TranscriptRow,
-} from "@/types/db/database";
+import type { FileRow, ProcessingStatus, TranscriptRow } from "@/types/db/database";
 
 interface FileListState {
   selectedFiles: Set<number>;
@@ -41,10 +37,7 @@ interface UseFileListReturn {
   handleSort: (field: "name" | "size" | "duration" | "uploadedAt") => void;
 }
 
-export function useFileList({
-  files,
-  transcripts,
-}: UseFileListProps): UseFileListReturn {
+export function useFileList({ files, transcripts }: UseFileListProps): UseFileListReturn {
   const [state, setState] = useState<FileListState>({
     selectedFiles: new Set(),
     searchQuery: "",
@@ -83,10 +76,7 @@ export function useFileList({
 
       return files.filter((file) => {
         // 搜索过滤
-        if (
-          searchQuery &&
-          !file.name.toLowerCase().includes(searchQuery.toLowerCase())
-        ) {
+        if (searchQuery && !file.name.toLowerCase().includes(searchQuery.toLowerCase())) {
           return false;
         }
 
@@ -103,23 +93,20 @@ export function useFileList({
   );
 
   // 获取排序值
-  const getSortValue = useCallback(
-    (file: FileRow, sortBy: string): string | number => {
-      switch (sortBy) {
-        case "name":
-          return file.name.toLowerCase();
-        case "size":
-          return file.size;
-        case "duration":
-          return file.duration || 0;
-        case "uploadedAt":
-          return file.uploadedAt.getTime();
-        default:
-          return file.uploadedAt.getTime();
-      }
-    },
-    [],
-  );
+  const getSortValue = useCallback((file: FileRow, sortBy: string): string | number => {
+    switch (sortBy) {
+      case "name":
+        return file.name.toLowerCase();
+      case "size":
+        return file.size;
+      case "duration":
+        return file.duration || 0;
+      case "uploadedAt":
+        return file.uploadedAt.getTime();
+      default:
+        return file.uploadedAt.getTime();
+    }
+  }, []);
 
   // 简化的排序比较函数
   const compareValues = useCallback(
@@ -169,11 +156,7 @@ export function useFileList({
       "selectedFiles",
       state.selectedFiles.size === filteredAndSortedFiles.length
         ? new Set()
-        : new Set(
-            filteredAndSortedFiles
-              .map((file) => file.id)
-              .filter(Boolean) as number[],
-          ),
+        : new Set(filteredAndSortedFiles.map((file) => file.id).filter(Boolean) as number[]),
     );
   }, [state.selectedFiles.size, filteredAndSortedFiles, setStateField]);
 

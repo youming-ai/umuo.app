@@ -6,27 +6,21 @@ import Navigation from "@/components/ui/Navigation";
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative flex min-h-screen w-full flex-col">
       <Navigation />
 
-      <main className="container mx-auto px-4 py-8 mt-20">
-        <Suspense fallback={<PageLoadingState />}>
-          {/* 页面标题 */}
-          <div className="flex flex-col gap-6 mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold">文件管理</h1>
-                <p className="text-muted-foreground">管理您的音频文件和转录任务</p>
-              </div>
+      <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8 mt-24">
+        <div className="mx-auto max-w-5xl">
+          <Suspense fallback={<PageLoadingState />}>
+            {/* 统计卡片 */}
+            <div className="mb-8">
+              <StatsCards />
             </div>
 
-            {/* 统计卡片 */}
-            <StatsCards />
-          </div>
-
-          {/* 文件管理器 */}
-          <FileManager />
-        </Suspense>
+            {/* 文件管理器 */}
+            <FileManager />
+          </Suspense>
+        </div>
       </main>
     </div>
   );

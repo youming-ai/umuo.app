@@ -13,29 +13,18 @@ import type { FileRow, TranscriptRow } from "@/types/db/database";
 import { FileStatus } from "@/types/db/database";
 */
 
-// === 使用统一导入后的方式 ===
-import {
-  // 数据库
-  db,
-  type FileRow,
-  type TranscriptRow,
-  FileStatus,
-
-  // 错误处理
-  handleTranscriptionError,
-  logError,
-
-  // API
-  apiSuccess,
-
-  // 常量
-  API_ENDPOINTS,
-  SUPPORTED_AUDIO_FORMATS,
-  TRANSCRIPTION_LANGUAGES,
-} from "@/lib";
-
 // 手动导入复杂组件和钩子
 import { useTranscription } from "@/hooks/api/useTranscription";
+// === 使用统一导入后的方式 ===
+import {
+  // API
+  apiSuccess,
+  // 数据库
+  db,
+  // 错误处理
+  handleTranscriptionError,
+  TRANSCRIPTION_LANGUAGES,
+} from "@/lib";
 
 // === 使用示例 ===
 

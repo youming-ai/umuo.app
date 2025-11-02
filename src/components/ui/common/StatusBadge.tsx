@@ -37,7 +37,7 @@ const statusBadgeVariants = cva(
       status: "info",
       size: "md",
     },
-  }
+  },
 );
 
 export interface StatusBadgeProps
@@ -47,12 +47,16 @@ export interface StatusBadgeProps
   icon?: React.ReactNode;
 }
 
-export function StatusBadge({ className, status, size, icon, children, ...props }: StatusBadgeProps) {
+export function StatusBadge({
+  className,
+  status,
+  size,
+  icon,
+  children,
+  ...props
+}: StatusBadgeProps) {
   return (
-    <span
-      className={cn(statusBadgeVariants({ status, size }), className)}
-      {...props}
-    >
+    <span className={cn(statusBadgeVariants({ status, size }), className)} {...props}>
       {icon && <span className="mr-1">{icon}</span>}
       {children}
     </span>

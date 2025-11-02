@@ -6,27 +6,24 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const emptyStateVariants = cva(
-  "flex flex-col items-center justify-center p-8 text-center",
-  {
-    variants: {
-      variant: {
-        default: "text-muted-foreground",
-        subtle: "text-muted-foreground/70",
-        strong: "text-foreground",
-      },
-      size: {
-        sm: "p-4",
-        md: "p-8",
-        lg: "p-12",
-      },
+const emptyStateVariants = cva("flex flex-col items-center justify-center p-8 text-center", {
+  variants: {
+    variant: {
+      default: "text-muted-foreground",
+      subtle: "text-muted-foreground/70",
+      strong: "text-foreground",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "md",
+    size: {
+      sm: "p-4",
+      md: "p-8",
+      lg: "p-12",
     },
-  }
-);
+  },
+  defaultVariants: {
+    variant: "default",
+    size: "md",
+  },
+});
 
 export interface EmptyStateProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -49,27 +46,13 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className={cn(emptyStateVariants({ variant, size }), className)} {...props}>
-      {icon && (
-        <div className="mb-4 text-muted-foreground/50">
-          {icon}
-        </div>
-      )}
+      {icon && <div className="mb-4 text-muted-foreground/50">{icon}</div>}
 
-      <h3 className="text-lg font-medium mb-2">
-        {title}
-      </h3>
+      <h3 className="text-lg font-medium mb-2">{title}</h3>
 
-      {description && (
-        <p className="text-sm max-w-sm mb-6">
-          {description}
-        </p>
-      )}
+      {description && <p className="text-sm max-w-sm mb-6">{description}</p>}
 
-      {action && (
-        <div className="mt-4">
-          {action}
-        </div>
-      )}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

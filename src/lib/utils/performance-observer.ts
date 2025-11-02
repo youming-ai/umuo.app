@@ -99,9 +99,7 @@ export class PerformanceMonitor {
     }
 
     // FCP - 首次内容绘制
-    const fcpEntry = performance.getEntriesByName(
-      "first-contentful-paint",
-    )[0] as PerformanceEntry;
+    const fcpEntry = performance.getEntriesByName("first-contentful-paint")[0] as PerformanceEntry;
     if (fcpEntry) {
       this.metrics.fcp = fcpEntry.startTime;
     }
@@ -147,15 +145,10 @@ export class PerformanceMonitor {
 
   // 监控导航时间
   private observeNavigationTiming(): void {
-    const navigation = performance.getEntriesByType(
-      "navigation",
-    )[0] as PerformanceNavigationTiming;
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
     if (navigation) {
       // 可以计算更多导航相关指标
-      console.log(
-        "页面加载时间:",
-        navigation.loadEventEnd - navigation.fetchStart,
-      );
+      console.log("页面加载时间:", navigation.loadEventEnd - navigation.fetchStart);
     }
   }
 
@@ -301,9 +294,7 @@ export class PerformanceMonitor {
 let performanceMonitor: PerformanceMonitor | null = null;
 
 // 获取性能监控实例
-export function getPerformanceMonitor(
-  config?: Partial<PerformanceConfig>,
-): PerformanceMonitor {
+export function getPerformanceMonitor(config?: Partial<PerformanceConfig>): PerformanceMonitor {
   if (!performanceMonitor) {
     performanceMonitor = new PerformanceMonitor(config);
   }
@@ -345,7 +336,7 @@ export const performanceUtils = {
   },
 
   // 记录API响应时间
-  recordApiResponse: (endpoint: string, duration: number) => {
+  recordApiResponse: (_endpoint: string, duration: number) => {
     const monitor = getPerformanceMonitor();
     monitor.recordMetric("apiResponseTime", duration);
   },
