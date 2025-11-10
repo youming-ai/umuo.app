@@ -1,0 +1,78 @@
+/**
+ * Mobile utilities and optimizations
+ * Centralized exports for all mobile-specific functionality
+ */
+
+// Core mobile types
+export * from "@/types/mobile";
+
+// Touch optimization and gesture detection
+export * from "./gesture-detector";
+export * from "./gesture-recognizer";
+export * from "./touch-optimization";
+export * from "./touch-optimizer";
+
+// Haptic feedback
+export * from "./haptic-feedback";
+
+// Mobile performance optimizations
+export * from "./optimization";
+
+// Comprehensive Touch Feedback System (NEW)
+export * from "./touch-feedback";
+
+// Visual feedback components
+export * from "./visual-feedback";
+
+// Re-export commonly used classes and utilities
+export {
+  GestureDetector,
+  GestureProcessor,
+  useGestureDetector,
+  useTapGesture,
+  useSwipeGesture,
+  usePinchGesture,
+  useDragGesture,
+  createPlayerGestureConfig,
+  createUploadAreaGestureConfig,
+} from "./gesture-detector";
+
+export {
+  hapticFeedback,
+  useHapticFeedback,
+  HapticFeedbackManager,
+} from "./haptic-feedback";
+
+export {
+  MobileDetector,
+  TouchGestureDetector,
+  TouchOptimizationManager,
+  TouchOptimizer,
+} from "./touch-optimization";
+
+// Touch Feedback System Exports
+export {
+  TouchFeedbackManager,
+  MultiTouchManager,
+  AccessibilityManager,
+  PerformanceMonitor,
+  initializeTouchFeedbackSystem,
+  getTouchFeedbackSystemStatus,
+  enhanceElementWithTouchFeedback,
+  TouchFeedbackPresets,
+  quickSetup,
+  // React Hooks
+  useTouchFeedback,
+  useMultiTouch,
+  useTouchAccessibility,
+  // Visual Components
+  Ripple,
+  RippleContainer,
+  VisualResponsePatterns,
+  // Animation Utilities
+  TouchAnimationUtils,
+  animateTransform,
+  animateBounce,
+  animatePulse,
+  animateShake,
+} from "./touch-feedback";

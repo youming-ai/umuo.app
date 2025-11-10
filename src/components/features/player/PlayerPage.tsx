@@ -20,6 +20,8 @@ import type { Segment } from "@/types/db/database";
 
 export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   const router = useRouter();
+  // For now, use standard progress tracking
+  // In the future, this could be enhanced with user preferences or system capabilities
   const {
     file,
     segments,
@@ -31,7 +33,12 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     isTranscribing,
     transcriptionProgress,
     startTranscription,
-  } = usePlayerDataQuery(fileId);
+    enhancedProgress,
+    currentJobId,
+    hasEnhancedProgress,
+  } = usePlayerDataQuery(fileId, {
+    enableEnhancedProgress: false, // Set to true to enable enhanced progress tracking
+  });
 
   const {
     audioPlayerState,
@@ -54,12 +61,15 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   const [volume, setVolume] = useState(1);
   const subtitleContainerId = useId();
 
-  const sanitizeNumber = useCallback((value: number, fallback: number = 0): number => {
-    if (!Number.isFinite(value) || Number.isNaN(value)) {
-      return fallback;
-    }
-    return value;
-  }, []);
+  const sanitizeNumber = useCallback(
+    (value: number, fallback: number = 0): number => {
+      if (!Number.isFinite(value) || Number.isNaN(value)) {
+        return fallback;
+      }
+      return value;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (file && audioUrl) {
@@ -133,7 +143,10 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     };
 
     const handleEnded = () => {
-      const duration = sanitizeNumber(audio.duration, audioPlayerState.duration);
+      const duration = sanitizeNumber(
+        audio.duration,
+        audioPlayerState.duration,
+      );
       updatePlayerState({ isPlaying: false, currentTime: duration });
       onClearLoop();
     };
@@ -161,7 +174,13 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
-  }, [updatePlayerState, sanitizeNumber, file?.duration, audioPlayerState.duration, onClearLoop]);
+  }, [
+    updatePlayerState,
+    sanitizeNumber,
+    file?.duration,
+    audioPlayerState.duration,
+    onClearLoop,
+  ]);
 
   const handleSegmentClick = (segment: Segment) => {
     handleSeek(segment.start);
@@ -186,7 +205,14 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
         onPlay();
       }
     }
-  }, [audioPlayerState.isPlaying, onPause, onPlay, transcript, isTranscribing, startTranscription]);
+  }, [
+    audioPlayerState.isPlaying,
+    onPause,
+    onPlay,
+    transcript,
+    isTranscribing,
+    startTranscription,
+  ]);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
@@ -270,11 +296,19 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
         )}
 
         {!transcript && (
-          <PlayerNoTranscriptState onBack={handleBack} onStartTranscription={startTranscription} />
+          <PlayerNoTranscriptState
+            onBack={handleBack}
+            onStartTranscription={startTranscription}
+          />
         )}
       </PlayerPageLayout>
 
-      <audio ref={audioRef} src={audioUrl ?? undefined} preload="auto" className="hidden">
+      <audio
+        ref={audioRef}
+        src={audioUrl ?? undefined}
+        preload="auto"
+        className="hidden"
+      >
         <track kind="captions" />
       </audio>
     </>

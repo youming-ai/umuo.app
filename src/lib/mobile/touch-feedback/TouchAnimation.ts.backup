@@ -1,0 +1,683 @@
+/**
+ * Touch Animation Utilities
+ * Provides smooth GPU-accelerated animations optimized for mobile touch interactions
+ */
+
+export interface AnimationConfig {
+  duration?: number;
+  easing?: string;
+  delay?: number;
+  fill?: 'none' | 'forwards' | 'backwards' | 'both';
+  iterations?: number | 'infinite';
+  direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
+  enableGpuAcceleration?: boolean;
+  performanceMode?: 'quality' | 'balanced' | 'performance';
+}
+
+export interface TransformConfig {
+  scale?: number | { x: number; y: number };
+  translate?: { x: number; y: number; z?: number };
+  rotate?: number | { x: number; y: number; z: number };
+  skew?: { x: number; y: number };
+  origin?: string;
+}
+
+export interface VisualEffectConfig {
+  glow?: {
+    color: string;
+    intensity: number;
+    radius: number;
+  };
+  shadow?: {
+    color: string;
+    blur: number;
+    spread: number;
+    x: number;
+    y: number;
+  };
+  backgroundColor?: string;
+  borderColor?: string;
+  opacity?: number;
+}
+
+export interface TouchAnimationPreset {
+  name: string;
+  keyframes: Keyframe[];
+  config: AnimationConfig;
+}
+
+/**
+ * Performance-optimized animation utilities
+ */
+export class TouchAnimationUtils {
+  private static instance: TouchAnimationUtils;
+  private activeAnimations: WeakMap<Element, Set<Animation>> = new WeakMap();
+  private performanceMode: 'quality' | 'balanced' | 'performance' = 'balanced';
+  private reduceMotion = false;
+  private isLowEndDevice = false;
+
+  private constructor() {
+    this.initialize();
+  }
+
+  static getInstance(): TouchAnimationUtils {
+    if (!TouchAnimationUtils.instance) {
+      TouchAnimationUtils.instance = new TouchAnimationUtils();
+    }
+    return TouchAnimationUtils.instance;
+  }
+
+  /**
+   * Initialize animation utilities
+   */
+  private initialize(): void {
+    // Detect device capabilities
+    this.detectDeviceCapabilities();
+
+    // Check for reduced motion preference
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    this.reduceMotion = mediaQuery.matches;
+
+    mediaQuery.addEventListener('change', (e) => {
+      this.reduceMotion = e.matches;
+    });
+
+    // Set appropriate performance mode
+    this.performanceMode = this.isLowEndDevice ? 'performance' : 'balanced';
+  }
+
+  /**
+   * Detect device capabilities
+   */
+  private detectDeviceCapabilities(): void {
+    const deviceMemory = (navigator as any).deviceMemory || 4;
+    const hardwareConcurrency = navigator.hardwareConcurrency || 4;
+    const connection = (navigator as any).connection;
+
+    // Check if it's a low-end device
+    this.isLowEndDevice = (
+      deviceMemory < 3 ||
+      hardwareConcurrency < 4 ||
+      (connection && connection.effectiveType && connection.effectiveType.includes('2g'))
+    );
+  }
+
+  /**
+   * Create optimized animation keyframes
+   */
+  private createOptimizedKeyframes(
+    element: Element,
+    keyframes: Keyframe[],
+    config: AnimationConfig
+  ): Keyframe[] {
+    if (this.reduceMotion) {
+      // Reduce motion by simplifying animations
+      return keyframes.map((frame, index) => {
+        if (index === 0 || index === keyframes.length - 1) {
+          return frame;
+        }
+        // Skip intermediate frames for reduced motion
+        return { ...frame, offset: index === 1 ? 1 : undefined };
+      });
+    }
+
+    return keyframes;
+  }
+
+  /**
+   * Create optimized animation options
+   */
+  private createOptimizedOptions(config: AnimationConfig): KeyframeAnimationOptions {
+    const {
+      duration = this.performanceMode === 'performance' ? 150 : 300,
+      easing = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+      delay = 0,
+      fill = 'forwards',
+      iterations = 1,
+      direction = 'normal',
+      enableGpuAcceleration = true,
+    } = config;
+
+    return {
+      duration,
+      easing,
+      delay,
+      fill,
+      iterations,
+      direction,
+      composite: enableGpuAcceleration ? 'replace' : 'replace',
+    };
+  }
+
+  /**
+   * Apply GPU acceleration to element
+   */
+  private applyGpuAcceleration(element: HTMLElement): void {
+    if (this.performanceMode !== 'quality') {
+      element.style.willChange = 'transform, opacity';
+      element.style.transform = element.style.transform || 'translateZ(0)';
+    }
+  }
+
+  /**
+   * Remove GPU acceleration from element
+   */
+  private removeGpuAcceleration(element: HTMLElement): void {
+    const currentWillChange = element.style.willChange;
+    if (currentWillChange === 'transform, opacity' || currentWillChange === 'transform') {
+      element.style.willChange = 'auto';
+    }
+  }
+
+  /**
+   * Animate transform properties
+   */
+  public animateTransform(
+    element: HTMLElement,
+    transform: TransformConfig,
+    config: AnimationConfig = {}
+  ): Animation {
+    const {
+      scale = 1,
+      translate = { x: 0, y: 0, z: 0 },
+      rotate = 0,
+      skew = { x: 0, y: 0 },
+      origin = 'center',
+    } = transform;
+
+    // Apply transform origin
+    element.style.transformOrigin = origin;
+
+    // Apply GPU acceleration if enabled
+    if (config.enableGpuAcceleration !== false) {
+      this.applyGpuAcceleration(element);
+    }
+
+    // Create transform string
+    const createTransform = (progress: number): string => {
+      const currentScale = typeof scale === 'number' ? scale : scale.x;
+      const scaleY = typeof scale === 'number' ? scale : scale.y;
+      const currentTranslateZ = translate.z || 0;
+
+      return `
+        translate(${translate.x * progress}px, ${translate.y * progress}px)
+        translateZ(${currentTranslateZ * progress}px)
+        scale(${1 + (currentScale - 1) * progress}, ${1 + (scaleY - 1) * progress})
+        rotate(${(typeof rotate === 'number' ? rotate : rotate.z) * progress}deg)
+        skewX(${skew.x * progress}deg)
+        skewY(${skew.y * progress}deg)
+      `;
+    };
+
+    const keyframes = [
+      { transform: createTransform(0) },
+      { transform: createTransform(1) },
+    ];
+
+    const optimizedKeyframes = this.createOptimizedKeyframes(element, keyframes, config);
+    const options = this.createOptimizedOptions(config);
+
+    const animation = element.animate(optimizedKeyframes, options);
+    this.addAnimationToElement(element, animation);
+
+    // Clean up after animation
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+      if (config.enableGpuAcceleration !== false) {
+        this.removeGpuAcceleration(element);
+      }
+    };
+
+    return animation;
+  }
+
+  /**
+   * Animate visual effects
+   */
+  public animateVisualEffects(
+    element: HTMLElement,
+    effects: VisualEffectConfig,
+    config: AnimationConfig = {}
+  ): Animation {
+    const {
+      glow,
+      shadow,
+      backgroundColor,
+      borderColor,
+      opacity,
+    } = effects;
+
+    const startFrame: Keyframe = {};
+    const endFrame: Keyframe = {};
+
+    // Build keyframes
+    if (glow) {
+      startFrame.boxShadow = 'none';
+      endFrame.boxShadow = `0 0 ${glow.radius}px ${glow.color}`;
+    }
+
+    if (shadow) {
+      startFrame.boxShadow = startFrame.boxShadow || 'none';
+      endFrame.boxShadow = `${shadow.x}px ${shadow.y}px ${shadow.blur}px ${shadow.spread}px ${shadow.color}`;
+    }
+
+    if (backgroundColor) {
+      startFrame.backgroundColor = element.style.backgroundColor || 'transparent';
+      endFrame.backgroundColor = backgroundColor;
+    }
+
+    if (borderColor) {
+      startFrame.borderColor = element.style.borderColor || 'transparent';
+      endFrame.borderColor = borderColor;
+    }
+
+    if (opacity !== undefined) {
+      startFrame.opacity = element.style.opacity || '1';
+      endFrame.opacity = opacity.toString();
+    }
+
+    const keyframes = [startFrame, endFrame];
+    const optimizedKeyframes = this.createOptimizedKeyframes(element, keyframes, config);
+    const options = this.createOptimizedOptions(config);
+
+    const animation = element.animate(optimizedKeyframes, options);
+    this.addAnimationToElement(element, animation);
+
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+    };
+
+    return animation;
+  }
+
+  /**
+   * Combine transform and visual effects animation
+   */
+  public animateCombined(
+    element: HTMLElement,
+    transform: TransformConfig,
+    effects: VisualEffectConfig,
+    config: AnimationConfig = {}
+  ): Animation[] {
+    const transformAnimation = this.animateTransform(element, transform, config);
+    const effectsAnimation = this.animateVisualEffects(element, effects, config);
+
+    return [transformAnimation, effectsAnimation];
+  }
+
+  /**
+   * Create spring animation
+   */
+  public animateSpring(
+    element: HTMLElement,
+    target: TransformConfig,
+    tension = 300,
+    friction = 10,
+    config: AnimationConfig = {}
+  ): Animation {
+    // Use spring-like easing
+    const springEasing = `cubic-bezier(0.175, 0.885, ${0.32 - friction * 0.001}, ${1.275 + tension * 0.001})`;
+
+    return this.animateTransform(element, target, {
+      ...config,
+      easing: springEasing,
+    });
+  }
+
+  /**
+   * Create bounce animation
+   */
+  public animateBounce(
+    element: HTMLElement,
+    target: TransformConfig,
+    config: AnimationConfig = {}
+  ): Animation {
+    const bounceKeyframes: Keyframe[] = [
+      { transform: 'scale(1)' },
+      { transform: 'scale(1.2)', offset: 0.3 },
+      { transform: 'scale(0.9)', offset: 0.6 },
+      { transform: 'scale(1.05)', offset: 0.8 },
+      { transform: 'scale(1)' },
+    ];
+
+    const optimizedKeyframes = this.createOptimizedKeyframes(element, bounceKeyframes, config);
+    const options = this.createOptimizedOptions({
+      ...config,
+      easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+    });
+
+    const animation = element.animate(optimizedKeyframes, options);
+    this.addAnimationToElement(element, animation);
+
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+    };
+
+    return animation;
+  }
+
+  /**
+   * Create pulse animation
+   */
+  public animatePulse(
+    element: HTMLElement,
+    config: AnimationConfig = {}
+  ): Animation {
+    const pulseKeyframes: Keyframe[] = [
+      { transform: 'scale(1)', opacity: '1' },
+      { transform: 'scale(1.05)', opacity: '0.8' },
+      { transform: 'scale(1)', opacity: '1' },
+    ];
+
+    const optimizedKeyframes = this.createOptimizedKeyframes(element, pulseKeyframes, config);
+    const options = this.createOptimizedOptions({
+      ...config,
+      iterations: config.iterations || 3,
+      easing: 'ease-in-out',
+    });
+
+    const animation = element.animate(optimizedKeyframes, options);
+    this.addAnimationToElement(element, animation);
+
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+    };
+
+    return animation;
+  }
+
+  /**
+   * Create shake animation
+   */
+  public animateShake(
+    element: HTMLElement,
+    intensity = 10,
+    config: AnimationConfig = {}
+  ): Animation {
+    const shakeKeyframes: Keyframe[] = [
+      { transform: 'translateX(0)' },
+      { transform: `translateX(-${intensity}px)` },
+      { transform: 'translateX(${intensity}px)` },
+      { transform: `translateX(-${intensity}px)` },
+      { transform: 'translateX(${intensity}px)` },
+      { transform: 'translateX(-${intensity}px)` },
+      { transform: 'translateX(0)' },
+    ];
+
+    const optimizedKeyframes = this.createOptimizedKeyframes(element, shakeKeyframes, config);
+    const options = this.createOptimizedOptions({
+      ...config,
+      duration: config.duration || 400,
+      easing: 'ease-in-out',
+    });
+
+    const animation = element.animate(optimizedKeyframes, options);
+    this.addAnimationToElement(element, animation);
+
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+    };
+
+    return animation;
+  }
+
+  /**
+   * Create fade animation
+   */
+  public animateFade(
+    element: HTMLElement,
+    targetOpacity: number,
+    config: AnimationConfig = {}
+  ): Animation {
+    const currentOpacity = parseFloat(element.style.opacity || '1');
+
+    const fadeKeyframes: Keyframe[] = [
+      { opacity: currentOpacity.toString() },
+      { opacity: targetOpacity.toString() },
+    ];
+
+    const optimizedKeyframes = this.createOptimizedKeyframes(element, fadeKeyframes, config);
+    const options = this.createOptimizedOptions(config);
+
+    const animation = element.animate(optimizedKeyframes, options);
+    this.addAnimationToElement(element, animation);
+
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+      // Keep the final opacity value
+      element.style.opacity = targetOpacity.toString();
+    };
+
+    return animation;
+  }
+
+  /**
+   * Create slide animation
+   */
+  public animateSlide(
+    element: HTMLElement,
+    direction: 'up' | 'down' | 'left' | 'right',
+    distance = 100,
+    config: AnimationConfig = {}
+  ): Animation {
+    const directions = {
+      up: { y: -distance },
+      down: { y: distance },
+      left: { x: -distance },
+      right: { x: distance },
+    };
+
+    return this.animateTransform(
+      element,
+      { translate: directions[direction] },
+      config
+    );
+  }
+
+  /**
+   * Create scale animation
+   */
+  public animateScale(
+    element: HTMLElement,
+    scale: number | { x: number; y: number },
+    config: AnimationConfig = {}
+  ): Animation {
+    return this.animateTransform(element, { scale }, config);
+  }
+
+  /**
+   * Create rotate animation
+   */
+  public animateRotate(
+    element: HTMLElement,
+    degrees: number,
+    config: AnimationConfig = {}
+  ): Animation {
+    return this.animateTransform(element, { rotate: degrees }, config);
+  }
+
+  /**
+   * Add animation to element tracking
+   */
+  private addAnimationToElement(element: Element, animation: Animation): void {
+    if (!this.activeAnimations.has(element)) {
+      this.activeAnimations.set(element, new Set());
+    }
+    this.activeAnimations.get(element)!.add(animation);
+  }
+
+  /**
+   * Remove animation from element tracking
+   */
+  private removeAnimationFromElement(element: Element, animation: Animation): void {
+    const animations = this.activeAnimations.get(element);
+    if (animations) {
+      animations.delete(animation);
+      if (animations.size === 0) {
+        this.activeAnimations.delete(element);
+      }
+    }
+  }
+
+  /**
+   * Cancel all animations for an element
+   */
+  public cancelAllAnimations(element: HTMLElement): void {
+    const animations = this.activeAnimations.get(element);
+    if (animations) {
+      animations.forEach(animation => animation.cancel());
+      this.activeAnimations.delete(element);
+    }
+  }
+
+  /**
+   * Get active animations count
+   */
+  public getActiveAnimationsCount(): number {
+    let count = 0;
+    this.activeAnimations.forEach(animations => {
+      count += animations.size;
+    });
+    return count;
+  }
+
+  /**
+   * Set performance mode
+   */
+  public setPerformanceMode(mode: 'quality' | 'balanced' | 'performance'): void {
+    this.performanceMode = mode;
+  }
+
+  /**
+   * Get current performance mode
+   */
+  public getPerformanceMode(): string {
+    return this.performanceMode;
+  }
+
+  /**
+   * Check if reduced motion is enabled
+   */
+  public isReducedMotionEnabled(): boolean {
+    return this.reduceMotion;
+  }
+
+  /**
+   * Create touch-specific animation presets
+   */
+  public createTouchPreset(type: 'tap' | 'press' | 'swipe' | 'longPress'): TouchAnimationPreset {
+    const presets: Record<string, TouchAnimationPreset> = {
+      tap: {
+        name: 'tap',
+        keyframes: [
+          { transform: 'scale(1)' },
+          { transform: 'scale(0.95)' },
+          { transform: 'scale(1)' },
+        ],
+        config: {
+          duration: 150,
+          easing: 'ease-out',
+        },
+      },
+      press: {
+        name: 'press',
+        keyframes: [
+          { transform: 'scale(1)' },
+          { transform: 'scale(0.9)' },
+          { transform: 'scale(1)' },
+        ],
+        config: {
+          duration: 200,
+          easing: 'ease-out',
+        },
+      },
+      swipe: {
+        name: 'swipe',
+        keyframes: [
+          { transform: 'translateX(0)' },
+          { transform: 'translateX(20px)' },
+          { transform: 'translateX(0)' },
+        ],
+        config: {
+          duration: 300,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+        },
+      },
+      longPress: {
+        name: 'longPress',
+        keyframes: [
+          { transform: 'scale(1)', opacity: '1' },
+          { transform: 'scale(0.95)', opacity: '0.8' },
+        ],
+        config: {
+          duration: 100,
+          easing: 'ease-out',
+          fill: 'forwards',
+        },
+      },
+    };
+
+    return presets[type];
+  }
+
+  /**
+   * Animate touch interaction
+   */
+  public animateTouchInteraction(
+    element: HTMLElement,
+    type: 'tap' | 'press' | 'swipe' | 'longPress',
+    config: AnimationConfig = {}
+  ): Animation {
+    const preset = this.createTouchPreset(type);
+
+    const animation = element.animate(preset.keyframes, {
+      ...preset.config,
+      ...config,
+    });
+
+    this.addAnimationToElement(element, animation);
+
+    animation.onfinish = () => {
+      this.removeAnimationFromElement(element, animation);
+    };
+
+    return animation;
+  }
+}
+
+// Export singleton instance
+export const touchAnimation = TouchAnimationUtils.getInstance();
+
+// Export convenience functions
+export const animateTransform = (element: HTMLElement, transform: TransformConfig, config?: AnimationConfig) =>
+  touchAnimation.animateTransform(element, transform, config);
+
+export const animateVisualEffects = (element: HTMLElement, effects: VisualEffectConfig, config?: AnimationConfig) =>
+  touchAnimation.animateVisualEffects(element, effects, config);
+
+export const animateSpring = (element: HTMLElement, target: TransformConfig, tension?: number, friction?: number, config?: AnimationConfig) =>
+  touchAnimation.animateSpring(element, target, tension, friction, config);
+
+export const animateBounce = (element: HTMLElement, target: TransformConfig, config?: AnimationConfig) =>
+  touchAnimation.animateBounce(element, target, config);
+
+export const animatePulse = (element: HTMLElement, config?: AnimationConfig) =>
+  touchAnimation.animatePulse(element, config);
+
+export const animateShake = (element: HTMLElement, intensity?: number, config?: AnimationConfig) =>
+  touchAnimation.animateShake(element, intensity, config);
+
+export const animateFade = (element: HTMLElement, targetOpacity: number, config?: AnimationConfig) =>
+  touchAnimation.animateFade(element, targetOpacity, config);
+
+export const animateSlide = (element: HTMLElement, direction: 'up' | 'down' | 'left' | 'right', distance?: number, config?: AnimationConfig) =>
+  touchAnimation.animateSlide(element, direction, distance, config);
+
+export const animateScale = (element: HTMLElement, scale: number | { x: number; y: number }, config?: AnimationConfig) =>
+  touchAnimation.animateScale(element, scale, config);
+
+export const animateRotate = (element: HTMLElement, degrees: number, config?: AnimationConfig) =>
+  touchAnimation.animateRotate(element, degrees, config);
+
+export const animateTouchInteraction = (element: HTMLElement, type: 'tap' | 'press' | 'swipe' | 'longPress', config?: AnimationConfig) =>
+  touchAnimation.animateTouchInteraction(element, type, config);

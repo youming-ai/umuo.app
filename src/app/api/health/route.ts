@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { apiSuccess } from "@/lib/utils/api-response";
+import {
+  withEnhancedErrorHandling,
+  defaultMiddlewareConfig,
+} from "@/lib/api/api-middleware-wrapper";
+import type { EnhancedRequestContext } from "@/lib/api/api-middleware-wrapper";
 
 /**
  * Cloudflare Workers 健康检查 API
@@ -85,7 +90,11 @@ interface RuntimeInfo {
   environment?: string;
 }
 
-export async function GET(_request: NextRequest) {
+export const GET = withEnhancedErrorHandling(
+  async function enhancedHealthCheckHandler(
+    request: NextRequest,
+    context?: EnhancedRequestContext,
+  ): Promise<NextResponse> {
   try {
     const startTime = Date.now();
 
@@ -157,12 +166,16 @@ export async function GET(_request: NextRequest) {
     // 检查关键依赖
     const criticalServices = ["groq"];
     const unavailableServices = criticalServices.filter(
-      (service) => !healthData.services[service as keyof typeof healthData.services].available,
+      (service) =>
+        !healthData.services[service as keyof typeof healthData.services]
+          .available,
     );
 
     if (unavailableServices.length > 0) {
       healthData.status = "unhealthy"; // 修复类型错误
-      healthData.issues = [`Missing critical services: ${unavailableServices.join(", ")}`];
+      healthData.issues = [
+        `Missing critical services: ${unavailableServices.join(", ")}`,
+      ];
     }
 
     const responseTime = Date.now() - startTime;
@@ -313,7 +326,8 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         healthData.connections.tests.kv = {
           success: false,
-          error: error instanceof Error ? error.message : "KV connection failed",
+          error:
+            error instanceof Error ? error.message : "KV connection failed",
         };
       }
 
@@ -324,7 +338,8 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         healthData.connections.tests.d1 = {
           success: false,
-          error: error instanceof Error ? error.message : "D1 connection failed",
+          error:
+            error instanceof Error ? error.message : "D1 connection failed",
         };
       }
     }
@@ -332,7 +347,10 @@ export async function POST(request: NextRequest) {
     const response = apiSuccess(healthData);
 
     // 添加详细的健康检查响应头
-    response.headers.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    response.headers.set(
+      "Cache-Control",
+      "no-cache, no-store, must-revalidate",
+    );
     response.headers.set("X-Health-Check", "OpenNext.js-Detailed");
     response.headers.set("X-Platform", "cloudflare-workers");
 

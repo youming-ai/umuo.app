@@ -39,14 +39,24 @@ const AudioPlayer = React.memo<AudioPlayerProps>(
   }) => {
     const audioRef = useRef<HTMLAudioElement>(null);
     const { formatTime } = useAudioPlayerTime();
-    const { isMuted, volume, playbackRate, setVolume, setPlaybackRate, toggleMute } =
-      useAudioPlayerState();
+    const {
+      isMuted,
+      volume,
+      playbackRate,
+      setVolume,
+      setPlaybackRate,
+      toggleMute,
+    } = useAudioPlayerState();
 
     const safeCurrentTime = Number.isFinite(currentTime) ? currentTime : 0;
-    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 0;
+    const safeDuration =
+      Number.isFinite(duration) && duration > 0 ? duration : 0;
     const formattedCurrentTime = formatTime(safeCurrentTime);
     const formattedDuration = formatTime(safeDuration);
-    const progress = safeDuration > 0 ? Math.min(100, (safeCurrentTime / safeDuration) * 100) : 0;
+    const progress =
+      safeDuration > 0
+        ? Math.min(100, (safeCurrentTime / safeDuration) * 100)
+        : 0;
 
     const handlePlayPause = () => {
       if (isPlaying) {
@@ -56,8 +66,7 @@ const AudioPlayer = React.memo<AudioPlayerProps>(
       }
     };
 
-    const handleVolumeChange = (value: number[]) => {
-      const newVolume = value[0];
+    const handleVolumeChange = (newVolume: number) => {
       setVolume([newVolume]);
     };
 
@@ -132,7 +141,10 @@ const AudioPlayer = React.memo<AudioPlayerProps>(
 
             <div className="flex flex-col items-center gap-2">
               <div className="flex w-full items-center gap-3">
-                <span className="w-12 text-right text-xs text-muted-foreground" aria-hidden>
+                <span
+                  className="w-12 text-right text-xs text-muted-foreground"
+                  aria-hidden
+                >
                   {formattedCurrentTime}
                 </span>
                 <div className="relative h-1 flex-1 rounded-full bg-muted">
@@ -141,7 +153,10 @@ const AudioPlayer = React.memo<AudioPlayerProps>(
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                <span className="w-12 text-left text-xs text-muted-foreground" aria-hidden>
+                <span
+                  className="w-12 text-left text-xs text-muted-foreground"
+                  aria-hidden
+                >
                   {formattedDuration}
                 </span>
               </div>
@@ -162,17 +177,28 @@ const AudioPlayer = React.memo<AudioPlayerProps>(
             {/* 高级控制 */}
             <div className="flex items-center justify-center space-x-6">
               <VolumeControl
+                volume={volume[0]}
                 isMuted={isMuted}
-                volume={volume}
-                onToggleMute={toggleMute}
                 onVolumeChange={handleVolumeChange}
+                onToggleMute={toggleMute}
                 compact={false}
+                enableBoost={true}
+                showPresets={true}
+                enableKeyboard={true}
+                enableGestures={true}
               />
 
               <PlaybackSpeedControl
                 playbackRate={playbackRate}
                 onPlaybackRateChange={handlePlaybackRateChange}
                 compact={false}
+                showPresets={true}
+                allowCustom={true}
+                showHotkeys={true}
+                enableHapticFeedback={true}
+                onSpeedChangeComplete={(speed) => {
+                  console.log(`Playback speed changed to: ${speed}x`);
+                }}
               />
             </div>
           </div>

@@ -1,0 +1,1189 @@
+/**
+ * Mobile-First Responsive Design Utilities
+ *
+ * A comprehensive CSS system for mobile-first responsive design
+ * optimized for screens starting from 320px width.
+ *
+ * Features:
+ * - Mobile-first breakpoint system
+ * - Touch-optimized utilities
+ * - Fluid typography scales
+ * - Safe area inset support
+ * - Performance optimizations
+ * - Accessibility enhancements
+ * - Theme system integration
+ */
+
+/* ===================================
+   Mobile Breakpoint System
+   =================================== */
+
+/* Breakpoint Variables */
+:root {
+  /* Mobile-first breakpoints */
+  --mobile-xs: 320px;  /* Small phones */
+  --mobile-sm: 375px;  /* Standard phones (iPhone SE) */
+  --mobile-md: 414px;  /* Large phones (iPhone Pro) */
+  --mobile-lg: 768px;  /* Tablets (iPad) */
+  --desktop-sm: 1024px; /* Small desktops */
+  --desktop-md: 1280px; /* Standard desktops */
+  --desktop-lg: 1536px; /* Large desktops */
+
+  /* Mobile-specific spacing */
+  --mobile-safe-area-top: env(safe-area-inset-top, 0px);
+  --mobile-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-safe-area-left: env(safe-area-inset-left, 0px);
+  --mobile-safe-area-right: env(safe-area-inset-right, 0px);
+
+  /* Touch target minimums (WCAG guidelines) */
+  --mobile-touch-target-min: 44px;
+  --mobile-touch-target-large: 48px;
+  --mobile-touch-spacing: 8px;
+
+  /* Mobile typography scale */
+  --mobile-text-xs: 0.75rem;    /* 12px */
+  --mobile-text-sm: 0.875rem;   /* 14px */
+  --mobile-text-base: 1rem;     /* 16px */
+  --mobile-text-lg: 1.125rem;   /* 18px */
+  --mobile-text-xl: 1.25rem;    /* 20px */
+  --mobile-text-2xl: 1.5rem;    /* 24px */
+  --mobile-text-3xl: 1.875rem;  /* 30px */
+
+  /* Fluid typography clamp values */
+  --mobile-fluid-min: 0.875rem;  /* 14px minimum */
+  --mobile-fluid-preferred: 1rem; /* 16px preferred */
+  --mobile-fluid-max: 1.125rem;  /* 18px maximum */
+
+  /* Mobile container constraints */
+  --mobile-container-sm: 100%;
+  --mobile-container-md: 100%;
+  --mobile-container-padding: 1rem;
+}
+
+/* ===================================
+   Base Mobile Utilities
+   =================================== */
+
+/* Mobile-first container */
+.mobile-container {
+  width: var(--mobile-container-sm);
+  max-width: 100vw;
+  margin: 0 auto;
+  padding: 0 var(--mobile-container-padding);
+  box-sizing: border-box;
+}
+
+/* Safe area utilities */
+.mobile-safe-top {
+  padding-top: var(--mobile-safe-area-top);
+}
+
+.mobile-safe-bottom {
+  padding-bottom: var(--mobile-safe-area-bottom);
+}
+
+.mobile-safe-left {
+  padding-left: var(--mobile-safe-area-left);
+}
+
+.mobile-safe-right {
+  padding-right: var(--mobile-safe-area-right);
+}
+
+.mobile-safe-all {
+  padding:
+    var(--mobile-safe-area-top)
+    var(--mobile-safe-area-right)
+    var(--mobile-safe-area-bottom)
+    var(--mobile-safe-area-left);
+}
+
+/* ===================================
+   Touch-Optimized Utilities
+   =================================== */
+
+/* Touch target sizing */
+.mobile-touch-target {
+  min-height: var(--mobile-touch-target-min);
+  min-width: var(--mobile-touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-touch-target-large {
+  min-height: var(--mobile-touch-target-large);
+  min-width: var(--mobile-touch-target-large);
+}
+
+/* Touch-friendly spacing */
+.mobile-touch-spacing {
+  gap: var(--mobile-touch-spacing);
+}
+
+.mobile-touch-margin {
+  margin: var(--mobile-touch-spacing);
+}
+
+/* Touch feedback */
+.mobile-touch-feedback {
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-touch-feedback::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mobile-touch-feedback:active::after {
+  width: 200px;
+  height: 200px;
+  opacity: 1;
+}
+
+/* ===================================
+   Mobile Typography System
+   =================================== */
+
+/* Fluid typography utilities */
+.mobile-text-fluid {
+  font-size: clamp(
+    var(--mobile-fluid-min),
+    4vw + 0.5rem,
+    var(--mobile-fluid-max)
+  );
+  line-height: 1.5;
+}
+
+/* Mobile text sizes */
+.mobile-text-xs {
+  font-size: var(--mobile-text-xs);
+  line-height: 1.4;
+}
+
+.mobile-text-sm {
+  font-size: var(--mobile-text-sm);
+  line-height: 1.45;
+}
+
+.mobile-text-base {
+  font-size: var(--mobile-text-base);
+  line-height: 1.5;
+}
+
+.mobile-text-lg {
+  font-size: var(--mobile-text-lg);
+  line-height: 1.5;
+}
+
+.mobile-text-xl {
+  font-size: var(--mobile-text-xl);
+  line-height: 1.5;
+}
+
+.mobile-text-2xl {
+  font-size: var(--mobile-text-2xl);
+  line-height: 1.4;
+}
+
+.mobile-text-3xl {
+  font-size: var(--mobile-text-3xl);
+  line-height: 1.3;
+}
+
+/* Mobile heading utilities */
+.mobile-heading-xs {
+  font-size: var(--mobile-text-lg);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.mobile-heading-sm {
+  font-size: var(--mobile-text-xl);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.mobile-heading-md {
+  font-size: var(--mobile-text-2xl);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.mobile-heading-lg {
+  font-size: var(--mobile-text-3xl);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Responsive typography that scales with viewport */
+.mobile-text-responsive-xs {
+  font-size: clamp(0.75rem, 3vw, 0.875rem);
+}
+
+.mobile-text-responsive-sm {
+  font-size: clamp(0.875rem, 4vw, 1rem);
+}
+
+.mobile-text-responsive-base {
+  font-size: clamp(1rem, 4vw + 0.25rem, 1.125rem);
+}
+
+.mobile-text-responsive-lg {
+  font-size: clamp(1.125rem, 5vw, 1.25rem);
+}
+
+.mobile-text-responsive-xl {
+  font-size: clamp(1.25rem, 5vw + 0.25rem, 1.5rem);
+}
+
+/* ===================================
+   Mobile Layout Utilities
+   =================================== */
+
+/* Mobile flexbox utilities */
+.mobile-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.mobile-flex-wrap {
+  flex-wrap: wrap;
+}
+
+.mobile-flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-flex-start {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.mobile-flex-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Mobile grid utilities */
+.mobile-grid {
+  display: grid;
+}
+
+.mobile-grid-cols-1 {
+  grid-template-columns: repeat(1, 1fr);
+}
+
+.mobile-grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.mobile-gap-xs {
+  gap: 0.5rem;
+}
+
+.mobile-gap-sm {
+  gap: 0.75rem;
+}
+
+.mobile-gap-md {
+  gap: 1rem;
+}
+
+.mobile-gap-lg {
+  gap: 1.5rem;
+}
+
+/* Mobile spacing utilities */
+.mobile-p-xs { padding: 0.5rem; }
+.mobile-p-sm { padding: 0.75rem; }
+.mobile-p-md { padding: 1rem; }
+.mobile-p-lg { padding: 1.5rem; }
+.mobile-p-xl { padding: 2rem; }
+
+.mobile-m-xs { margin: 0.5rem; }
+.mobile-m-sm { margin: 0.75rem; }
+.mobile-m-md { margin: 1rem; }
+.mobile-m-lg { margin: 1.5rem; }
+.mobile-m-xl { margin: 2rem; }
+
+.mobile-mt-xs { margin-top: 0.5rem; }
+.mobile-mt-sm { margin-top: 0.75rem; }
+.mobile-mt-md { margin-top: 1rem; }
+.mobile-mt-lg { margin-top: 1.5rem; }
+.mobile-mt-xl { margin-top: 2rem; }
+
+.mobile-mb-xs { margin-bottom: 0.5rem; }
+.mobile-mb-sm { margin-bottom: 0.75rem; }
+.mobile-mb-md { margin-bottom: 1rem; }
+.mobile-mb-lg { margin-bottom: 1.5rem; }
+.mobile-mb-xl { margin-bottom: 2rem; }
+
+/* ===================================
+   Mobile Component Styles
+   =================================== */
+
+/* Mobile button styling */
+.mobile-button {
+  @apply mobile-touch-target mobile-touch-feedback;
+  min-height: var(--mobile-touch-target-min);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-size: var(--mobile-text-base);
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  border: none;
+  background-color: var(--color-primary);
+  color: var(--button-text-color);
+}
+
+.mobile-button:hover {
+  background-color: var(--color-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-button-secondary {
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+  border: 2px solid var(--border-default);
+}
+
+.mobile-button-secondary:hover {
+  background-color: var(--surface-card);
+  border-color: var(--color-primary);
+}
+
+.mobile-button-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.mobile-button-outline:hover {
+  background-color: var(--color-primary);
+  color: var(--button-text-color);
+}
+
+/* Mobile icon button */
+.mobile-button-icon {
+  @apply mobile-touch-target mobile-touch-feedback;
+  width: var(--mobile-touch-target-min);
+  height: var(--mobile-touch-target-min);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-button-icon:hover {
+  background-color: var(--color-primary);
+  color: var(--button-text-color);
+  transform: scale(1.05);
+}
+
+/* Mobile input styling */
+.mobile-input {
+  @apply mobile-touch-target;
+  width: 100%;
+  min-height: var(--mobile-touch-target-min);
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-default);
+  border-radius: 0.75rem;
+  font-size: var(--mobile-text-base);
+  background-color: var(--surface-card);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.mobile-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+}
+
+.mobile-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Mobile form styling */
+.mobile-form-group {
+  margin-bottom: 1.5rem;
+}
+
+.mobile-form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: var(--mobile-text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mobile-form-error {
+  margin-top: 0.5rem;
+  font-size: var(--mobile-text-xs);
+  color: var(--color-error);
+}
+
+/* Mobile card styling */
+.mobile-card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.mobile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-card-header {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.mobile-card-title {
+  font-size: var(--mobile-text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.mobile-card-content {
+  font-size: var(--mobile-text-base);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ===================================
+   Mobile Navigation Patterns
+   =================================== */
+
+/* Mobile bottom navigation */
+.mobile-nav-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--surface-card);
+  border-top: 1px solid var(--border-default);
+  padding: var(--mobile-safe-area-bottom) 0 0 0;
+  z-index: 50;
+}
+
+.mobile-nav-bottom-list {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.mobile-nav-item {
+  @apply mobile-touch-target;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+  min-width: 60px;
+}
+
+.mobile-nav-item:hover,
+.mobile-nav-item.active {
+  color: var(--color-primary);
+}
+
+.mobile-nav-icon {
+  font-size: 1.25rem;
+}
+
+.mobile-nav-label {
+  font-size: var(--mobile-text-xs);
+  font-weight: 500;
+}
+
+/* Mobile header navigation */
+.mobile-nav-header {
+  position: sticky;
+  top: 0;
+  background-color: var(--surface-card);
+  border-bottom: 1px solid var(--border-default);
+  padding: var(--mobile-safe-area-top) 1rem 1rem 1rem;
+  z-index: 40;
+}
+
+.mobile-nav-header-content {
+  @apply mobile-flex-center mobile-flex-between;
+}
+
+.mobile-nav-title {
+  font-size: var(--mobile-text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ===================================
+   Mobile Audio Player Styles
+   =================================== */
+
+/* Mobile player container */
+.mobile-player {
+  background-color: var(--player-card-bg);
+  border: 1px solid var(--player-card-border);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile player controls */
+.mobile-player-controls {
+  @apply mobile-flex-col mobile-gap-md;
+}
+
+.mobile-player-main-controls {
+  @apply mobile-flex-center mobile-gap-md;
+  margin-bottom: 1rem;
+}
+
+.mobile-player-button {
+  @apply mobile-button-icon;
+  width: 3rem;
+  height: 3rem;
+}
+
+.mobile-player-button-primary {
+  @apply mobile-button-icon;
+  width: 4rem;
+  height: 4rem;
+  background-color: var(--color-primary);
+  color: var(--button-text-color);
+}
+
+.mobile-player-button-primary:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+}
+
+/* Mobile seek bar */
+.mobile-player-seek {
+  margin: 1rem 0;
+}
+
+.mobile-player-seek-bar {
+  height: 6px;
+  background-color: var(--player-track-color);
+  border-radius: 3px;
+  position: relative;
+  cursor: pointer;
+}
+
+.mobile-player-seek-progress {
+  height: 100%;
+  background-color: var(--player-accent-color);
+  border-radius: 3px;
+  transition: width 0.15s ease;
+}
+
+.mobile-player-seek-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  background-color: var(--player-accent-color);
+  border: 3px solid var(--surface-card);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: grab;
+}
+
+.mobile-player-seek-handle:active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Mobile time display */
+.mobile-player-time {
+  @apply mobile-flex-center mobile-flex-between;
+  margin-top: 0.5rem;
+}
+
+.mobile-player-time-text {
+  font-size: var(--mobile-text-sm);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Mobile volume control */
+.mobile-player-volume {
+  @apply mobile-flex-center mobile-gap-sm;
+  margin-top: 1rem;
+}
+
+.mobile-player-volume-slider {
+  flex: 1;
+  height: 4px;
+  background-color: var(--player-track-color);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+.mobile-player-volume-progress {
+  height: 100%;
+  background-color: var(--player-accent-color);
+  border-radius: 2px;
+}
+
+/* Mobile subtitle display */
+.mobile-player-subtitles {
+  margin-top: 1.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 1rem;
+  background-color: var(--surface-muted);
+  border-radius: 0.75rem;
+}
+
+.mobile-subtitle-line {
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.5rem;
+  font-size: var(--mobile-text-base);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.mobile-subtitle-line.active {
+  background-color: var(--player-highlight-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ===================================
+   Mobile File Upload Styles
+   =================================== */
+
+/* Mobile upload area */
+.mobile-upload-area {
+  border: 2px dashed var(--border-default);
+  border-radius: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  background-color: var(--surface-muted);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.mobile-upload-area:hover,
+.mobile-upload-area.drag-over {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary);
+  background-opacity: 0.1;
+}
+
+.mobile-upload-icon {
+  font-size: 2.5rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.mobile-upload-text {
+  font-size: var(--mobile-text-base);
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.mobile-upload-hint {
+  font-size: var(--mobile-text-sm);
+  color: var(--text-muted);
+}
+
+/* Mobile file list */
+.mobile-file-list {
+  margin-top: 1.5rem;
+}
+
+.mobile-file-item {
+  @apply mobile-card;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-file-icon {
+  width: 3rem;
+  height: 3rem;
+  background-color: var(--surface-muted);
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.mobile-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-file-name {
+  font-size: var(--mobile-text-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-file-meta {
+  font-size: var(--mobile-text-sm);
+  color: var(--text-muted);
+}
+
+.mobile-file-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ===================================
+   Mobile Performance Optimizations
+   =================================== */
+
+/* Hardware acceleration for animations */
+.mobile-hardware-accel {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-touch-feedback::after {
+    transition: none;
+  }
+
+  .mobile-button,
+  .mobile-button-icon,
+  .mobile-card {
+    transition: none;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Battery-conscious animations */
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-button {
+    animation: mobile-button-subtle 0.3s ease;
+  }
+
+  @keyframes mobile-button-subtle {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+}
+
+/* Optimize for low-end devices */
+.mobile-low-performance {
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+.mobile-low-performance * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* ===================================
+   Responsive Breakpoint Utilities
+   =================================== */
+
+/* Extra small phones (320px and up) */
+@media (min-width: 320px) {
+  .mobile-container {
+    padding: 0 0.75rem;
+  }
+
+  .mobile-text-responsive-xs {
+    font-size: 0.75rem;
+  }
+
+  .mobile-text-responsive-sm {
+    font-size: 0.875rem;
+  }
+
+  .mobile-text-responsive-base {
+    font-size: 1rem;
+  }
+}
+
+/* Small phones (375px and up) */
+@media (min-width: 375px) {
+  .mobile-container {
+    padding: 0 1rem;
+  }
+
+  .mobile-p-lg { padding: 1.75rem; }
+  .mobile-p-xl { padding: 2.25rem; }
+
+  .mobile-gap-lg { gap: 1.75rem; }
+}
+
+/* Large phones (414px and up) */
+@media (min-width: 414px) {
+  .mobile-text-responsive-lg {
+    font-size: 1.25rem;
+  }
+
+  .mobile-text-responsive-xl {
+    font-size: 1.5rem;
+  }
+
+  .mobile-player-subtitles {
+    max-height: 250px;
+  }
+}
+
+/* Tablets (768px and up) */
+@media (min-width: 768px) {
+  .mobile-container {
+    max-width: 768px;
+    padding: 0 1.5rem;
+  }
+
+  .mobile-grid-cols-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mobile-nav-bottom {
+    display: none; /* Hide mobile nav on tablets */
+  }
+
+  .mobile-player {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+}
+
+/* Small desktops (1024px and up) */
+@media (min-width: 1024px) {
+  .mobile-container {
+    max-width: 1024px;
+  }
+
+  .mobile-grid-cols-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ===================================
+   Orientation-Specific Styles
+   =================================== */
+
+/* Landscape orientation */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-nav-header {
+    padding: 0.5rem 1rem;
+  }
+
+  .mobile-player {
+    padding: 1rem;
+  }
+
+  .mobile-player-subtitles {
+    max-height: 120px;
+  }
+
+  .mobile-upload-area {
+    padding: 1.5rem 1rem;
+    min-height: 100px;
+  }
+}
+
+/* Portrait orientation */
+@media (orientation: portrait) {
+  .mobile-nav-bottom {
+    padding-bottom: calc(0.5rem + var(--mobile-safe-area-bottom));
+  }
+}
+
+/* ===================================
+   Device Density Support
+   =================================== */
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .mobile-button,
+  .mobile-input {
+    border-width: 0.5px;
+  }
+}
+
+/* Very high DPI displays */
+@media (-webkit-min-device-pixel-ratio: 3), (min-resolution: 288dpi) {
+  .mobile-button-icon {
+    border-width: 0.33px;
+  }
+}
+
+/* ===================================
+   Mobile Accessibility Enhancements
+   =================================== */
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .mobile-button {
+    border: 2px solid currentColor;
+  }
+
+  .mobile-input {
+    border-width: 2px;
+  }
+
+  .mobile-card {
+    border-width: 2px;
+  }
+}
+
+/* Focus management for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-button:focus,
+  .mobile-button-icon:focus,
+  .mobile-input:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Screen reader optimizations */
+.mobile-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mobile-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+/* ===================================
+   Theme Integration
+   =================================== */
+
+/* Dark theme mobile adjustments */
+html[data-theme="dark"] {
+  --mobile-upload-area-bg: rgba(34, 197, 94, 0.05);
+}
+
+/* Light theme mobile adjustments */
+html[data-theme="light"] {
+  --mobile-upload-area-bg: rgba(34, 197, 94, 0.1);
+}
+
+/* High contrast theme mobile adjustments */
+html[data-theme="high-contrast"] {
+  .mobile-button,
+  .mobile-input,
+  .mobile-card {
+    border-width: 2px;
+  }
+
+  .mobile-button {
+    font-weight: 700;
+  }
+}
+
+/* ===================================
+   Utility Classes for Conditional Mobile Features
+   =================================== */
+
+/* Hide on mobile */
+.mobile-hidden {
+  display: none;
+}
+
+/* Show only on mobile */
+.mobile-only {
+  display: block;
+}
+
+/* Touch detection */
+@media (hover: none) and (pointer: coarse) {
+  .touch-only {
+    display: block;
+  }
+
+  .no-touch {
+    display: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .touch-only {
+    display: none;
+  }
+
+  .no-touch {
+    display: block;
+  }
+}
+
+/* ===================================
+   Mobile Viewport Utilities
+   =================================== */
+
+/* Full viewport height utilities */
+.mobile-min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height */
+}
+
+.mobile-h-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Safe viewport height (excluding safe areas) */
+.mobile-min-h-safe {
+  min-height: calc(100vh - var(--mobile-safe-area-top) - var(--mobile-safe-area-bottom));
+  min-height: calc(100dvh - var(--mobile-safe-area-top) - var(--mobile-safe-area-bottom));
+}
+
+/* ===================================
+   Debug and Development Utilities
+   =================================== */
+
+/* Mobile breakpoint indicators (development only) */
+.mobile-debug::before {
+  content: "XS (320px+)";
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+@media (min-width: 375px) {
+  .mobile-debug::before {
+    content: "SM (375px+)";
+    background: rgba(255, 165, 0, 0.8);
+  }
+}
+
+@media (min-width: 414px) {
+  .mobile-debug::before {
+    content: "MD (414px+)";
+    background: rgba(255, 255, 0, 0.8);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-debug::before {
+    content: "LG (768px+)";
+    background: rgba(0, 255, 0, 0.8);
+  }
+}
+
+/* Grid overlay for development (enable with .mobile-debug-grid class) */
+.mobile-debug-grid {
+  position: relative;
+}
+
+.mobile-debug-grid::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    linear-gradient(rgba(255, 0, 0, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 1;
+}

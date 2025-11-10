@@ -1,8 +1,13 @@
 import Groq from "groq-sdk";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError, apiFromError, apiSuccess } from "@/lib/utils/api-response";
 import { validationError } from "@/lib/utils/error-handler";
+import {
+  withEnhancedErrorHandling,
+  defaultMiddlewareConfig,
+} from "@/lib/api/api-middleware-wrapper";
+import type { EnhancedRequestContext } from "@/lib/api/api-middleware-wrapper";
 
 // Groq 模型配置
 const GROQ_CHAT_MODEL = "openai/gpt-oss-20b";
@@ -58,7 +63,10 @@ const postProcessSchema = z.object({
 function validateRequestData(body: unknown) {
   const validation = postProcessSchema.safeParse(body);
   if (!validation.success) {
-    const error = validationError("Invalid request data", validation.error.format());
+    const error = validationError(
+      "Invalid request data",
+      validation.error.format(),
+    );
     return { isValid: false, error };
   }
   return { isValid: true, data: validation.data };
@@ -67,7 +75,9 @@ function validateRequestData(body: unknown) {
 /**
  * 验证segments数据
  */
-function validateSegments(segments: Array<{ text: string; start: number; end: number }>) {
+function validateSegments(
+  segments: Array<{ text: string; start: number; end: number }>,
+) {
   if (!segments || segments.length === 0) {
     return {
       isValid: false,
@@ -93,7 +103,11 @@ function validateSegments(segments: Array<{ text: string; start: number; end: nu
   // 验证每个segment的必需字段
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (!segment.text || typeof segment.start !== "number" || typeof segment.end !== "number") {
+    if (
+      !segment.text ||
+      typeof segment.start !== "number" ||
+      typeof segment.end !== "number"
+    ) {
       return {
         isValid: false,
         error: {
@@ -282,7 +296,10 @@ async function postProcessSegmentWithGroq(
     };
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`单个segment AI SDK处理失败，耗时: ${processingTime}ms，错误:`, error);
+    console.error(
+      `单个segment AI SDK处理失败，耗时: ${processingTime}ms，错误:`,
+      error,
+    );
 
     // 抛出错误让上层处理fallback
     throw error;
@@ -372,7 +389,8 @@ Return format (JSON):
         );
         return {
           originalText: originalSegment.text,
-          normalizedText: processedSegment?.normalizedText || originalSegment.text,
+          normalizedText:
+            processedSegment?.normalizedText || originalSegment.text,
           translation: processedSegment?.translation || "",
           annotations: processedSegment?.annotations || [],
           furigana: processedSegment?.furigana || "",
@@ -384,7 +402,9 @@ Return format (JSON):
 
     // Fallback: 如果解析失败，返回原始文本
     const processingTime = Date.now() - startTime;
-    console.warn(`批量AI SDK处理解析失败，使用fallback，耗时: ${processingTime}ms`);
+    console.warn(
+      `批量AI SDK处理解析失败，使用fallback，耗时: ${processingTime}ms`,
+    );
 
     return shortTextSegments.map((segment) => ({
       originalText: segment.text,
@@ -397,7 +417,10 @@ Return format (JSON):
     }));
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error(`批量AI SDK处理失败，耗时: ${processingTime}ms，错误:`, error);
+    console.error(
+      `批量AI SDK处理失败，耗时: ${processingTime}ms，错误:`,
+      error,
+    );
 
     // 返回fallback结果
     return shortTextSegments.map((segment) => ({
@@ -445,14 +468,22 @@ async function postProcessSegmentsWithGroq(
     BATCH_SIZE = 6;
   }
 
-  console.log(`开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`);
+  console.log(
+    `开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`,
+  );
   const startTime = Date.now();
 
   // 分离短文本和长文本
-  const shortTextSegments = segments.filter((seg) => seg.text.length <= SHORT_TEXT_THRESHOLD);
-  const longTextSegments = segments.filter((seg) => seg.text.length > SHORT_TEXT_THRESHOLD);
+  const shortTextSegments = segments.filter(
+    (seg) => seg.text.length <= SHORT_TEXT_THRESHOLD,
+  );
+  const longTextSegments = segments.filter(
+    (seg) => seg.text.length > SHORT_TEXT_THRESHOLD,
+  );
 
-  console.log(`短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`);
+  console.log(
+    `短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`,
+  );
 
   const allResults: PostProcessResult[] = [];
 
@@ -482,11 +513,20 @@ async function postProcessSegmentsWithGroq(
 
       const batchPromises = batch.map(async (segment, segmentIndex) => {
         try {
-          const processed = await postProcessSegmentWithGroq(segment, sourceLanguage, finalOptions);
-          console.log(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`);
+          const processed = await postProcessSegmentWithGroq(
+            segment,
+            sourceLanguage,
+            finalOptions,
+          );
+          console.log(
+            `长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`,
+          );
           return processed;
         } catch (error) {
-          console.error(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`, error);
+          console.error(
+            `长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`,
+            error,
+          );
           return {
             originalText: segment.text,
             normalizedText: segment.text,
@@ -535,58 +575,72 @@ async function postProcessSegmentsWithGroq(
   return allResults;
 }
 
-export async function POST(request: NextRequest) {
-  try {
+export const POST = withEnhancedErrorHandling(
+  async function enhancedPostProcessHandler(
+    request: NextRequest,
+    context?: EnhancedRequestContext,
+  ): Promise<NextResponse> {
     // 验证Groq配置
     const configValidation = validateGroqConfiguration();
     if (!configValidation.isValid) {
-      return apiError({
-        code: "CONFIG_ERROR",
-        message: "Groq configuration invalid",
-        details: configValidation.errors,
-        statusCode: 500,
-      });
+      throw new Error(
+        `Groq configuration invalid: ${configValidation.errors.join(", ")}`,
+      );
     }
 
     const body = await request.json();
     const validation = validateRequestData(body);
     if (!validation.isValid) {
-      return apiError(
-        validation.error ?? {
-          code: "INVALID_REQUEST" as const,
-          message: "Invalid request data",
-          statusCode: 400,
-        },
+      throw new Error(
+        `Request validation failed: ${JSON.stringify(validation.error)}`,
       );
     }
 
     const data = validation.data;
     if (!data) {
-      return apiError({
-        code: "INVALID_REQUEST" as const,
-        message: "Request data is missing",
-        statusCode: 400,
-      });
+      throw new Error("Request data is missing");
     }
-    const { segments, language, targetLanguage, enableAnnotations, enableFurigana } = data;
+    const {
+      segments,
+      language,
+      targetLanguage,
+      enableAnnotations,
+      enableFurigana,
+    } = data;
 
     // 验证输入数据
     const segmentValidation = validateSegments(segments);
     if (!segmentValidation.isValid) {
-      return apiError(
-        segmentValidation.error ?? {
-          code: "UNKNOWN_VALIDATION_ERROR" as const,
-          message: "Segment validation failed",
-          statusCode: 400,
-        },
+      throw new Error(
+        `Segment validation failed: ${JSON.stringify(segmentValidation.error)}`,
       );
     }
 
-    const processedSegments = await postProcessSegmentsWithGroq(segments, language, {
+    // Enhanced processing options with mobile optimizations
+    const processingOptions = {
       targetLanguage,
       enableAnnotations,
       enableFurigana,
-    });
+      // Add mobile-specific optimizations
+      mobileOptimizations: {
+        enabled: true,
+        batteryOptimized: context?.deviceInfo?.is_low_power_mode,
+        networkOptimized: context?.deviceInfo?.network_type === "cellular",
+        deviceType: context?.deviceInfo?.device_type || "desktop",
+      },
+      // Add performance optimizations based on device capabilities
+      performanceOptimizations: {
+        batchSize: context?.deviceInfo?.device_type === "mobile" ? 3 : 5,
+        concurrency: context?.deviceInfo?.device_type === "mobile" ? 2 : 4,
+        enableCaching: true,
+      },
+    };
+
+    const processedSegments = await postProcessSegmentsWithGroq(
+      segments,
+      language,
+      processingOptions,
+    );
 
     // Return processed segments with original metadata preserved
     const finalSegments = processedSegments.map((processedSegment, index) => ({
@@ -600,19 +654,45 @@ export async function POST(request: NextRequest) {
     return apiSuccess({
       processedSegments: finalSegments.length,
       segments: finalSegments,
+      // Add optimization information
+      optimizations: {
+        mobile_optimized: processingOptions.mobileOptimizations.enabled,
+        battery_optimized:
+          processingOptions.mobileOptimizations.batteryOptimized,
+        network_optimized:
+          processingOptions.mobileOptimizations.networkOptimized,
+        performance_config: processingOptions.performanceOptimizations,
+      },
+      // Add request context
+      request_context: {
+        device_type: context?.deviceInfo?.device_type,
+        request_id: context?.metadata.requestId,
+        session_id: context?.metadata.sessionId,
+        processing_time: Date.now() - (context?.startTime || Date.now()),
+      },
     });
-  } catch (error) {
-    // 特定错误处理
-    if (error instanceof Error) {
-      const specificError = handleSpecificError(error);
-      if (specificError) {
-        return specificError;
-      }
-    }
-
-    return apiFromError(error, "postprocess/POST");
-  }
-}
+  },
+  {
+    ...defaultMiddlewareConfig,
+    // Post-processing specific configuration
+    enableMobileOptimizations: true,
+    batteryOptimizations: true,
+    networkOptimizations: true,
+    enableAnalytics: true,
+    enablePerformanceMonitoring: true,
+    enableTimeoutProtection: true,
+    requestTimeoutMs: 90000, // 90 seconds for post-processing
+    enableRateLimiting: true,
+    maxRequestsPerMinute: 60, // Higher limit for post-processing
+    customContext: {
+      customData: {
+        feature: "postprocessing",
+        service: "groq-chat",
+        model: "openai/gpt-oss-20b",
+      },
+    },
+  },
+);
 
 // GET endpoint is not needed for stateless API
 

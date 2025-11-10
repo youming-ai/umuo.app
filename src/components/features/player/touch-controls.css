@@ -1,0 +1,391 @@
+/**
+ * Touch-optimized controls CSS for mobile devices
+ * Provides mobile-specific styling and optimizations for touch interactions
+ */
+
+/* Touch controls base styles */
+.touch-controls {
+  /* Prevent text selection and callouts */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+
+  /* Optimize for touch */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
+  /* Ensure proper layering */
+  position: relative;
+  z-index: 10;
+
+  /* Smooth transitions */
+  transition: all 0.2s ease-out;
+}
+
+/* Touch feedback styles */
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+}
+
+.touch-feedback::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out;
+  pointer-events: none;
+}
+
+.touch-feedback:active::after {
+  width: 200px;
+  height: 200px;
+  opacity: 0;
+}
+
+/* Touch target optimization */
+.touch-target {
+  /* Minimum touch target size (WCAG 2.1) */
+  min-width: 44px;
+  min-height: 44px;
+
+  /* Optimal touch target for mobile */
+  min-width: 48px;
+  min-height: 48px;
+
+  /* Enhanced spacing for touch */
+  margin: 4px;
+  padding: 8px;
+
+  /* Prevent accidental zoom on double-tap */
+  touch-action: manipulation;
+}
+
+/* Mobile-specific button styles */
+.touch-button {
+  /* Touch-friendly sizing */
+  min-height: 44px;
+  min-width: 44px;
+  padding: 12px 16px;
+
+  /* Visual feedback */
+  transition: transform 0.1s ease-out, background-color 0.1s ease-out;
+
+  /* Prevent text selection */
+  user-select: none;
+  -webkit-user-select: none;
+
+  /* Better touch response */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-button:active {
+  transform: scale(0.95);
+}
+
+/* Touch slider styles */
+.touch-slider {
+  /* Larger touch area */
+  min-height: 44px;
+
+  /* Prevent accidental scrolling */
+  touch-action: pan-y;
+
+  /* Visual feedback */
+  position: relative;
+}
+
+.touch-slider-thumb {
+  /* Enlarged thumb for better touch */
+  width: 24px;
+  height: 24px;
+
+  /* Touch feedback */
+  transition: transform 0.1s ease-out;
+}
+
+.touch-slider-thumb:active {
+  transform: scale(1.2);
+}
+
+/* Gesture indicator styles */
+.gesture-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.gesture-indicator-swipe {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(59, 130, 246, 0.8);
+  border-radius: 50%;
+  animation: swipe-pulse 0.6s ease-out;
+}
+
+.gesture-indicator-pinch {
+  width: 80px;
+  height: 80px;
+  border: 3px solid rgba(59, 130, 246, 0.8);
+  border-radius: 50%;
+  animation: pinch-pulse 0.6s ease-out;
+}
+
+@keyframes swipe-pulse {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+@keyframes pinch-pulse {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.3) rotate(180deg);
+  }
+}
+
+/* Responsive touch controls */
+@media (max-width: 640px) {
+  .touch-controls {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .touch-target {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  .touch-button {
+    min-height: 48px;
+    min-width: 48px;
+    padding: 14px 18px;
+  }
+
+  .touch-slider {
+    min-height: 48px;
+  }
+
+  .touch-slider-thumb {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .touch-controls {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .touch-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .touch-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+  }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .touch-target,
+  .touch-button {
+    /* Adjust sizes for high DPI displays */
+    border-width: 0.5px;
+  }
+
+  .touch-slider-thumb {
+    border-width: 1px;
+  }
+}
+
+/* Dark mode adaptations */
+@media (prefers-color-scheme: dark) {
+  .touch-feedback::after {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .gesture-indicator-swipe,
+  .gesture-indicator-pinch {
+    border-color: rgba(147, 197, 253, 0.8);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .touch-controls,
+  .touch-button,
+  .touch-slider-thumb,
+  .gesture-indicator {
+    transition: none;
+    animation: none;
+  }
+
+  .touch-button:active {
+    transform: none;
+  }
+
+  .touch-slider-thumb:active {
+    transform: none;
+  }
+}
+
+/* Battery optimization */
+@media (prefers-reduced-data: reduce) {
+  .touch-controls {
+    /* Disable non-essential animations */
+    transition: none;
+  }
+
+  .gesture-indicator {
+    display: none;
+  }
+}
+
+/* Landscape orientation optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  .touch-controls {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .touch-target {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .touch-button {
+    min-height: 40px;
+    min-width: 40px;
+    padding: 8px 12px;
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .touch-controls {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .touch-target {
+    min-width: 52px;
+    min-height: 52px;
+  }
+
+  .touch-button {
+    min-height: 52px;
+    min-width: 52px;
+    padding: 16px 20px;
+  }
+}
+
+/* Accessibility focus styles */
+.touch-button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.touch-slider:focus-within {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Haptic feedback visual indicators */
+.haptic-feedback {
+  position: relative;
+}
+
+.haptic-feedback::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  border: 2px solid rgba(59, 130, 246, 0.5);
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s ease-out;
+  pointer-events: none;
+}
+
+.haptic-feedback.active::before {
+  opacity: 1;
+  transform: scale(1.5);
+}
+
+/* Performance optimizations */
+.touch-controls {
+  /* GPU acceleration for smooth animations */
+  transform: translateZ(0);
+  will-change: transform;
+
+  /* Optimize rendering */
+  contain: layout style paint;
+}
+
+.touch-button,
+.touch-slider-thumb {
+  /* GPU acceleration for smooth interactions */
+  transform: translateZ(0);
+  will-change: transform;
+
+  /* Optimize for frequent updates */
+  contain: layout style;
+}
+
+/* Loading and disabled states */
+.touch-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.touch-button.loading {
+  position: relative;
+  color: transparent;
+}
+
+.touch-button.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

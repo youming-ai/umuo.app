@@ -1,0 +1,749 @@
+/**
+ * Enhanced Error Classification System
+ *
+ * Comprehensive error classification, analysis, and recovery system for umuo.app.
+ * This module provides intelligent error handling with pattern recognition,
+ * clustering, prediction, and automated recovery strategies, including:
+ * - Network interruption handling with automatic retry (T062)
+ * - Intelligent error classification (T057)
+ * - Automated recovery strategies (T058)
+ */
+
+// ============================================================================
+// CORE CLASSIFICATION SYSTEM
+// ============================================================================
+
+export {
+  // Enums and types
+  ErrorCategory,
+  ErrorType,
+  ErrorSeverity,
+  RecoveryStrategy,
+
+  // Interfaces
+  ErrorContext,
+  ErrorAnalysis,
+  ErrorPattern,
+  ErrorCluster,
+  UserImpact,
+  SystemImpact,
+  ErrorPatternCondition,
+
+  // Main classifier
+  ErrorClassifier,
+
+  // Utility functions
+  classifyError,
+  getErrorStatistics,
+  getActiveErrorClusters,
+  exportErrorData,
+} from "./error-classifier";
+
+// ============================================================================
+// NETWORK INTERRUPTION HANDLING (T062)
+// ============================================================================
+
+export {
+  // Core network classes
+  NetworkMonitor,
+  RetryManager,
+  CircuitBreaker,
+  OfflineManager,
+
+  // Network types and enums
+  NetworkType,
+  NetworkQuality,
+  NetworkEffectiveType,
+  CircuitState,
+  NetworkEventType,
+
+  // Network interfaces
+  NetworkStatus,
+  NetworkMetrics,
+  RetryConfig,
+  RetryState,
+  RetryAttempt,
+  CircuitBreakerConfig,
+  CircuitBreakerState,
+  SyncOperation,
+  OfflineStorage,
+  NetworkEvent,
+  NetworkEventListener,
+
+  // React hooks
+  useNetworkMonitor,
+  useRetryManager,
+  useCircuitBreaker,
+
+  // Utility functions
+  createResilientFetch,
+  isNetworkSuitable,
+  getNetworkRecommendations,
+
+  // Default configurations
+  DEFAULT_RETRY_CONFIG,
+  DEFAULT_CIRCUIT_BREAKER_CONFIG,
+} from "./network-interruption";
+
+// ============================================================================
+// ERROR ANALYSIS UTILITIES
+// ============================================================================
+
+export {
+  // Analysis engines
+  PatternRecognitionEngine,
+  ErrorClusteringEngine,
+  ErrorPredictionEngine,
+
+  // Utility functions
+  createPatternRecognitionEngine,
+  createErrorClusteringEngine,
+  createErrorPredictionEngine,
+  analyzeErrorTrends,
+  generateErrorReport,
+} from "./error-analysis";
+
+// ============================================================================
+// RECOVERY STRATEGY SYSTEM (T058)
+// ============================================================================
+
+export {
+  // Recovery manager interfaces
+  RecoveryManager,
+
+  // Recovery actions and implementations
+  RecoveryAction,
+  RecoveryImplementation,
+  RecoveryResult,
+  RecoveryPlan,
+  RecoveryExecutionContext,
+
+  // Recovery action types
+  RecoveryActionType,
+  RecoveryStatus,
+  RecoveryPriority,
+
+  // Configuration and options
+  RetryConfiguration,
+  CircuitBreakerConfiguration,
+  FallbackConfiguration,
+  RecoveryPlanOptions,
+  RecoveryExecutionOptions,
+  RecoveryConfiguration,
+
+  // Mobile-specific interfaces
+  MobileDeviceContext,
+  PerformanceContext,
+  MobileRecoveryOptimization,
+
+  // Analytics and monitoring
+  RecoveryMetrics,
+  RecoveryStatistics,
+  RecoveryExecution,
+
+  // Main utility functions
+  createRecoveryStrategy,
+  generateRecoveryPlan,
+  executeRecoveryPlan,
+  quickRecovery,
+  getRecoveryStatistics,
+  getRecoveryHistory,
+  configureRecovery,
+  getRecoveryConfiguration,
+  registerRecoveryAction,
+  unregisterRecoveryAction,
+  getRecoveryAction,
+  getRecoveryActionsByType,
+  createCancelToken,
+} from "./recovery-strategies";
+
+// ============================================================================
+// SPECIFIC RECOVERY STRATEGIES
+// ============================================================================
+
+export {
+  // Network recovery strategies
+  networkConnectivityCheckAction,
+  networkRetryAction,
+  offlineModeAction,
+
+  // API recovery strategies
+  apiRateLimitAction,
+  apiAuthenticationRefreshAction,
+
+  // File system recovery strategies
+  fileCompressionAction,
+  chunkedUploadAction,
+
+  // Audio processing recovery strategies
+  audioFormatConversionAction,
+  audioQualityRepairAction,
+
+  // Transcription recovery strategies
+  transcriptionFallbackAction,
+  audioSegmentationAction,
+
+  // Registration function
+  registerAllRecoveryStrategies,
+} from "./specific-recovery-strategies";
+
+// ============================================================================
+// MOBILE RECOVERY STRATEGIES
+// ============================================================================
+
+export {
+  // Battery-aware recovery
+  batteryAwareRecoveryAction,
+
+  // Network-optimized recovery
+  mobileNetworkOptimizationAction,
+
+  // Storage management
+  mobileStorageManagementAction,
+
+  // Touch-friendly interfaces
+  touchFriendlyRecoveryAction,
+
+  // Offline-first recovery
+  mobileOfflineFirstAction,
+
+  // Performance optimization
+  mobilePerformanceOptimizedAction,
+
+  // Mobile utilities
+  registerMobileRecoveryStrategies,
+  hasMobileCapability,
+  getDevicePerformanceProfile,
+} from "./mobile-recovery-strategies";
+
+// ============================================================================
+// TANSTACK QUERY INTEGRATION
+// ============================================================================
+
+export {
+  // Enhanced query and mutation hooks
+  useEnhancedQuery,
+  useEnhancedMutation,
+
+  // Recovery hooks
+  useBatchRecovery,
+  useRecoveryStatistics,
+
+  // Configuration
+  createRecoveryQueryClientConfig,
+
+  // Interfaces
+  EnhancedQueryOptions,
+  EnhancedMutationOptions,
+} from "./tanstack-query-integration";
+
+// ============================================================================
+// INTEGRATION UTILITIES
+// ============================================================================
+
+export {
+  // React Query integrations
+  createQueryErrorHandler,
+  createMutationErrorHandler,
+  useEnhancedQueryError,
+  useEnhancedMutationError,
+  QueryErrorHandlerOptions,
+  MutationErrorHandlerOptions,
+
+  // React Error Boundary
+  EnhancedErrorBoundary,
+  EnhancedErrorBoundaryProps,
+  EnhancedErrorBoundaryState,
+
+  // API integrations
+  createApiErrorHandler,
+  ApiErrorHandlerOptions,
+
+  // Existing system integrations
+  enhanceExistingErrorHandler,
+  wrapErrorHandler,
+
+  // Monitoring integrations
+  createErrorMonitoring,
+  ErrorMonitoringOptions,
+
+  // Constants
+  DefaultErrorContexts,
+  CommonErrorHandlingConfigs,
+} from "./integrations";
+
+// ============================================================================
+// TESTING UTILITIES
+// ============================================================================
+
+export {
+  // Mock data generators
+  MockErrorGenerator,
+
+  // Test scenarios
+  TestScenarios,
+
+  // Validation utilities
+  TestValidator,
+
+  // Performance testing
+  PerformanceTester,
+
+  // Test runner
+  ErrorClassificationTestRunner,
+
+  // Quick test functions
+  quickTest,
+  generateTestReport,
+
+  // Type definitions
+  ValidationResult,
+  PerformanceTestResult,
+  MemoryTestResult,
+  AccuracyTestResult,
+  TestSuiteResult,
+} from "./testing-utils";
+
+// ============================================================================
+// LEGACY COMPATIBILITY
+// ============================================================================
+
+// Re-export from existing error handler for compatibility
+export {
+  AppError,
+  TranscriptionError,
+  ErrorHandler,
+  handleError,
+} from "@/lib/utils/error-handler";
+
+// ============================================================================
+// ERROR MIDDLEWARE SYSTEM (T060)
+// ============================================================================
+
+export {
+  // Main middleware system
+  ErrorMiddleware,
+  MiddlewareError,
+
+  // Middleware interfaces
+  MiddlewareContext,
+  MiddlewareRequest,
+  MiddlewareResponse,
+  MiddlewareConfiguration,
+
+  // Error processing
+  ErrorTransformer,
+  ErrorFilter,
+  ErrorValidator,
+  ErrorRoutingRule,
+
+  // Recovery suggestions
+  RecoverySuggestion,
+  RecoveryStep,
+
+  // Analytics and monitoring
+  ErrorAnalytics,
+
+  // Main components
+  RequestContextProcessor,
+  MiddlewareErrorHandler,
+  ErrorReporter,
+  MiddlewareManager,
+
+  // Utility functions
+  errorMiddleware,
+  createNextJSErrorMiddleware,
+  createExpressErrorMiddleware,
+  createReactErrorHandler,
+} from "./error-middleware";
+
+// ============================================================================
+// INTEGRATION UTILITIES
+// ============================================================================
+
+export {
+  // Next.js integration
+  createNextJSMiddleware,
+  withErrorMiddleware,
+  NextJSErrorBoundary,
+
+  // Express.js integration
+  createExpressMiddleware,
+  createExpressErrorHandler,
+
+  // React integration
+  ReactErrorBoundary,
+  DefaultErrorFallback,
+  ErrorBoundaryComponent,
+
+  // TanStack Query integration
+  createEnhancedQueryOptions,
+  createEnhancedMutationOptions,
+
+  // Mobile integration
+  useMobileErrorHandler,
+  MobileErrorDisplay,
+
+  // Types
+  NextJSMiddlewareConfig,
+  TanStackQueryErrorHandlerOptions,
+  ErrorBoundaryProps,
+} from "./integrations";
+
+// ============================================================================
+// DEVELOPER TOOLS
+// ============================================================================
+
+export {
+  // Debug mode
+  enableDebugMode,
+  disableDebugMode,
+  isDebugEnabled,
+  getDebugConfiguration,
+  DebugConfiguration,
+
+  // Error simulation
+  ErrorSimulation,
+  ErrorSimulationEngine,
+  errorSimulationEngine,
+
+  // Performance analysis
+  PerformanceMetrics,
+  PerformanceAnalyzer,
+  performanceAnalyzer,
+
+  // Configuration validation
+  ConfigurationValidationResult,
+  ConfigurationValidator,
+  configurationValidator,
+
+  // Error visualization
+  ErrorVisualizationOptions,
+  ErrorVisualizer,
+  errorVisualizer,
+
+  // Development workflow
+  DevWorkflowAutomation,
+  devWorkflowAutomation,
+} from "./developer-tools";
+
+// ============================================================================
+// ERROR ANALYTICS AND TRACKING SYSTEM (T061)
+// ============================================================================
+
+export {
+  // Main analytics classes
+  ErrorCollector,
+  PatternAnalyzer,
+  MetricsCalculator,
+  DashboardGenerator,
+  AnalyticsStorageManager,
+
+  // Real-time monitoring and alerting
+  ErrorMonitoringSystem,
+  MetricsCollector,
+  RuleEngine,
+  AlertManager,
+  NotificationService,
+  RealTimeAnomalyDetector,
+
+  // Integration utilities
+  AnalyticsIntegrationManager,
+  AnalyticsErrorMiddleware,
+  AnalyticsErrorBoundary,
+  createAnalyticsQueryConfig,
+  useAnalyticsQuery,
+
+  // Core types and interfaces
+  ErrorEvent,
+  ErrorAnalyticsData,
+  ErrorAnalyticsConfig,
+  PatternRecognitionResult,
+  AnomalyDetectionResult,
+  DashboardData,
+  MonitoringAlert,
+  MonitoringRule,
+  RealTimeMetrics,
+  MonitoringDashboard,
+  StorageStats,
+  AggregatedAnalytics,
+  CachedPattern,
+  StoredErrorEvent,
+
+  // Enums
+  AlertSeverity,
+  AlertType,
+  ConsentLevel,
+
+  // Utility functions
+  createErrorAnalytics,
+  initializeErrorAnalytics,
+  quickStartAnalytics,
+  createErrorMonitoringSystem,
+  getErrorMonitoringSystem,
+  createAnalyticsStorageManager,
+  getAnalyticsStorageManager,
+  initializeErrorAnalytics,
+  getErrorAnalytics,
+  handleErrorWithAnalytics,
+  createAnalyticsMiddleware,
+  getAnalyticsIntegrationManager,
+} from "./error-analytics";
+
+export {
+  // Analytics storage management
+  ErrorAnalyticsDatabase,
+  createAnalyticsStorageManager,
+  getAnalyticsStorageManager,
+} from "./analytics-storage";
+
+export {
+  // Real-time monitoring
+  AlertSeverity,
+  AlertType,
+  MonitoringAlert,
+  MonitoringRule,
+  NotificationConfig,
+  SuppressionRule,
+  AutoResolveConfig,
+  RealTimeMetrics,
+  MonitoringDashboard,
+  ErrorMonitoringSystem,
+  MetricsCollector,
+  RuleEngine,
+  AlertManager,
+  NotificationService,
+  RealTimeAnomalyDetector,
+  createErrorMonitoringSystem,
+  getErrorMonitoringSystem,
+} from "./analytics-monitoring";
+
+export {
+  // Integration utilities
+  AnalyticsIntegrationManager,
+  AnalyticsIntegrationConfig,
+  IntegrationResult,
+  AnalyticsErrorMiddleware,
+  AnalyticsErrorBoundary,
+  useErrorAnalytics,
+  createAnalyticsQueryConfig,
+  useAnalyticsQuery,
+  initializeErrorAnalytics,
+  quickStartAnalytics,
+  createAnalyticsMiddleware,
+  getAnalyticsIntegrationManager,
+  handleErrorWithAnalytics,
+} from "./analytics-integrations";
+
+// ============================================================================
+// TROUBLESHOOTING GUIDANCE SYSTEM (T065)
+// ============================================================================
+
+export {
+  // Core troubleshooting types
+  TroubleshootingContext,
+  BrowserInfo,
+  DeviceInfo,
+  Symptom,
+  SymptomCategory,
+  SymptomSeverity,
+  SymptomQuestion,
+  QuestionType,
+  SymptomCondition,
+  ConditionOperator,
+  SymptomAnalysis,
+  TroubleshootingGuide,
+  TargetAudience,
+  DifficultyLevel,
+  TroubleshootingStep,
+  StepType,
+  StepCondition,
+  StepAction,
+  ActionType,
+  ApiCall,
+  ActionValidation,
+  VerificationStep,
+  VerificationType,
+  AlternativeSolution,
+  KnowledgeBaseEntry,
+  ContentType,
+  FAQ,
+  WizardSession,
+  WizardStep,
+  WizardStepType,
+  SessionProgress,
+  SessionStatus,
+  TroubleshootingAnalytics,
+  AnalyticsAction,
+  UserFeedback,
+  SuccessMetrics,
+  MobileTroubleshootingGuide,
+  MobileTroubleshootingContext,
+  MobilePerformanceMetrics,
+  NetworkEvent,
+  ContentManagementConfig,
+  ContentAuthor,
+  AuthorRole,
+  AuthorPermission,
+  ContentStatus,
+  ContentReview,
+  ReviewStatus,
+  ReviewComment,
+  TroubleshootingConfig,
+  AnalyticsConfig,
+  IntegrationConfig,
+  SupportSystemConfig,
+  EscalationRule,
+
+  // Main troubleshooting manager
+  TroubleshootingManager,
+  createTroubleshootingManager,
+  quickStartTroubleshooting,
+
+  // Symptom checker
+  SymptomChecker,
+  createSymptomChecker,
+
+  // Troubleshooting wizard
+  TroubleshootingWizard,
+
+  // Knowledge base
+  KnowledgeBase,
+  createKnowledgeBase,
+
+  // Guidance generator
+  GuidanceGenerator,
+  createGuidanceGenerator,
+
+  // Version and metadata
+  TROUBLESHOOTING_SYSTEM_VERSION,
+  TROUBLESHOOTING_SYSTEM_BUILD_DATE,
+  getTroubleshootingSystemInfo,
+  enableTroubleshootingDebugMode,
+  isTroubleshootingDebugMode,
+  debugTroubleshooting,
+
+  // Quick start helpers
+  quickStartTroubleshootingForDev,
+  quickSetupForProduction,
+} from "./troubleshooting";
+
+// ============================================================================
+// REACT HOOKS FOR TROUBLESHOOTING
+// ============================================================================
+
+export {
+  // Troubleshooting hooks
+  useTroubleshootingManager,
+  useTroubleshootingSession,
+  useSymptomChecker,
+  useKnowledgeBase,
+  useMobileTroubleshooting,
+  useTroubleshootingAnalytics,
+  useErrorIntegration,
+  useQuickTroubleshooting,
+} from "@/hooks/useTroubleshooting";
+
+// ============================================================================
+// VERSION AND METADATA
+// ============================================================================
+
+export const ERROR_CLASSIFICATION_VERSION = "1.0.0";
+export const ERROR_CLASSIFICATION_BUILD_DATE = new Date().toISOString();
+export const ERROR_MIDDLEWARE_VERSION = "1.0.0";
+export const ERROR_MIDDLEWARE_BUILD_DATE = new Date().toISOString();
+export const ERROR_ANALYTICS_VERSION = "1.0.0";
+export const ERROR_ANALYTICS_BUILD_DATE = new Date().toISOString();
+export const TROUBLESHOOTING_SYSTEM_VERSION = "1.0.0";
+export const TROUBLESHOOTING_SYSTEM_BUILD_DATE = new Date().toISOString();
+
+/**
+ * System information and health check
+ */
+export function getSystemInfo() {
+  return {
+    version: ERROR_CLASSIFICATION_VERSION,
+    buildDate: ERROR_CLASSIFICATION_BUILD_DATE,
+    classifier: ErrorClassifier.getInstance(),
+    capabilities: {
+      classification: true,
+      patternRecognition: true,
+      clustering: true,
+      prediction: true,
+      recovery: true,
+      monitoring: true,
+      testing: true,
+      troubleshooting: true,
+    },
+    components: {
+      errorClassification: {
+        version: ERROR_CLASSIFICATION_VERSION,
+        available: true,
+      },
+      errorMiddleware: {
+        version: ERROR_MIDDLEWARE_VERSION,
+        available: true,
+      },
+      errorAnalytics: {
+        version: ERROR_ANALYTICS_VERSION,
+        available: true,
+      },
+      troubleshootingSystem: {
+        version: TROUBLESHOOTING_SYSTEM_VERSION,
+        available: true,
+        features: {
+          symptomChecking: true,
+          guidedResolution: true,
+          knowledgeBase: true,
+          mobileSupport: true,
+          analytics: true,
+          contentManagement: true,
+          errorIntegration: true,
+          reactComponents: true,
+        },
+      },
+    },
+  };
+}
+
+// ============================================================================
+// DEVELOPMENT HELPERS
+// ============================================================================
+
+/**
+ * Development helper to enable debug mode
+ */
+export function enableDebugMode(): void {
+  if (typeof window !== "undefined") {
+    (window as any).__ERROR_CLASSIFICATION_DEBUG__ = true;
+  }
+}
+
+/**
+ * Check if debug mode is enabled
+ */
+export function isDebugMode(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    (window as any).__ERROR_CLASSIFICATION_DEBUG__ === true
+  );
+}
+
+/**
+ * Development helper to log debug information
+ */
+export function debugLog(message: string, data?: any): void {
+  if (isDebugMode()) {
+    console.log(`[ErrorClassification] ${message}`, data);
+  }
+}
+
+/**
+ * Development helper to clear all error data
+ */
+export function clearAllErrorData(): void {
+  const classifier = ErrorClassifier.getInstance();
+  classifier.clearHistory();
+
+  debugLog("All error data cleared");
+}

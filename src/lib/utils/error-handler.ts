@@ -1,763 +1,361 @@
-import { toast } from "sonner";
-import {
-  type AppError,
-  DefaultRecoveryStrategies,
-  type ErrorCategory,
-  type ErrorCode,
-  ErrorCodes,
-  type ErrorContext,
-  type ErrorMonitor,
-  getDefaultErrorMessage,
-  getErrorCategory,
-  getErrorCodeConfig,
-  getErrorSeverity,
-  type ErrorStats as ImportedErrorStats,
-  isRetryableError,
-} from "@/types/api/errors";
-import { type RetryOptions, withRetry } from "./retry-utils";
+/**
+ * Enhanced error handling utilities for optimization features
+ */
 
-// 错误日志级别
-export enum LogLevel {
-  ERROR = "error",
-  WARN = "warn",
-  INFO = "info",
-  DEBUG = "debug",
-}
+import { type ErrorType } from "@/types/transcription";
 
-// 错误监控接口扩展
-export interface ExtendedErrorMonitor {
-  logError(error: AppError, context?: ErrorContext): void;
-  logInfo(message: string, context?: ErrorContext): void;
-  logWarning(message: string, context?: ErrorContext): void;
-  flush?(): Promise<void>;
-}
-
-// 本地存储的错误日志
-export interface ErrorLogEntry {
-  id: string;
-  timestamp: number;
-  level: LogLevel;
-  message: string;
+export interface AppError extends Error {
+  type: ErrorType;
   code?: string;
-  context?: ErrorContext;
-  stack?: string;
-}
-
-// 全局错误监控实例
-let globalErrorMonitor: ErrorMonitor | null = null;
-
-// 设置全局错误监控
-export function setErrorMonitor(monitor: ErrorMonitor): void {
-  globalErrorMonitor = monitor;
-}
-
-// 获取全局错误监控
-export function getErrorMonitor(): ErrorMonitor | null {
-  return globalErrorMonitor;
-}
-
-// 创建错误
-export function createError(
-  code: ErrorCode,
-  message: string,
-  details?: Record<string, unknown>,
-  statusCode: number = 500,
-  context?: ErrorContext,
-): AppError {
-  const errorCode = ErrorCodes[code];
-  const config = getErrorCodeConfig(errorCode);
-
-  // 安全获取 stack 属性
-  let stack: string | undefined;
-  try {
-    const testError = new Error();
-    stack = testError.stack;
-  } catch {
-    // 在某些环境中可能无法获取 stack
-    stack = undefined;
-  }
-
-  return {
-    code: errorCode,
-    message,
-    details,
-    statusCode,
-    timestamp: Date.now(),
-    stack,
-    context: {
-      ...context,
-      timestamp: Date.now(),
-      additional: {
-        ...context?.additional,
-        severity: config.severity,
-        category: config.category,
-      },
-    },
+  statusCode?: number;
+  details?: Record<string, any>;
+  suggestedAction?: string;
+  retryable?: boolean;
+  context?: {
+    fileId?: number;
+    jobId?: string;
+    timestamp?: Date;
+    userAgent?: string;
+    url?: string;
   };
 }
 
-// 记录错误到控制台和监控服务
-export function logError(error: AppError, context?: string): void {
-  const errorContext: ErrorContext = {
-    timestamp: Date.now(),
-    component: context,
-    additional: {
-      ...(error.details || {}),
-      stack: getErrorStack(error),
-    },
+export class TranscriptionError extends Error implements AppError {
+  type: ErrorType;
+  code?: string;
+  statusCode?: number;
+  details?: Record<string, any>;
+  suggestedAction?: string;
+  retryable?: boolean;
+  context?: {
+    fileId?: number;
+    jobId?: string;
+    timestamp?: Date;
+    userAgent?: string;
+    url?: string;
   };
 
-  // 控制台输出
-  const _logMessage = context
-    ? `[${context}] ${error.code}: ${error.message}`
-    : `${error.code}: ${error.message}`;
-
-  // 发送到错误监控服务
-  if (globalErrorMonitor) {
-    globalErrorMonitor.logError(error, errorContext);
-  }
-
-  // 本地存储错误日志
-  logErrorLocally(error, errorContext);
-}
-
-// 检查是否为应用错误
-export function isAppError(error: unknown): error is AppError {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    "message" in error &&
-    "statusCode" in error
-  );
-}
-
-// 处理错误
-export function handleError(error: unknown, context?: string): AppError {
-  if (isAppError(error)) {
-    logError(error, context);
-    return error;
-  }
-
-  if (typeof error === "string") {
-    const appError = createError("internalServerError", error, undefined, 500);
-    logError(appError, context);
-    return appError;
-  }
-
-  if (error instanceof Error) {
-    const appError = createError("internalServerError", error.message, { stack: error.stack }, 500);
-    logError(appError, context);
-    return appError;
-  }
-
-  const appError = createError(
-    "internalServerError",
-    "未知错误",
-    typeof error === "object" && error !== null ? { error } : undefined,
-    500,
-  );
-  logError(appError, context);
-  return appError;
-}
-
-// 静默处理错误（不记录日志）
-export function handleSilently(error: unknown, _context?: string): AppError {
-  if (isAppError(error)) {
-    return error;
-  }
-
-  if (error instanceof Error) {
-    return createError("internalServerError", error.message, { stack: error.stack }, 500);
-  }
-
-  return createError(
-    "internalServerError",
-    "未知错误",
-    typeof error === "object" && error !== null ? { error } : undefined,
-    500,
-  );
-}
-
-// 显示用户友好的错误消息
-export function showErrorToast(error: AppError | unknown): void {
-  const appError = isAppError(error) ? error : handleError(error);
-
-  const userMessage = getDefaultErrorMessage(appError.code) || appError.message;
-  toast.error(userMessage);
-}
-
-// 显示成功消息
-export function showSuccessToast(message: string): void {
-  toast.success(message);
-}
-
-// 验证错误
-export function validationError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("apiValidationError", message, details, 400);
-}
-
-// 未找到错误
-export function notFoundError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("fileNotFound", message, details, 404);
-}
-
-// 内部服务器错误
-export function internalError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("internalServerError", message, details, 500);
-}
-
-// 网络错误
-export function networkError(
-  message: string = "Network error occurred",
-  details?: Record<string, unknown>,
-): AppError {
-  return createError("networkError", message, details, 503);
-}
-
-// 数据库错误
-export function databaseError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("dbQueryFailed", message, details, 500);
-}
-
-// 文件上传错误
-export function fileUploadError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("fileUploadFailed", message, details, 400);
-}
-
-// 音频处理错误
-export function audioProcessingError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("audioProcessingError", message, details, 500);
-}
-
-// 转录错误
-export function transcriptionError(message: string, details?: Record<string, unknown>): AppError {
-  return createError("transcriptionFailed", message, details, 500);
-}
-
-// API错误
-export function apiError(
-  message: string,
-  statusCode: number = 500,
-  details?: Record<string, unknown>,
-): AppError {
-  return createError("apiValidationError", message, details, statusCode);
-}
-
-// 本地错误日志存储
-function logErrorLocally(error: AppError, context: ErrorContext): void {
-  try {
-    const logs = getLocalErrorLogs();
-    const entry: ErrorLogEntry = {
-      id: generateErrorId(),
-      timestamp: context.timestamp || Date.now(),
-      level: LogLevel.ERROR,
-      message: error.message,
-      code: error.code,
-      context,
-      stack: getErrorStack(error),
+  constructor(
+    message: string,
+    type: ErrorType,
+    options: {
+      code?: string;
+      statusCode?: number;
+      details?: Record<string, any>;
+      suggestedAction?: string;
+      retryable?: boolean;
+      context?: AppError["context"];
+    } = {},
+  ) {
+    super(message);
+    this.name = "TranscriptionError";
+    this.type = type;
+    this.code = options.code;
+    this.statusCode = options.statusCode;
+    this.details = options.details;
+    this.suggestedAction = options.suggestedAction;
+    this.retryable = options.retryable ?? this.getDefaultRetryable(type);
+    this.context = {
+      ...options.context,
+      timestamp: new Date(),
+      userAgent:
+        typeof window !== "undefined" ? window.navigator.userAgent : "Unknown",
+      url: typeof window !== "undefined" ? window.location.href : "Unknown",
     };
-
-    logs.push(entry);
-
-    // 只保留最近的100条错误日志
-    if (logs.length > 100) {
-      logs.splice(0, logs.length - 100);
-    }
-
-    localStorage.setItem("app_error_logs", JSON.stringify(logs));
-  } catch (_storageError) {}
-}
-
-// 获取本地错误日志
-export function getLocalErrorLogs(): ErrorLogEntry[] {
-  try {
-    const logs = localStorage.getItem("app_error_logs");
-    return logs ? JSON.parse(logs) : [];
-  } catch {
-    return [];
-  }
-}
-
-// 清除本地错误日志
-export function clearLocalErrorLogs(): void {
-  localStorage.removeItem("app_error_logs");
-}
-
-// 生成错误ID
-function generateErrorId(): string {
-  return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-}
-
-function getErrorStack(error: unknown): string | undefined {
-  if (typeof error === "object" && error !== null && "stack" in error) {
-    const stack = (error as { stack?: unknown }).stack;
-    if (typeof stack === "string") {
-      return stack;
-    }
-  }
-  return undefined;
-}
-
-// 带重试的错误处理
-export async function handleWithRetry<T>(
-  fn: () => Promise<T>,
-  retryOptions?: RetryOptions,
-  context?: string,
-): Promise<T> {
-  const result = await withRetry(fn, {
-    maxAttempts: 3,
-    baseDelay: 1000,
-    maxDelay: 30000,
-    backoffFactor: 2,
-    onRetry: (error, attempt) => {
-      const message = `操作失败，正在重试 (${attempt}/3): ${error.message}`;
-      toast.warning(message);
-    },
-    ...retryOptions,
-  });
-
-  if (!result.success || result.data === undefined) {
-    const appError = handleError(result.error, context);
-    showErrorToast(appError);
-    throw appError;
   }
 
-  return result.data;
-}
-
-// 智能错误处理 - 根据错误类型自动选择恢复策略
-export async function handleWithSmartRetry<T>(
-  fn: () => Promise<T>,
-  errorContext?: ErrorContext,
-  customStrategy?: Partial<(typeof DefaultRecoveryStrategies)[ErrorCategory]>,
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    const appError = handleError(error, errorContext?.component);
-    const category = getErrorCategory(appError.code);
-    const strategy = {
-      ...DefaultRecoveryStrategies[category],
-      ...customStrategy,
-    };
-
-    if (!isRetryableError(appError.code) || strategy.maxRetries === 0) {
-      showErrorToast(appError);
-      throw appError;
-    }
-
-    const result = await withRetry(fn, {
-      maxAttempts: strategy.maxRetries,
-      baseDelay: strategy.baseDelay,
-      maxDelay: strategy.maxDelay,
-      backoffFactor: strategy.backoffFactor,
-      shouldRetry: (retryError) => {
-        const retryAppError = handleError(retryError);
-        return (
-          isRetryableError(retryAppError.code) &&
-          (!strategy.retryCondition || strategy.retryCondition(retryAppError))
-        );
-      },
-      onRetry: (retryError, attempt) => {
-        const message = `${getErrorCategory(appError.code)} 错误，正在重试 (${attempt}/${strategy.maxRetries}): ${retryError.message}`;
-        toast.warning(message);
-      },
-    });
-
-    if (!result.success || result.data === undefined) {
-      // 如果重试失败，执行降级操作
-      if (strategy.fallbackAction) {
-        try {
-          await strategy.fallbackAction(appError);
-        } catch (fallbackError) {
-          const fallbackAppError = handleError(
-            fallbackError,
-            `${errorContext?.component}_fallback`,
-          );
-          showErrorToast(fallbackAppError);
-        }
-      }
-      showErrorToast(appError);
-      throw appError;
-    }
-
-    return result.data;
-  }
-}
-
-// 处理并显示错误（UI友好的错误处理）
-export function handleAndShowError(
-  error: unknown,
-  context?: string,
-  customMessage?: string,
-): AppError {
-  const appError = handleError(error, context);
-
-  if (customMessage) {
-    showErrorToast({ ...appError, message: customMessage });
-  } else {
-    showErrorToast(appError);
+  private getDefaultRetryable(type: ErrorType): boolean {
+    const retryableTypes: ErrorType[] = [
+      "network",
+      "timeout",
+      "rate_limit",
+      "server_error",
+    ];
+    return retryableTypes.includes(type);
   }
 
-  return appError;
-}
-
-// 网络错误重试包装器
-export async function fetchWithErrorHandling(
-  url: string,
-  options?: RequestInit & { retryOptions?: RetryOptions },
-  context?: string,
-): Promise<Response> {
-  return handleWithRetry(
-    async () => {
-      const response = await fetch(url, options);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
-      }
-
-      return response;
-    },
-    options?.retryOptions,
-    context,
-  );
-}
-
-// 错误恢复工具
-export async function withErrorRecovery<T>(
-  fn: () => Promise<T>,
-  recoveryFn: (error: AppError) => Promise<T>,
-  context?: string,
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    const appError = handleError(error, context);
-
-    try {
-      return await recoveryFn(appError);
-    } catch (recoveryError) {
-      const recoveryAppError = handleError(recoveryError, `${context}_recovery`);
-      showErrorToast(recoveryAppError);
-      throw recoveryAppError;
-    }
-  }
-}
-
-// 获取错误统计
-export function getErrorStats(): ImportedErrorStats {
-  const logs = getLocalErrorLogs();
-  const now = Date.now();
-  const oneHourAgo = now - 60 * 60 * 1000;
-
-  const stats: ImportedErrorStats = {
-    totalErrors: logs.length,
-    errorsByCode: {},
-    errorsByComponent: {},
-    errorsBySeverity: {},
-    errorFrequency: 0,
-    errorRate: 0,
-  };
-
-  if (logs.length > 0) {
-    stats.lastErrorTime = logs[logs.length - 1].timestamp;
-
-    // 计算最近一小时的错误频率
-    const recentErrors = logs.filter((log) => log.timestamp > oneHourAgo);
-    stats.errorFrequency = recentErrors.length;
-
-    // 计算错误率 (每分钟)
-    const timeRangeInMinutes = 60;
-    stats.errorRate = recentErrors.length / timeRangeInMinutes;
-
-    // 按错误代码统计
-    logs.forEach((log) => {
-      if (log.code) {
-        stats.errorsByCode[log.code] = (stats.errorsByCode[log.code] || 0) + 1;
-      }
-
-      if (log.context?.component) {
-        const component = log.context.component;
-        stats.errorsByComponent[component] = (stats.errorsByComponent[component] || 0) + 1;
-      }
-
-      // 按严重程度统计
-      if (log.code) {
-        const severity = getErrorSeverity(log.code);
-        stats.errorsBySeverity[severity] = (stats.errorsBySeverity[severity] || 0) + 1;
-      }
-    });
-  }
-
-  return stats;
-}
-
-// 批量错误处理
-export async function handleBatchErrors<T>(
-  operations: Array<() => Promise<T>>,
-  options: {
-    continueOnError?: boolean;
-    batchSize?: number;
-    retryOptions?: RetryOptions;
-    context?: string;
-  } = {},
-): Promise<{
-  results: Array<{ success: boolean; data?: T; error?: AppError }>;
-  errors: AppError[];
-}> {
-  const { continueOnError = true, batchSize = 5, retryOptions, context } = options;
-
-  const results: Array<{ success: boolean; data?: T; error?: AppError }> = [];
-  const errors: AppError[] = [];
-
-  // 分批处理
-  for (let i = 0; i < operations.length; i += batchSize) {
-    const batch = operations.slice(i, i + batchSize);
-
-    const batchPromises = batch.map(async (operation, index) => {
-      try {
-        const result = await handleWithRetry(
-          operation,
-          retryOptions,
-          `${context}_batch_${i + index}`,
-        );
-        return { success: true as const, data: result };
-      } catch (error) {
-        const appError = handleError(error, `${context}_batch_${i + index}`);
-        errors.push(appError);
-        return { success: false as const, error: appError };
-      }
-    });
-
-    const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults);
-
-    // 如果配置为遇到错误停止，且有错误发生
-    if (!continueOnError && errors.length > 0) {
-      break;
-    }
-  }
-
-  return { results, errors };
-}
-
-// 错误监控装饰器
-export function withErrorMonitoring(
-  target: object,
-  propertyKey: string,
-  descriptor: PropertyDescriptor,
-): void {
-  const originalMethod = descriptor.value;
-
-  descriptor.value = async function (...args: unknown[]) {
-    const context = `${target.constructor.name}.${propertyKey}`;
-
-    try {
-      return await originalMethod.apply(this, args);
-    } catch (error) {
-      const appError = handleError(error, context);
-      showErrorToast(appError);
-      throw appError;
-    }
-  };
-}
-
-// 错误恢复Hook（React Hook的替代方案）
-export function useErrorHandler() {
-  return {
-    handleError: (error: unknown, context?: string) => {
-      return handleAndShowError(error, context);
-    },
-    showError: (message: string, context?: string) => {
-      const error = createError("internalServerError", message);
-      showErrorToast(error);
-      logError(error, context);
-    },
-    showSuccess: (message: string) => {
-      showSuccessToast(message);
-    },
-    withRetry: async <T>(fn: () => Promise<T>, options?: RetryOptions) => {
-      return handleWithRetry(fn, options);
-    },
-    withSmartRetry: async <T>(
-      fn: () => Promise<T>,
-      context?: ErrorContext,
-      strategy?: Partial<(typeof DefaultRecoveryStrategies)[ErrorCategory]>,
-    ) => {
-      return handleWithSmartRetry(fn, context, strategy);
-    },
-  };
-}
-
-// 创建错误上下文
-export function createErrorContext(
-  component: string,
-  action: string,
-  additional?: Record<string, unknown>,
-): ErrorContext {
-  return {
-    component,
-    action,
-    timestamp: Date.now(),
-    additional,
-    traceId: generateTraceId(),
-    spanId: generateSpanId(),
-  };
-}
-
-// 生成追踪ID
-function generateTraceId(): string {
-  return `trace_${Date.now()}_${Math.random().toString(36).substr(2, 12)}`;
-}
-
-// 生成Span ID
-function generateSpanId(): string {
-  return Math.random().toString(36).substr(2, 8);
-}
-
-// 错误聚合器 - 用于处理重复错误
-export class ErrorAggregator {
-  private recentErrors: Map<string, { count: number; lastSeen: number; error: AppError }> =
-    new Map();
-  private readonly windowMs: number;
-
-  constructor(windowMs: number = 60000) {
-    // 默认1分钟窗口
-    this.windowMs = windowMs;
-  }
-
-  addError(error: AppError): { isNew: boolean; count: number } {
-    const key = this.getErrorKey(error);
-    const now = Date.now();
-    const existing = this.recentErrors.get(key);
-
-    if (existing && now - existing.lastSeen < this.windowMs) {
-      existing.count++;
-      existing.lastSeen = now;
-      return { isNew: false, count: existing.count };
-    } else {
-      this.recentErrors.set(key, { count: 1, lastSeen: now, error });
-      this.cleanup();
-      return { isNew: true, count: 1 };
-    }
-  }
-
-  private getErrorKey(error: AppError): string {
-    return `${error.code}_${error.message}_${error.context?.component}_${error.context?.action}`;
-  }
-
-  private cleanup(): void {
-    const now = Date.now();
-    for (const [key, entry] of this.recentErrors) {
-      if (now - entry.lastSeen > this.windowMs) {
-        this.recentErrors.delete(key);
-      }
-    }
-  }
-
-  getStats(): {
-    totalUniqueErrors: number;
-    topErrors: Array<{ error: AppError; count: number }>;
-  } {
-    const sorted = Array.from(this.recentErrors.entries())
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 10);
-
+  toJSON(): Record<string, any> {
     return {
-      totalUniqueErrors: this.recentErrors.size,
-      topErrors: sorted.map(([_, entry]) => ({
-        error: entry.error,
-        count: entry.count,
-      })),
+      name: this.name,
+      message: this.message,
+      type: this.type,
+      code: this.code,
+      statusCode: this.statusCode,
+      details: this.details,
+      suggestedAction: this.suggestedAction,
+      retryable: this.retryable,
+      context: this.context,
+      stack: this.stack,
     };
   }
 }
 
-// 全局错误聚合器实例
-const globalErrorAggregator = new ErrorAggregator();
+export class ErrorHandler {
+  private static instance: ErrorHandler;
+  private errorCallbacks: Map<ErrorType, ((error: AppError) => void)[]> =
+    new Map();
 
-export function getGlobalErrorAggregator(): ErrorAggregator {
-  return globalErrorAggregator;
-}
+  static getInstance(): ErrorHandler {
+    if (!ErrorHandler.instance) {
+      ErrorHandler.instance = new ErrorHandler();
+    }
+    return ErrorHandler.instance;
+  }
 
-// 为了向后兼容，保留函数别名
-export const ErrorHandler = {
-  createError,
-  logError,
-  handleError,
-  handleSilently,
-  showErrorToast,
-  showSuccessToast,
-  validationError,
-  notFoundError,
-  internalError,
-  networkError,
-  databaseError,
-  fileUploadError,
-  audioProcessingError,
-  transcriptionError,
-  apiError,
-  handleAndShowError,
-  isAppError,
-  handleWithRetry,
-  handleWithSmartRetry,
-  fetchWithErrorHandling,
-  withErrorRecovery,
-  getErrorStats,
-  handleBatchErrors,
-  useErrorHandler,
-  createErrorContext,
-  setErrorMonitor,
-  getErrorMonitor,
-  getGlobalErrorAggregator,
-};
+  /**
+   * Classify and create an appropriate error
+   */
+  static classifyError(error: any, context?: AppError["context"]): AppError {
+    const message = error?.message || String(error);
+    const statusCode = error?.status || error?.statusCode;
 
-// 重新导出类型、接口和枚举
-export type { AppError, ErrorContext, LogLevel as ImportedLogLevel, RetryOptions };
+    // Network errors
+    if (
+      message.includes("ECONNRESET") ||
+      message.includes("ETIMEDOUT") ||
+      message.includes("ENOTFOUND") ||
+      message.includes("fetch")
+    ) {
+      return new TranscriptionError(`Network error: ${message}`, "network", {
+        statusCode: statusCode || 503,
+        suggestedAction: "Check your internet connection and try again",
+        context,
+      });
+    }
 
-// 检查是否为API密钥相关错误
-export function isApiKeyError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const errorMessage = error.message.toLowerCase();
-    return (
-      errorMessage.includes("groq_api_key") ||
-      errorMessage.includes("环境变量未设置") ||
-      errorMessage.includes("api key") ||
-      errorMessage.includes("authentication")
+    // API Key errors
+    if (
+      message.includes("api key") ||
+      message.includes("unauthorized") ||
+      statusCode === 401
+    ) {
+      return new TranscriptionError("Invalid or missing API key", "api_key", {
+        statusCode: 401,
+        suggestedAction: "Check your GROQ_API_KEY environment variable",
+        retryable: false,
+        context,
+      });
+    }
+
+    // Rate limiting
+    if (message.includes("rate limit") || statusCode === 429) {
+      return new TranscriptionError("Rate limit exceeded", "rate_limit", {
+        statusCode: 429,
+        suggestedAction:
+          "Wait before retrying or implement exponential backoff",
+        retryable: true,
+        context,
+      });
+    }
+
+    // Quota exceeded
+    if (
+      message.includes("quota") ||
+      message.includes("insufficient_quota") ||
+      statusCode === 402
+    ) {
+      return new TranscriptionError("API quota exceeded", "quota_exceeded", {
+        statusCode: 402,
+        suggestedAction: "Check your Groq account billing and usage",
+        retryable: false,
+        context,
+      });
+    }
+
+    // File too large
+    if (
+      message.includes("too large") ||
+      message.includes("413") ||
+      statusCode === 413
+    ) {
+      return new TranscriptionError(
+        "Audio file size exceeds maximum limit",
+        "file_too_large",
+        {
+          statusCode: 413,
+          suggestedAction:
+            "Split audio file into smaller chunks or compress the audio",
+          retryable: true,
+          context,
+        },
+      );
+    }
+
+    // Unsupported format
+    if (
+      message.includes("unsupported") ||
+      message.includes("format") ||
+      statusCode === 400
+    ) {
+      return new TranscriptionError(
+        "Unsupported audio format",
+        "unsupported_format",
+        {
+          statusCode: 400,
+          suggestedAction:
+            "Convert audio to supported format (MP3, WAV, M4A, OGG, FLAC)",
+          retryable: false,
+          context,
+        },
+      );
+    }
+
+    // Timeout errors
+    if (
+      message.includes("timeout") ||
+      message.includes("Timeout") ||
+      statusCode === 408
+    ) {
+      return new TranscriptionError("Request timeout", "timeout", {
+        statusCode: 408,
+        suggestedAction:
+          "Try again with a smaller file or check your connection",
+        retryable: true,
+        context,
+      });
+    }
+
+    // Server errors
+    if (statusCode >= 500) {
+      return new TranscriptionError("Server error occurred", "server_error", {
+        statusCode,
+        suggestedAction:
+          "Try again later or contact support if the issue persists",
+        retryable: true,
+        context,
+      });
+    }
+
+    // Unknown error
+    return new TranscriptionError(
+      message || "Unknown error occurred",
+      "unknown",
+      {
+        statusCode: statusCode || 500,
+        suggestedAction: "Try again or contact support if the issue persists",
+        retryable: false,
+        context,
+      },
     );
   }
-  return false;
+
+  /**
+   * Handle an error with logging and callbacks
+   */
+  static handleError(error: AppError): void {
+    // Log error details
+    console.error("Transcription Error:", {
+      type: error.type,
+      message: error.message,
+      code: error.code,
+      statusCode: error.statusCode,
+      retryable: error.retryable,
+      context: error.context,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Trigger callbacks for this error type
+    const callbacks = this.getInstance().errorCallbacks.get(error.type);
+    if (callbacks) {
+      callbacks.forEach((callback) => {
+        try {
+          callback(error);
+        } catch (callbackError) {
+          console.error("Error in error callback:", callbackError);
+        }
+      });
+    }
+  }
+
+  /**
+   * Register a callback for specific error types
+   */
+  static onError(
+    errorType: ErrorType,
+    callback: (error: AppError) => void,
+  ): () => void {
+    const instance = ErrorHandler.getInstance();
+
+    if (!instance.errorCallbacks.has(errorType)) {
+      instance.errorCallbacks.set(errorType, []);
+    }
+
+    instance.errorCallbacks.get(errorType)!.push(callback);
+
+    // Return unsubscribe function
+    return () => {
+      const callbacks = instance.errorCallbacks.get(errorType);
+      if (callbacks) {
+        const index = callbacks.indexOf(callback);
+        if (index > -1) {
+          callbacks.splice(index, 1);
+        }
+      }
+    };
+  }
+
+  /**
+   * Create a user-friendly error message
+   */
+  static createUserFriendlyMessage(error: AppError): string {
+    if (error.suggestedAction) {
+      return `${error.message}. ${error.suggestedAction}`;
+    }
+
+    switch (error.type) {
+      case "network":
+        return "Connection problem. Please check your internet connection and try again.";
+      case "api_key":
+        return "Authentication problem. Please check your API configuration.";
+      case "rate_limit":
+        return "Too many requests. Please wait a moment and try again.";
+      case "quota_exceeded":
+        return "Service limit reached. Please check your account billing.";
+      case "file_too_large":
+        return "File too large. Please try with a smaller audio file.";
+      case "unsupported_format":
+        return "File format not supported. Please use MP3, WAV, M4A, OGG, or FLAC.";
+      case "timeout":
+        return "Request timed out. Please try again with a smaller file.";
+      case "server_error":
+        return "Service temporarily unavailable. Please try again later.";
+      default:
+        return "An error occurred. Please try again or contact support.";
+    }
+  }
+
+  /**
+   * Check if an error is retryable
+   */
+  static isRetryable(error: AppError): boolean {
+    return error.retryable ?? false;
+  }
+
+  /**
+   * Get retry delay for exponential backoff
+   */
+  static getRetryDelay(
+    attempt: number,
+    baseDelay: number = 1000,
+    maxDelay: number = 30000,
+  ): number {
+    const delay = baseDelay * Math.pow(2, attempt - 1);
+    return Math.min(delay + Math.random() * 1000, maxDelay); // Add jitter
+  }
 }
 
-// 获取用户友好的错误消息
-export function getFriendlyErrorMessage(error: unknown): string {
-  if (isApiKeyError(error)) {
-    return "请配置 GROQ_API_KEY 环境变量以使用转录功能";
-  }
+// Export AppError interface
+export type { AppError };
 
-  if (error instanceof Error) {
-    const errorMessage = error.message.toLowerCase();
-
-    if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
-      return "网络连接失败，请检查网络连接后重试";
-    }
-
-    if (errorMessage.includes("timeout")) {
-      return "请求超时，请稍后重试";
-    }
-
-    if (errorMessage.includes("rate limit")) {
-      return "请求过于频繁，请稍后重试";
-    }
-
-    if (errorMessage.includes("file size") || errorMessage.includes("文件大小")) {
-      return "文件太大，请上传较小的音频文件";
-    }
-
-    return error.message;
-  }
-
-  return "未知错误，请重试";
+// Export default error handler function for convenience
+export function handleError(
+  error: any,
+  context?: AppError["context"],
+): AppError {
+  const appError =
+    error instanceof AppError
+      ? error
+      : ErrorHandler.classifyError(error, context);
+  ErrorHandler.handleError(appError);
+  return appError;
 }

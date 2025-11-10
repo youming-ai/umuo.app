@@ -12,6 +12,13 @@ export class AppDatabase extends Dexie {
   transcripts!: Table<TranscriptRow>;
   segments!: Table<Segment>;
 
+  // New optimization tables
+  transcriptionJobs!: Table<any>;
+  audioChunks!: Table<any>;
+  progressTrackers!: Table<any>;
+  mobileInteractions!: Table<any>;
+  performanceMetrics!: Table<any>;
+
   constructor() {
     super("umuo-app-db");
 
@@ -19,7 +26,8 @@ export class AppDatabase extends Dexie {
     this.version(3).stores({
       files: "++id, name, size, type, uploadedAt, updatedAt, [name+type]",
       transcripts: "++id, fileId, status, language, createdAt, updatedAt",
-      segments: "++id, transcriptId, start, end, text, [transcriptId+start], [transcriptId+end]",
+      segments:
+        "++id, transcriptId, start, end, text, [transcriptId+start], [transcriptId+end]",
     });
 
     // Migration logic for version updates
@@ -27,7 +35,8 @@ export class AppDatabase extends Dexie {
       .stores({
         files: "++id, name, size, type, uploadedAt, [name+type]",
         transcripts: "++id, fileId, status, language, createdAt, updatedAt",
-        segments: "++id, transcriptId, start, end, text, [transcriptId+start], [transcriptId+end]",
+        segments:
+          "++id, transcriptId, start, end, text, [transcriptId+start], [transcriptId+end]",
       })
       .upgrade((_tx) => {
         // Initial setup - no migration needed
@@ -43,7 +52,9 @@ export class AppDatabase extends Dexie {
       })
       .upgrade(async (_tx) => {
         // Add wordTimestamps to existing segments if needed
-        console.log("Database migrated to version 2: Added wordTimestamps support");
+        console.log(
+          "Database migrated to version 2: Added wordTimestamps support",
+        );
       });
 
     this.version(3)
@@ -55,7 +66,64 @@ export class AppDatabase extends Dexie {
       })
       .upgrade(async (_tx) => {
         // Add enhanced segment fields for better transcription features
-        console.log("Database migrated to version 3: Added enhanced transcription features");
+        console.log(
+          "Database migrated to version 3: Added enhanced transcription features",
+        );
+      });
+
+    // Version 4: Enhanced optimization features
+    this.version(4)
+      .stores({
+        // Enhanced existing tables
+        files:
+          "++id, name, size, type, uploadedAt, updatedAt, isChunked, totalChunks, deviceType, uploadMethod, [name+type]",
+        transcripts:
+          "++id, fileId, status, language, createdAt, updatedAt, priority, retryCount, errorType, processingTime, queueTime",
+        segments:
+          "++id, transcriptId, start, end, text, wordTimestamps, normalizedText, translation, annotations, furigana, [transcriptId+start], [transcriptId+end]",
+
+        // New optimization tables
+        transcriptionJobs:
+          "++id, fileId, status, priority, createdAt, startedAt, completedAt, isChunked, totalChunks, currentStage, overallProgress, errorType, retryCount, [fileId+status]",
+        audioChunks:
+          "++id, jobId, chunkIndex, startTime, endTime, duration, size, status, uploadedAt, transcribedAt, transcriptionId, [jobId+chunkIndex]",
+        progressTrackers:
+          "++id, jobId, fileId, currentStage, overallProgress, connectionType, lastActivity, connectionHealth, [jobId+currentStage]",
+        mobileInteractions:
+          "++id, jobId, sessionId, interactionType, targetElement, timestamp, deviceType, responseTime, [jobId+interactionType]",
+        performanceMetrics:
+          "++id, jobId, timestamp, success, errorType, processingTime, audioSize, model, [jobId+timestamp]",
+      })
+      .upgrade(async (tx) => {
+        // Enhanced optimization features migration
+        console.log(
+          "Database migrated to version 4: Added transcription optimization features",
+        );
+
+        // Migrate existing files to enhanced schema
+        const files = await tx.table("files").toCollection().toArray();
+        for (const file of files) {
+          await tx.table("files").update(file.id, {
+            isChunked: false,
+            totalChunks: 1,
+            deviceType: "desktop",
+            uploadMethod: "direct",
+          });
+        }
+
+        // Migrate existing transcripts to enhanced schema
+        const transcripts = await tx
+          .table("transcripts")
+          .toCollection()
+          .toArray();
+        for (const transcript of transcripts) {
+          await tx.table("transcripts").update(transcript.id, {
+            priority: 0,
+            retryCount: 0,
+            processingTime: 0,
+            queueTime: 0,
+          });
+        }
       });
   }
 }
@@ -92,21 +160,33 @@ export const DBUtils = {
    */
   async deleteFile(id: number): Promise<void> {
     try {
-      await db.transaction("rw", db.files, db.transcripts, db.segments, async () => {
-        // Delete the file
-        await db.files.delete(id);
+      await db.transaction(
+        "rw",
+        db.files,
+        db.transcripts,
+        db.segments,
+        async () => {
+          // Delete the file
+          await db.files.delete(id);
 
-        // Get associated transcripts
-        const transcripts = await db.transcripts.where("fileId").equals(id).toArray();
+          // Get associated transcripts
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(id)
+            .toArray();
 
-        // Delete each transcript and its segments
-        for (const transcript of transcripts) {
-          if (transcript.id) {
-            await db.segments.where("transcriptId").equals(transcript.id).delete();
-            await db.transcripts.delete(transcript.id);
+          // Delete each transcript and its segments
+          for (const transcript of transcripts) {
+            if (transcript.id) {
+              await db.segments
+                .where("transcriptId")
+                .equals(transcript.id)
+                .delete();
+              await db.transcripts.delete(transcript.id);
+            }
           }
-        }
-      });
+        },
+      );
     } catch (error) {
       throw handleError(error, "DBUtils.deleteFile");
     }
@@ -137,7 +217,10 @@ export const DBUtils = {
   /**
    * Update transcript status
    */
-  async updateTranscriptStatus(id: number, status: TranscriptRow["status"]): Promise<void> {
+  async updateTranscriptStatus(
+    id: number,
+    status: TranscriptRow["status"],
+  ): Promise<void> {
     try {
       await db.transcripts.update(id, { status, updatedAt: new Date() });
     } catch (error) {
@@ -185,7 +268,9 @@ export const DBUtils = {
         if (options?.onProgress) {
           const progress = Math.min(
             100,
-            Math.floor(((i + batch.length) / segmentsWithTimestamps.length) * 100),
+            Math.floor(
+              ((i + batch.length) / segmentsWithTimestamps.length) * 100,
+            ),
           );
           options.onProgress({
             processed: i + batch.length,
@@ -206,7 +291,10 @@ export const DBUtils = {
    */
   async getSegmentsByTranscriptId(transcriptId: number): Promise<Segment[]> {
     try {
-      return await db.segments.where("transcriptId").equals(transcriptId).toArray();
+      return await db.segments
+        .where("transcriptId")
+        .equals(transcriptId)
+        .toArray();
     } catch (error) {
       throw handleError(error, "DBUtils.getSegmentsByTranscriptId");
     }
@@ -217,11 +305,17 @@ export const DBUtils = {
    */
   async clearAll(): Promise<void> {
     try {
-      await db.transaction("rw", db.files, db.transcripts, db.segments, async () => {
-        await db.segments.clear();
-        await db.transcripts.clear();
-        await db.files.clear();
-      });
+      await db.transaction(
+        "rw",
+        db.files,
+        db.transcripts,
+        db.segments,
+        async () => {
+          await db.segments.clear();
+          await db.transcripts.clear();
+          await db.files.clear();
+        },
+      );
     } catch (error) {
       throw handleError(error, "DBUtils.clearAll");
     }

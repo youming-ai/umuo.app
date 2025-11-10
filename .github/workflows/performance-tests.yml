@@ -1,0 +1,314 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run performance tests daily at 2 AM UTC
+    - cron: "0 2 * * *"
+
+jobs:
+  performance-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm ci --frozen-lockfile
+
+      - name: Run linter
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Run performance tests
+        run: pnpm test:performance:ci
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Generate performance report
+        run: pnpm performance-test:ci
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-reports-node-${{ matrix.node-version }}
+          path: |
+            performance-reports/
+            test-results/
+          retention-days: 30
+
+      - name: Performance regression check
+        run: |
+          if [ -f "performance-reports/performance-regressions.txt" ]; then
+            echo "🚨 Performance regressions detected!"
+            cat performance-reports/performance-regressions.txt
+            echo "::error::Performance regressions detected - see uploaded reports for details"
+            exit 1
+          fi
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const path = './performance-reports/latest-performance-report.md';
+
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🚀 Performance Test Results\n\n${report}`
+              });
+            }
+
+  performance-trends:
+    runs-on: ubuntu-latest
+    needs: performance-tests
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Need full history for trend analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm ci --frozen-lockfile
+
+      - name: Download performance reports
+        uses: actions/download-artifact@v3
+        with:
+          name: performance-reports-node-20.x
+          path: performance-reports/
+
+      - name: Analyze performance trends
+        run: |
+          node scripts/analyze-performance-trends.js \
+            --reports-dir performance-reports \
+            --output trends.json \
+            --threshold 5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create performance dashboard
+        run: |
+          node scripts/generate-performance-dashboard.js \
+            --metrics trends.json \
+            --output performance-dashboard.html \
+            --template templates/dashboard.html
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: Deploy performance dashboard
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./performance-dashboard
+          destination_dir: performance
+
+  cross-browser-performance:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[performance-all]')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm ci --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Run cross-browser performance tests
+        run: |
+          npx playwright test tests/performance/cross-browser/
+          --reporter=json
+          --output-file=performance-reports/cross-browser.json
+        env:
+          CI: true
+
+      - name: Upload cross-browser results
+        uses: actions/upload-artifact@v3
+        with:
+          name: cross-browser-performance
+          path: performance-reports/cross-browser.json
+          retention-days: 30
+
+  mobile-performance:
+    runs-on: macos-latest # Use macOS for iOS simulator access
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[performance-mobile]')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm ci --frozen-lockfile
+
+      - name: Setup iOS Simulator
+        run: |
+          xcrun simctl create "iPhone 14" "iPhone 14" || true
+          xcrun simctl boot "iPhone 14" || true
+
+      - name: Setup Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          script: |
+            echo "Android emulator ready"
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Run mobile performance tests
+        run: |
+          pnpm test:performance:ci \
+            --test-name-pattern="mobile" \
+            --device-type="mobile" \
+            --network-conditions="3g,4g,wifi"
+        env:
+          CI: true
+          MOBILE_TESTING: true
+
+      - name: Upload mobile performance results
+        uses: actions/upload-artifact@v3
+        with:
+          name: mobile-performance-results
+          path: performance-reports/
+          retention-days: 30
+
+  notify-performance-issues:
+    runs-on: ubuntu-latest
+    needs: [performance-tests, cross-browser-performance, mobile-performance]
+    if: failure() && (github.ref == 'refs/heads/main' || github.event_name == 'schedule')
+
+    steps:
+      - name: Download all performance reports
+        uses: actions/download-artifact@v3
+        with:
+          path: all-reports/
+
+      - name: Notify performance issues
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: "#performance-alerts"
+          text: |
+            🚨 Performance Test Failures Detected
+
+            **Branch:** ${{ github.ref }}
+            **Commit:** ${{ github.sha }}
+            **Event:** ${{ github.event_name }}
+
+            **Failed Jobs:**
+            ${{ join(needs.*.result, ', ') }}
+
+            Please check the GitHub Actions for detailed performance reports.
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create GitHub issue for critical failures
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: runs } = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'performance-tests.yml',
+              status: 'failure',
+              per_page: 5
+            });
+
+            if (runs.workflow_runs.length > 0) {
+              const latestRun = runs.workflow_runs[0];
+
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Performance Test Failures - ${new Date().toISOString().split('T')[0]}`,
+                body: `
+                  ## 🚨 Performance Test Failures
+
+                  **Workflow Run:** ${latestRun.html_url}
+                  **Branch:** ${latestRun.head_branch}
+                  **Commit:** ${latestRun.head_sha}
+
+                  **Failed Jobs:**
+                  ${{ join(needs.*.result, '\n') }}
+
+                  Please investigate the performance regressions and fix them before merging to main.
+
+                  **Next Steps:**
+                  1. Review the performance reports in the Actions tab
+                  2. Identify the root cause of regressions
+                  3. Implement fixes and optimizations
+                  4. Verify improvements with targeted performance tests
+
+                  **Performance Reports:** [View Artifacts](${latestRun.html_url}#artifacts)
+                `,
+                labels: ['performance', 'bug', 'urgent']
+              });
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

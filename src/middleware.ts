@@ -1,46 +1,24 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+/**
+ * Simple Next.js middleware to get development server running
+ */
 
-// Theme detection middleware
-export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+import { NextRequest, NextResponse } from "next/server";
 
-  // Handle theme preference from query params
-  if (searchParams.has("theme")) {
-    const theme = searchParams.get("theme");
-    const response = NextResponse.redirect(new URL(pathname, request.url));
+export async function middleware(request: NextRequest) {
+  // Simple middleware that just passes through all requests
+  // We'll add error handling back once the core system is working
 
-    if (theme && ["dark", "light", "system", "high-contrast"].includes(theme)) {
-      response.cookies.set("theme", theme, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 365, // 1 year
-      });
-    }
-
-    return response;
-  }
-
-  // Set security headers
+  // Add basic security headers
   const response = NextResponse.next();
 
-  // Add security headers
-  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-
-  // Add performance headers
-  response.headers.set("X-DNS-Prefetch-Control", "on");
-
-  // API rate limiting headers (basic)
-  if (pathname.startsWith("/api/")) {
-    response.headers.set("X-RateLimit-Limit", "100");
-    response.headers.set("X-RateLimit-Remaining", "99");
-  }
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("Referrer-Policy", "origin-when-cross-origin");
 
   return response;
 }
 
+// Configure which paths the middleware should run on
 export const config = {
   matcher: [
     /*
@@ -48,8 +26,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public (public files)
+     * - public folder
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
 };

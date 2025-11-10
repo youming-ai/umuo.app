@@ -1,0 +1,1120 @@
+openapi: 3.0.3
+info:
+  title: umuo.app Transcription API - Enhanced
+  description: Enhanced transcription API with chunked processing, real-time progress tracking, and mobile optimizations
+  version: 2.0.0
+  contact:
+    name: umuo.app API
+    url: https://umuo.app
+  license:
+    name: ISC
+
+servers:
+  - url: https://umuo.app/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+paths:
+  /transcribe:
+    post:
+      summary: Enhanced audio transcription with chunking support
+      description: Transcribe audio file with enhanced features including chunked processing, priority queuing, and mobile optimizations
+      operationId: enhancedTranscribe
+      tags:
+        - Transcription
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - audio
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Audio file to transcribe (MP3, WAV, M4A, OGG, FLAC)
+                language:
+                  type: string
+                  default: auto
+                  description: Language code (e.g., 'en', 'zh', 'ja') or 'auto' for auto-detection
+                  pattern: '^[a-z]{2,3}(-[A-Z]{2})?$|^auto$'
+                priority:
+                  type: integer
+                  default: 0
+                  minimum: 0
+                  maximum: 10
+                  description: Job priority (0-10, higher = higher priority)
+                enable_chunking:
+                  type: boolean
+                  default: false
+                  description: Enable automatic audio chunking for large files
+                chunk_size_mb:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 15
+                  description: Target chunk size in MB when chunking is enabled
+                progress_tracking:
+                  type: boolean
+                  default: true
+                  description: Enable real-time progress tracking
+                update_interval_ms:
+                  type: integer
+                  default: 2000
+                  minimum: 1000
+                  maximum: 10000
+                  description: Progress update interval in milliseconds
+                device_info:
+                  type: object
+                  properties:
+                    device_type:
+                      type: string
+                      enum: [desktop, mobile, tablet]
+                    network_type:
+                      type: string
+                      enum: [wifi, cellular, unknown]
+                    battery_level:
+                      type: number
+                      minimum: 0
+                      maximum: 1
+                    is_low_power_mode:
+                      type: boolean
+                  description: Mobile device information for optimization
+
+      responses:
+        '200':
+          description: Transcription job created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptionJobResponse'
+
+        '400':
+          description: Bad request - invalid parameters or file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '401':
+          description: Unauthorized - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /transcribe/chunk:
+    post:
+      summary: Transcribe audio chunk
+      description: Transcribe a single audio chunk as part of a chunked transcription job
+      operationId: transcribeChunk
+      tags:
+        - Transcription
+
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - audio
+                - job_id
+                - chunk_index
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: Audio chunk data
+                job_id:
+                  type: string
+                  description: Parent transcription job ID
+                chunk_index:
+                  type: integer
+                  minimum: 0
+                  description: Index of this chunk in the sequence
+                start_time:
+                  type: number
+                  format: float
+                  description: Start time of this chunk in seconds from beginning of original audio
+                end_time:
+                  type: number
+                  format: float
+                  description: End time of this chunk in seconds from beginning of original audio
+                overlap_duration:
+                  type: number
+                  format: float
+                  default: 5
+                  description: Overlap duration with previous/next chunks in seconds
+
+      responses:
+        '200':
+          description: Chunk transcribed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkTranscriptionResponse'
+
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /jobs:
+    get:
+      summary: List transcription jobs
+      description: Get list of transcription jobs with filtering and pagination
+      operationId: listJobs
+      tags:
+        - Jobs
+
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [queued, uploading, processing, chunking, transcribing, post-processing, completed, failed, cancelled]
+          description: Filter by job status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of jobs to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Number of jobs to skip
+        - name: order_by
+          in: query
+          schema:
+            type: string
+            enum: [created_at, priority, processing_time]
+            default: created_at
+          description: Field to order by
+        - name: order_direction
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Order direction
+
+      responses:
+        '200':
+          description: List of transcription jobs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+
+  /jobs/{jobId}:
+    get:
+      summary: Get transcription job details
+      description: Get detailed information about a specific transcription job
+      operationId: getJob
+      tags:
+        - Jobs
+
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job ID
+
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptionJobResponse'
+
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Cancel transcription job
+      description: Cancel a running transcription job or delete a completed job
+      operationId: cancelJob
+      tags:
+        - Jobs
+
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job ID
+
+      responses:
+        '200':
+          description: Job cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /progress/{jobId}:
+    get:
+      summary: Get job progress (HTTP Polling)
+      description: Get current progress of a transcription job via HTTP polling
+      operationId: getJobProgress
+      tags:
+        - Progress
+
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job ID
+        - name: detailed
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include detailed stage information
+
+      responses:
+        '200':
+          description: Current job progress
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProgressResponse'
+
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /progress/{jobId}/stream:
+    get:
+      summary: Get job progress (Server-Sent Events)
+      description: Stream real-time progress updates using Server-Sent Events
+      operationId: streamJobProgress
+      tags:
+        - Progress
+
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job ID
+
+      responses:
+        '200':
+          description: Server-Sent Events stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              examples:
+                progress_update:
+                  summary: Progress update event
+                  value: |
+                    data: {"jobId":"job_123","overallProgress":45,"currentStage":"transcription","message":"Processing chunk 2 of 4"}
+
+        '404':
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /mobile/analytics:
+    post:
+      summary: Record mobile interaction analytics
+      description: Record mobile-specific user interactions and performance metrics
+      operationId: recordMobileAnalytics
+      tags:
+        - Mobile
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileAnalyticsRequest'
+
+      responses:
+        '201':
+          description: Analytics recorded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  id:
+                    type: string
+                    description: Analytics record ID
+
+  /performance/metrics:
+    get:
+      summary: Get performance metrics
+      description: Get system performance metrics and statistics
+      operationId: getPerformanceMetrics
+      tags:
+        - Performance
+
+      parameters:
+        - name: time_window
+          in: query
+          schema:
+            type: string
+            enum: [1h, 6h, 24h, 7d]
+            default: 24h
+          description: Time window for metrics
+        - name: job_id
+          in: query
+          schema:
+            type: string
+          description: Filter by specific job ID
+
+      responses:
+        '200':
+          description: Performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformanceMetricsResponse'
+
+components:
+  schemas:
+    TranscriptionJobResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        job:
+          $ref: '#/components/schemas/TranscriptionJob'
+        message:
+          type: string
+          example: "Transcription job created successfully"
+
+    TranscriptionJob:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "job_1698567890_abc123"
+        file_id:
+          type: integer
+          example: 42
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 10
+          example: 5
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-11-03T10:30:00Z"
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_chunked:
+          type: boolean
+          example: true
+        total_chunks:
+          type: integer
+          minimum: 1
+          example: 3
+        processed_chunks:
+          type: integer
+          minimum: 0
+          example: 1
+        current_stage:
+          $ref: '#/components/schemas/ProcessingStage'
+        overall_progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 35
+        language:
+          type: string
+          example: "en"
+        model:
+          type: string
+          example: "whisper-large-v3-turbo"
+        error_type:
+          $ref: '#/components/schemas/ErrorType'
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        retry_count:
+          type: integer
+          minimum: 0
+          example: 0
+        processing_time:
+          type: integer
+          minimum: 0
+          example: 15000
+        queue_time:
+          type: integer
+          minimum: 0
+          example: 5000
+
+    JobStatus:
+      type: string
+      enum:
+        - queued
+        - uploading
+        - processing
+        - chunking
+        - transcribing
+        - post-processing
+        - completed
+        - failed
+        - cancelled
+
+    ProcessingStage:
+      type: string
+      enum:
+        - upload
+        - transcription
+        - post-processing
+        - completed
+        - failed
+
+    ErrorType:
+      type: string
+      enum:
+        - network
+        - api_key
+        - rate_limit
+        - quota_exceeded
+        - file_too_large
+        - unsupported_format
+        - timeout
+        - server_error
+        - unknown
+
+    ChunkTranscriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        chunk:
+          $ref: '#/components/schemas/AudioChunk'
+        transcription:
+          $ref: '#/components/schemas/TranscriptionResult'
+
+    AudioChunk:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "chunk_1698567890_def456"
+        job_id:
+          type: string
+          example: "job_1698567890_abc123"
+        chunk_index:
+          type: integer
+          minimum: 0
+          example: 1
+        start_time:
+          type: number
+          format: float
+          example: 150.5
+        end_time:
+          type: number
+          format: float
+          example: 300.0
+        duration:
+          type: number
+          format: float
+          example: 149.5
+        size:
+          type: integer
+          minimum: 0
+          example: 15728640
+        status:
+          type: string
+          enum: [pending, uploading, uploaded, transcribing, completed, failed]
+          example: "completed"
+        uploaded_at:
+          type: string
+          format: date-time
+          nullable: true
+        transcribed_at:
+          type: string
+          format: date-time
+          nullable: true
+        upload_time:
+          type: integer
+          minimum: 0
+          example: 2500
+        transcription_time:
+          type: integer
+          minimum: 0
+          example: 12000
+
+    TranscriptionResult:
+      type: object
+      properties:
+        text:
+          type: string
+          example: "This is the transcribed text from the audio chunk."
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptionSegment'
+        words:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptionWord'
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.95
+
+    TranscriptionSegment:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        start:
+          type: number
+          format: float
+          example: 150.5
+        end:
+          type: number
+          format: float
+          example: 160.2
+        text:
+          type: string
+          example: "This is a segment of transcribed text."
+
+    TranscriptionWord:
+      type: object
+      properties:
+        word:
+          type: string
+          example: "segment"
+        start:
+          type: number
+          format: float
+          example: 158.1
+        end:
+          type: number
+          format: float
+          example: 158.5
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.98
+
+    ProgressResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+          example: "job_1698567890_abc123"
+        file_id:
+          type: integer
+          example: 42
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        overall_progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 65
+        current_stage:
+          $ref: '#/components/schemas/ProcessingStage'
+        message:
+          type: string
+          example: "Processing chunk 2 of 3"
+        stages:
+          type: object
+          properties:
+            upload:
+              $ref: '#/components/schemas/UploadProgress'
+            transcription:
+              $ref: '#/components/schemas/TranscriptionProgress'
+            post-processing:
+              $ref: '#/components/schemas/PostProcessingProgress'
+        processing_time:
+          type: integer
+          minimum: 0
+          example: 25000
+        queue_time:
+          type: integer
+          minimum: 0
+          example: 3000
+        error:
+          $ref: '#/components/schemas/ErrorInfo'
+          nullable: true
+        mobile_optimizations:
+          $ref: '#/components/schemas/MobileOptimizations'
+          nullable: true
+
+    UploadProgress:
+      type: object
+      properties:
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 100
+        speed:
+          type: number
+          minimum: 0
+          example: 1048576
+        eta:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 5
+        bytes_transferred:
+          type: integer
+          minimum: 0
+          example: 15728640
+        total_bytes:
+          type: integer
+          minimum: 0
+          example: 15728640
+
+    TranscriptionProgress:
+      type: object
+      properties:
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 45
+        current_chunk:
+          type: integer
+          minimum: 0
+          example: 2
+        total_chunks:
+          type: integer
+          minimum: 1
+          example: 3
+        eta:
+          type: integer
+          minimum: 0
+          nullable: true
+          example: 30
+
+    PostProcessingProgress:
+      type: object
+      properties:
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 20
+        segments_processed:
+          type: integer
+          minimum: 0
+          example: 5
+        total_segments:
+          type: integer
+          minimum: 0
+          example: 25
+        current_operation:
+          type: string
+          enum: [normalization, translation, annotation, furigana]
+          example: "normalization"
+
+    MobileOptimizations:
+      type: object
+      properties:
+        connection_type:
+          type: string
+          enum: [sse, polling, periodic]
+          example: "sse"
+        battery_level:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.75
+        is_low_power_mode:
+          type: boolean
+          example: false
+
+    JobListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        jobs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptionJob'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          example: 45
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        offset:
+          type: integer
+          minimum: 0
+          example: 0
+        has_more:
+          type: boolean
+          example: true
+
+    MobileAnalyticsRequest:
+      type: object
+      required:
+        - session_id
+        - interaction_type
+        - target_element
+        - device_info
+      properties:
+        job_id:
+          type: integer
+          nullable: true
+        session_id:
+          type: string
+          example: "session_1698567890_ghi789"
+        interaction_type:
+          type: string
+          enum: [tap, double_tap, swipe, drag, pinch, long_press]
+          example: "tap"
+        target_element:
+          type: string
+          enum: [play_button, progress_bar, volume_control, speed_control, upload_area, file_item]
+          example: "play_button"
+        gesture_data:
+          $ref: '#/components/schemas/GestureData'
+        device_info:
+          $ref: '#/components/schemas/DeviceInfo'
+        response_time:
+          type: integer
+          minimum: 0
+          example: 150
+        successful_interaction:
+          type: boolean
+          example: true
+        error_type:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+
+    GestureData:
+      type: object
+      properties:
+        start_x:
+          type: number
+          example: 150
+        start_y:
+          type: number
+          example: 200
+        end_x:
+          type: number
+          example: 180
+        end_y:
+          type: number
+          example: 195
+        duration:
+          type: integer
+          minimum: 0
+          example: 250
+        velocity:
+          type: number
+          example: 0.12
+        direction:
+          type: string
+          enum: [up, down, left, right]
+          example: "right"
+
+    DeviceInfo:
+      type: object
+      required:
+        - type
+        - screen_size
+        - user_agent
+        - touch_points
+      properties:
+        type:
+          type: string
+          enum: [mobile, tablet]
+          example: "mobile"
+        screen_size:
+          type: object
+          properties:
+            width:
+              type: integer
+              minimum: 0
+              example: 375
+            height:
+              type: integer
+              minimum: 0
+              example: 812
+        user_agent:
+          type: string
+          example: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)..."
+        touch_points:
+          type: integer
+          minimum: 1
+          example: 5
+
+    PerformanceMetricsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        time_window:
+          type: string
+          example: "24h"
+        metrics:
+          $ref: '#/components/schemas/SystemMetrics'
+
+    SystemMetrics:
+      type: object
+      properties:
+        transcription:
+          $ref: '#/components/schemas/TranscriptionMetrics'
+        progress_tracking:
+          $ref: '#/components/schemas/ProgressTrackingMetrics'
+        mobile:
+          $ref: '#/components/schemas/MobileMetrics'
+        ui:
+          $ref: '#/components/schemas/UIMetrics'
+
+    TranscriptionMetrics:
+      type: object
+      properties:
+        total_jobs:
+          type: integer
+          minimum: 0
+          example: 156
+        successful_jobs:
+          type: integer
+          minimum: 0
+          example: 148
+        failed_jobs:
+          type: integer
+          minimum: 0
+          example: 8
+        success_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 94.9
+        average_processing_time:
+          type: number
+          minimum: 0
+          example: 18500
+        average_queue_time:
+          type: number
+          minimum: 0
+          example: 3200
+        total_audio_processed:
+          type: integer
+          minimum: 0
+          example: 2147483648
+        cost_estimate:
+          type: number
+          minimum: 0
+          example: 12.45
+
+    ProgressTrackingMetrics:
+      type: object
+      properties:
+        active_connections:
+          type: integer
+          minimum: 0
+          example: 23
+        average_update_frequency:
+          type: number
+          minimum: 0
+          example: 2050
+        connection_drops:
+          type: integer
+          minimum: 0
+          example: 5
+        average_reconnection_time:
+          type: number
+          minimum: 0
+          example: 1200
+
+    MobileMetrics:
+      type: object
+      properties:
+        mobile_sessions:
+          type: integer
+          minimum: 0
+          example: 89
+        touch_interactions:
+          type: integer
+          minimum: 0
+          example: 1250
+        average_touch_response_time:
+          type: number
+          minimum: 0
+          example: 180
+        mobile_task_completion_rate:
+          type: number
+          minimum: 0
+          maximum: 100
+          example: 87.3
+
+    UIMetrics:
+      type: object
+      properties:
+        first_contentful_paint:
+          type: number
+          minimum: 0
+          example: 1450
+        largest_contentful_paint:
+          type: number
+          minimum: 0
+          example: 2300
+        first_input_delay:
+          type: number
+          minimum: 0
+          example: 85
+        cumulative_layout_shift:
+          type: number
+          minimum: 0
+          example: 0.08
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          $ref: '#/components/schemas/ErrorInfo'
+
+    ErrorInfo:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "FILE_TOO_LARGE"
+        message:
+          type: string
+          example: "Audio file size exceeds maximum limit of 100MB"
+        details:
+          type: object
+          properties:
+            max_size_mb:
+              type: integer
+              example: 100
+            current_size_mb:
+              type: integer
+              example: 125
+            suggested_action:
+              type: string
+              example: "Split the audio file into smaller chunks or compress the audio"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API_KEY
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Transcription
+    description: Audio transcription operations with enhanced features
+  - name: Jobs
+    description: Transcription job management
+  - name: Progress
+    description: Real-time progress tracking
+  - name: Mobile
+    description: Mobile-specific features and analytics
+  - name: Performance
+    description: Performance monitoring and metrics

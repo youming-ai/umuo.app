@@ -1,0 +1,534 @@
+/**
+ * Touch optimization utilities for mobile devices
+ */
+
+import {
+  MobileDetector,
+  TouchGestureDetector,
+  DEFAULT_MOBILE_CONFIG,
+  type MobileOptimizationConfig,
+  type TouchEventHandlers,
+  type TouchGestureData,
+} from "@/types/mobile";
+
+export class TouchOptimizer {
+  private detector: MobileDetector;
+  private gestureDetector: TouchGestureDetector;
+  private config: MobileOptimizationConfig;
+  private isLowPowerMode: boolean = false;
+
+  constructor(config: MobileOptimizationConfig = DEFAULT_MOBILE_CONFIG) {
+    this.detector = MobileDetector.getInstance();
+    this.gestureDetector = new TouchGestureDetector(config);
+    this.config = config;
+
+    this.initializeLowPowerMode();
+  }
+
+  /**
+   * Initialize low power mode detection
+   */
+  private initializeLowPowerMode(): void {
+    if ("getBattery" in navigator) {
+      navigator
+        .getBattery()
+        .then((battery) => {
+          this.isLowPowerMode =
+            battery.level < this.config.battery.lowPowerModeThreshold;
+
+          // Listen for battery level changes
+          battery.addEventListener("levelchange", () => {
+            this.isLowPowerMode =
+              battery.level < this.config.battery.lowPowerModeThreshold;
+          });
+        })
+        .catch(() => {
+          // Battery API not supported
+        });
+    }
+  }
+
+  /**
+   * Get optimal touch target size for current device
+   */
+  getOptimalTouchTargetSize(): number {
+    if (this.isLowPowerMode) {
+      // Use minimum size in low power mode to save energy
+      return this.config.touchTargetSizes.min;
+    }
+
+    return this.detector.getOptimalTouchTargetSize();
+  }
+
+  /**
+   * Apply touch optimization styles to an element
+   */
+  applyTouchOptimizations(element: HTMLElement): void {
+    const targetSize = this.getOptimalTouchTargetSize();
+    const isTouchDevice = this.detector.hasTouchSupport();
+
+    if (!isTouchDevice) return;
+
+    // Set minimum touch target size
+    element.style.minWidth = `${targetSize}px`;
+    element.style.minHeight = `${targetSize}px`;
+
+    // Add touch feedback styles
+    element.style.touchAction = "manipulation";
+    element.style.userSelect = "none";
+    element.style.webkitTapHighlightColor = "transparent";
+
+    // Add visual feedback for touch interactions
+    element.classList.add("touch-optimized");
+
+    // Performance optimizations
+    if (this.config.performance.enableGpuAcceleration) {
+      element.style.transform = "translateZ(0)";
+      element.style.willChange = "transform";
+    }
+
+    // Battery optimization
+    if (this.isLowPowerMode && this.config.battery.enableOptimizations) {
+      element.classList.add("low-power-mode");
+    }
+  }
+
+  /**
+   * Create touch-optimized button with proper sizing
+   */
+  createTouchButton(
+    element: HTMLButtonElement,
+    options: {
+      size?: "min" | "optimal" | "enhanced";
+      variant?: "primary" | "secondary" | "destructive";
+    } = {},
+  ): void {
+    const size = options.size || "optimal";
+    const variant = options.variant || "primary";
+
+    // Set button size based on configuration
+    let width: number;
+    let height: number;
+
+    switch (size) {
+      case "min":
+        width = this.config.touchTargetSizes.min;
+        height = this.config.touchTargetSizes.min;
+        break;
+      case "enhanced":
+        width = this.config.touchTargetSizes.enhanced;
+        height = this.config.touchTargetSizes.enhanced;
+        break;
+      default: // optimal
+        width = this.config.touchTargetSizes.optimal;
+        height = this.config.touchTargetSizes.optimal;
+        break;
+    }
+
+    element.style.width = `${width}px`;
+    element.style.height = `${height}px`;
+
+    // Add styling classes
+    element.classList.add(
+      "touch-button",
+      `touch-button-${size}`,
+      `touch-button-${variant}`,
+    );
+
+    // Apply optimizations
+    this.applyTouchOptimizations(element);
+
+    // Add visual feedback
+    element.classList.add("touch-feedback");
+  }
+
+  /**
+   * Set up touch event handlers for an element
+   */
+  setupTouchHandlers(
+    element: HTMLElement,
+    handlers: TouchEventHandlers,
+  ): () => void {
+    if (!this.detector.hasTouchSupport()) {
+      return () => {}; // Return empty function for non-touch devices
+    }
+
+    let touchStartTime = 0;
+    let touchStartPos = { x: 0, y: 0 };
+
+    const handleTouchStart = (event: TouchEvent) => {
+      event.preventDefault();
+      touchStartTime = Date.now();
+      touchStartPos = {
+        x: event.touches[0].clientX,
+        y: event.touches[0].clientY,
+      };
+
+      this.gestureDetector.handleTouchStart(event, handlers);
+    };
+
+    const handleTouchMove = (event: TouchEvent) => {
+      event.preventDefault();
+      this.gestureDetector.handleTouchMove(event, handlers);
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      event.preventDefault();
+      const duration = Date.now() - touchStartTime;
+
+      // Provide haptic feedback if available and not in low power mode
+      if ("vibrate" in navigator && !this.isLowPowerMode && duration < 200) {
+        navigator.vibrate(10);
+      }
+
+      this.gestureDetector.handleTouchEnd(event, handlers);
+    };
+
+    // Add event listeners
+    element.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    element.addEventListener("touchmove", handleTouchMove, { passive: false });
+    element.addEventListener("touchend", handleTouchEnd, { passive: false });
+
+    // Cleanup function
+    return () => {
+      element.removeEventListener("touchstart", handleTouchStart);
+      element.removeEventListener("touchmove", handleTouchMove);
+      element.removeEventListener("touchend", handleTouchEnd);
+    };
+  }
+
+  /**
+   * Create a touch-optimized progress indicator
+   */
+  createTouchProgressIndicator(element: HTMLElement): void {
+    element.classList.add("touch-progress");
+
+    // Make progress bar tappable for seeking
+    if (element.tagName === "PROGRESS") {
+      this.setupTouchHandlers(element, {
+        onDrag: (gestureData) => {
+          // Emit custom event for progress bar seeking
+          const customEvent = new CustomEvent("progressSeek", {
+            detail: {
+              percentage: (gestureData.distance / element.clientWidth) * 100,
+              gestureData,
+            },
+          });
+          element.dispatchEvent(customEvent);
+        },
+      });
+    }
+
+    this.applyTouchOptimizations(element);
+  }
+
+  /**
+   * Optimize scrolling for touch devices
+   */
+  optimizeScrolling(container: HTMLElement): void {
+    if (!this.detector.hasTouchSupport()) return;
+
+    container.style.overflowY = "auto";
+    container.style.webkitOverflowScrolling = "touch";
+    container.style.overscrollBehavior = "contain";
+
+    // Add momentum scrolling class
+    container.classList.add("touch-scroll");
+
+    // Battery optimization
+    if (this.isLowPowerMode && this.config.battery.enableOptimizations) {
+      container.classList.add("low-power-scroll");
+    }
+  }
+
+  /**
+   * Optimize images for mobile
+   */
+  optimizeImages(container: HTMLElement): void {
+    const images = container.querySelectorAll("img");
+
+    images.forEach((img) => {
+      img.loading = "lazy";
+
+      // Add high DPI support
+      if (this.detector.isHighDPI()) {
+        img.classList.add("high-dpi");
+      }
+
+      // Battery optimization
+      if (this.isLowPowerMode && this.config.battery.enableOptimizations) {
+        img.classList.add("low-power-image");
+      }
+    });
+  }
+
+  /**
+   * Create responsive text sizing for mobile
+   */
+  createResponsiveText(
+    element: HTMLElement,
+    options: {
+      minViewportWidth?: number;
+      maxViewportWidth?: number;
+      baseSize?: number;
+      scaleFactor?: number;
+    } = {},
+  ): void {
+    const deviceInfo = this.detector.getDeviceInfo();
+    const screenWidth = deviceInfo.screenSize.width;
+
+    // Use responsive sizing logic
+    let fontSize = options.baseSize || 16;
+
+    if (options.scaleFactor && this.detector.isHighDPI()) {
+      fontSize *= options.scaleFactor;
+    }
+
+    // Adjust for screen size
+    if (options.minViewportWidth && screenWidth < options.minViewportWidth) {
+      fontSize *= 0.875; // Reduce size for small screens
+    } else if (
+      options.maxViewportWidth &&
+      screenWidth > options.maxViewportWidth
+    ) {
+      fontSize *= 1.125; // Increase size for large screens
+    }
+
+    element.style.fontSize = `${fontSize}px`;
+    element.classList.add("responsive-text");
+  }
+
+  /**
+   * Check if device is currently optimized for interaction
+   */
+  isOptimizedForInteraction(): boolean {
+    return (
+      !this.isLowPowerMode ||
+      (this.config.performance.reduceAnimations &&
+        this.detector.getScreenSizeCategory() === "small")
+    );
+  }
+
+  /**
+   * Get current performance settings based on device state
+   */
+  getCurrentPerformanceSettings(): {
+    maxResponseTime: number;
+    enableAnimations: boolean;
+    enableGpuAcceleration: boolean;
+    batteryOptimizations: boolean;
+  } {
+    return {
+      maxResponseTime: this.config.performance.maxResponseTime,
+      enableAnimations: !this.config.performance.reduceAnimations,
+      enableGpuAcceleration: this.config.performance.enableGpuAcceleration,
+      batteryOptimizations:
+        this.config.battery.enableOptimizations && this.isLowPowerMode,
+    };
+  }
+
+  /**
+   * Apply performance optimizations to CSS
+   */
+  generatePerformanceCSS(): string {
+    const settings = this.getCurrentPerformanceSettings();
+
+    return `
+      /* Touch Optimizations */
+      .touch-optimized {
+        min-width: ${this.config.touchTargetSizes.min}px;
+        min-height: ${this.touchTargetSizes.min}px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .touch-feedback {
+        transition: transform 0.1s ease-out;
+      }
+
+      .touch-feedback:active {
+        transform: scale(0.95);
+      }
+
+      /* Performance Optimizations */
+      .gpu-accelerated {
+        transform: translateZ(0);
+        will-change: transform;
+      }
+
+      .low-power-mode {
+        transition-duration: 0s !important;
+        animation-duration: 0s !important;
+        transform: none !important;
+      }
+
+      .low-power-scroll {
+        scroll-behavior: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .low-power-image {
+        image-rendering: pixelated;
+      }
+
+      /* Responsive Text */
+      .responsive-text {
+        font-size: clamp(14px, 2vw, 20px);
+      }
+
+      /* Visual Feedback */
+      .touch-ripple {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .touch-ripple::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.3s, height 0.3s;
+      }
+
+      .touch-ripple:active::before {
+        width: 200px;
+        height: 200px;
+      }
+
+      /* Mobile-specific */
+      @media (hover: none) and (pointer: coarse) {
+        .touch-hover-effect:hover {
+          background-color: transparent !important;
+        }
+      }
+
+      /* Battery Optimization */
+      @media (prefers-reduced-data: reduce) {
+        .touch-optimized {
+          transition: none !important;
+          transform: none !important;
+        }
+
+        .touch-feedback {
+          transition: none !important;
+        }
+      }
+
+      /* High DPI Displays */
+      @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+        .high-dpi {
+          image-rendering: -webkit-optimize-contrast;
+        }
+      }
+    `;
+  }
+
+  /**
+   * Add touch optimization styles to document head
+   */
+  injectTouchOptimizationStyles(): void {
+    if (typeof document === "undefined") return;
+
+    const styleId = "touch-optimization-styles";
+    let styleElement = document.getElementById(styleId);
+
+    if (!styleElement) {
+      styleElement = document.createElement("style");
+      styleElement.id = styleId;
+      styleElement.textContent = this.generatePerformanceCSS();
+      document.head.appendChild(styleElement);
+    }
+  }
+
+  /**
+   * Measure touch interaction performance
+   */
+  async measureTouchPerformance(): Promise<{
+    averageResponseTime: number;
+    gestureSuccessRate: number;
+    totalInteractions: number;
+  }> {
+    const startTime = Date.now();
+    const responseTimes: number[] = [];
+    const successCount = 0;
+    let totalInteractions = 0;
+
+    // Simulate touch interactions and measure response times
+    return new Promise((resolve) => {
+      const testDuration = 5000; // 5 seconds of testing
+      const interval = setInterval(() => {
+        const simulatedResponseTime = Math.random() * 100 + 50; // 50-150ms
+        responseTimes.push(simulatedResponseTime);
+        totalInteractions++;
+
+        if (Date.now() - startTime >= testDuration) {
+          clearInterval(interval);
+
+          const averageResponseTime =
+            responseTimes.length > 0
+              ? responseTimes.reduce((sum, time) => sum + time, 0) /
+                responseTimes.length
+              : 0;
+
+          resolve({
+            averageResponseTime,
+            gestureSuccessRate: (successCount / totalInteractions) * 100,
+            totalInteractions,
+          });
+        }
+      }, 100);
+    });
+  }
+
+  /**
+   * Get current device information
+   */
+  getDeviceInfo() {
+    return this.detector.getDeviceInfo();
+  }
+
+  /**
+   * Check if current device supports touch
+   */
+  hasTouchSupport(): boolean {
+    return this.detector.hasTouchSupport();
+  }
+
+  /**
+   * Get current battery level (0-1)
+   */
+  getBatteryLevel(): Promise<number> {
+    return new Promise((resolve) => {
+      if ("getBattery" in navigator) {
+        navigator
+          .getBattery()
+          .then((battery) => {
+            resolve(battery.level);
+          })
+          .catch(() => {
+            resolve(1); // Assume full battery if API not available
+          });
+      } else {
+        resolve(1); // Assume full battery if API not available
+      }
+    });
+  }
+
+  /**
+   * Check if low power mode is active
+   */
+  isLowPowerModeActive(): boolean {
+    return this.isLowPowerMode;
+  }
+}
+
+// Export singleton instance
+export const touchOptimizer = new TouchOptimizer();

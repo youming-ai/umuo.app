@@ -4,6 +4,8 @@ import {
   transcriptionKeys,
   useTranscription,
   useTranscriptionStatus,
+  useTranscriptionWithProgress,
+  useEnhancedProgressTracking,
 } from "@/hooks/api/useTranscription";
 import { postProcessText } from "@/lib/ai/text-postprocessor";
 import { db } from "@/lib/db/db";
@@ -11,6 +13,7 @@ import {
   handleTranscriptionError,
   handleTranscriptionProgress,
 } from "@/lib/utils/transcription-error-handler";
+import { useDeviceInfo } from "@/hooks/useRobustProgressTracker";
 import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 // 音频URL缓存管理 - 使用 WeakMap 防止内存泄漏
@@ -127,12 +130,50 @@ interface UsePlayerDataQueryReturn {
   retry: () => void;
   startTranscription: () => void;
   resetAutoTranscription: () => void; // 新增：重置自动转录功能
+
+  // Enhanced progress tracking information
+  enhancedProgress: any;
+  currentJobId: string | null;
+  hasEnhancedProgress: boolean;
+
+  // Additional controls for enhanced progress
+  stopEnhancedProgress?: () => Promise<void>;
+  forceFallback?: () => Promise<void>;
+  refetchProgress?: () => void;
 }
 
-export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
+// Enhanced player data query options
+interface UsePlayerDataQueryOptions {
+  enableEnhancedProgress?: boolean;
+  fallbackConfig?: {
+    maxTierTransitions?: number;
+    tierTransitionCooldown?: number;
+    healthCheckTimeout?: number;
+    enableMobileOptimizations?: boolean;
+  };
+  progressSyncConfig?: {
+    conflictResolution?:
+      | "latest"
+      | "highest"
+      | "lowest"
+      | "weighted"
+      | "priority"
+      | "smart";
+    enableOfflineSupport?: boolean;
+    syncInterval?: number;
+    throttleMs?: number;
+  };
+}
+
+export function usePlayerDataQuery(
+  fileId: string,
+  options: UsePlayerDataQueryOptions = {},
+): UsePlayerDataQueryReturn {
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [shouldAutoTranscribe, setShouldAutoTranscribe] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { deviceInfo } = useDeviceInfo();
 
   // 解析文件ID
   const parsedFileId = parseInt(fileId, 10);
@@ -145,6 +186,20 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 获取转录状态
   const transcriptionQuery = useTranscriptionStatus(parsedFileId);
+
+  // Enhanced transcription mutation
+  const enhancedTranscription = useTranscriptionWithProgress();
+  const standardTranscription = useTranscription();
+
+  // Enhanced progress tracking
+  const enhancedProgress =
+    currentJobId && options.enableEnhancedProgress
+      ? useEnhancedProgressTracking(currentJobId, parsedFileId, {
+          deviceInfo,
+          fallbackConfig: options.fallbackConfig,
+          syncConfig: options.progressSyncConfig,
+        })
+      : null;
   const transcript = transcriptionQuery.data?.transcript || null;
   const segments = transcriptionQuery.data?.segments || [];
 
@@ -153,8 +208,10 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
   // 计算加载状态
   const loading = fileQuery.isLoading || transcriptionQuery.isLoading;
-  const error = fileQuery.error?.message || transcriptionQuery.error?.message || null;
-  const isTranscribing = transcriptionMutation.isPending;
+  const error =
+    fileQuery.error?.message || transcriptionQuery.error?.message || null;
+  const isTranscribing =
+    standardTranscription.isPending || enhancedTranscription.isPending;
 
   // 统一计算是否应该开始自动转录
   // 优化：使用 useMemo 避免重复计算，统一状态判断逻辑
@@ -169,7 +226,13 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
     // 调试信息：自动转录状态检查
 
-    return isValidId && !loading && file && !transcript && !transcriptionMutation.isPending;
+    return (
+      isValidId &&
+      !loading &&
+      file &&
+      !transcript &&
+      !transcriptionMutation.isPending
+    );
   }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
 
   // 组件卸载时清理资源
@@ -196,10 +259,128 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
     setTranscriptionProgress(0);
 
     try {
-      await transcriptionMutation.mutateAsync({
-        fileId: file?.id ?? 0,
-        language: "ja",
-      });
+      // Detect device type for optimization
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent,
+        );
+      const isTablet =
+        /iPad|Android/i.test(navigator.userAgent) && window.innerWidth > 768;
+
+      // Detect network type
+      const connection =
+        (navigator as any).connection ||
+        (navigator as any).mozConnection ||
+        (navigator as any).webkitConnection;
+      const networkType = connection?.effectiveType || "unknown";
+      const isCellular =
+        networkType.includes("2g") ||
+        networkType.includes("3g") ||
+        networkType.includes("4g");
+
+      // Determine optimal chunking based on file size and device
+      const fileSizeMB = (file?.size || 0) / (1024 * 1024);
+      const shouldChunk = fileSizeMB > 10 || (isMobile && fileSizeMB > 5);
+
+      // Get battery level if available (mobile devices)
+      let batteryLevel: number | undefined;
+      let isLowPowerMode = false;
+      if ("getBattery" in navigator) {
+        try {
+          const battery = await (navigator as any).getBattery();
+          batteryLevel = battery.level;
+          isLowPowerMode =
+            battery.level < 0.2 || battery.dischargingTime < 30 * 60; // Less than 20% or less than 30 minutes
+        } catch (e) {
+          // Battery API not available
+        }
+      }
+
+      // Choose transcription method based on options
+      let result;
+      if (options.enableEnhancedProgress) {
+        console.log("🚀 开始增强转录 (播放器):", {
+          fileId: file?.id,
+          fileSize: fileSizeMB,
+          shouldChunk,
+          deviceType: deviceInfo?.type || (isMobile ? "mobile" : "desktop"),
+        });
+
+        result = await enhancedTranscription.mutateAsync({
+          fileId: file?.id ?? 0,
+          language: "ja",
+          options: {
+            enableChunking: shouldChunk,
+            chunkSizeMb: isMobile ? 8 : 15, // Smaller chunks for mobile
+            priority: isMobile ? 2 : 0, // Higher priority for mobile
+            progressTracking: true,
+            updateIntervalMs: isMobile ? 3000 : 2000, // Slower updates for mobile
+            enableEnhancedProgress: true,
+            deviceInfo: {
+              device_type:
+                deviceInfo?.type ||
+                (isTablet ? "tablet" : isMobile ? "mobile" : "desktop"),
+              network_type: isCellular
+                ? "cellular"
+                : networkType === "slow-2g" ||
+                    networkType === "2g" ||
+                    networkType === "3g"
+                  ? "cellular"
+                  : "wifi",
+              battery_level: batteryLevel,
+              is_low_power_mode: isLowPowerMode,
+            },
+            fallbackConfig: options.fallbackConfig,
+            progressSyncConfig: options.progressSyncConfig,
+          },
+        });
+      } else {
+        console.log("🚀 开始标准转录 (播放器):", {
+          fileId: file?.id,
+          fileSize: fileSizeMB,
+          shouldChunk,
+          deviceType: deviceInfo?.type || (isMobile ? "mobile" : "desktop"),
+        });
+
+        // Start standard transcription
+        result = await standardTranscription.mutateAsync({
+          fileId: file?.id ?? 0,
+          language: "ja",
+          options: {
+            enableChunking: shouldChunk,
+            chunkSizeMb: isMobile ? 8 : 15, // Smaller chunks for mobile
+            priority: isMobile ? 2 : 0, // Higher priority for mobile
+            progressTracking: true,
+            updateIntervalMs: isMobile ? 3000 : 2000, // Slower updates for mobile
+            deviceInfo: {
+              device_type: isTablet
+                ? "tablet"
+                : isMobile
+                  ? "mobile"
+                  : "desktop",
+              network_type: isCellular
+                ? "cellular"
+                : networkType === "slow-2g" ||
+                    networkType === "2g" ||
+                    networkType === "3g"
+                  ? "cellular"
+                  : "wifi",
+              battery_level: batteryLevel,
+              is_low_power_mode: isLowPowerMode,
+            },
+          },
+        });
+      }
+
+      if (result.jobId) {
+        setCurrentJobId(result.jobId);
+        console.log("转录任务已创建 (播放器):", {
+          fileId: file?.id,
+          jobId: result.jobId,
+          isChunked: result.isChunked,
+          enhancedProgress: options.enableEnhancedProgress,
+        });
+      }
       setTranscriptionProgress(100);
 
       // 重新获取转录数据以获得新的 transcript ID - 批量失效相关查询
@@ -209,7 +390,10 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       const freshData = await queryClient.fetchQuery({
         queryKey: transcriptionKeys.forFile(parsedFileId),
         queryFn: async () => {
-          const transcripts = await db.transcripts.where("fileId").equals(parsedFileId).toArray();
+          const transcripts = await db.transcripts
+            .where("fileId")
+            .equals(parsedFileId)
+            .toArray();
           const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
           if (transcript && typeof transcript.id === "number") {
@@ -255,7 +439,11 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           });
 
           // 更新字幕段，添加处理后的信息
-          for (let i = 0; i < segments.length && i < processedResult.segments.length; i++) {
+          for (
+            let i = 0;
+            i < segments.length && i < processedResult.segments.length;
+            i++
+          ) {
             const originalSegment = segments[i];
             const processedSegment = processedResult.segments[i];
 
@@ -265,7 +453,9 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
               .where("[transcriptId+start]")
               .equals([newTranscript.id, originalSegment.start])
               .modify((segment) => {
-                segment.romaji = (processedSegment as ProcessedTranscriptionSegment)?.romaji;
+                segment.romaji = (
+                  processedSegment as ProcessedTranscriptionSegment
+                )?.romaji;
                 segment.translation = (
                   processedSegment as ProcessedTranscriptionSegment
                 )?.translation;
@@ -424,5 +614,15 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
     retry,
     startTranscription,
     resetAutoTranscription, // 新增：重置自动转录功能
+
+    // Enhanced progress tracking information
+    enhancedProgress,
+    currentJobId,
+    hasEnhancedProgress: options.enableEnhancedProgress,
+
+    // Additional controls for enhanced progress
+    stopEnhancedProgress: enhancedProgress?.stop,
+    forceFallback: enhancedProgress?.forceFallback,
+    refetchProgress: enhancedProgress?.refetch,
   };
 }

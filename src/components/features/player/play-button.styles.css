@@ -1,0 +1,293 @@
+/* PlayButton Component Styles */
+
+/* Button scale animations for play/pause transitions */
+@keyframes pulse-scale {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes pause-scale {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse ring effect for active playing state */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Ripple effect for touch interactions */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Performance-optimized animation classes */
+.animate-pulse-scale {
+  animation: pulse-scale 300ms ease-out;
+}
+
+.animate-pause-scale {
+  animation: pause-scale 300ms ease-out;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 1000ms linear infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2000ms ease-in-out infinite;
+}
+
+.animate-ripple {
+  animation: ripple 300ms ease-out;
+}
+
+/* GPU-accelerated animations for better performance */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Reduced motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-scale,
+  .animate-pause-scale,
+  .animate-pulse-ring,
+  .animate-ripple {
+    animation: none;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 2000ms linear infinite;
+  }
+
+  .gpu-accelerated {
+    transform: none;
+    will-change: auto;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .play-button-enhanced {
+    border-width: 3px;
+    box-shadow: none;
+  }
+}
+
+/* Dark mode specific styles */
+@media (prefers-color-scheme: dark) {
+  .play-button-standard {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .play-button-enhanced {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Touch-specific optimizations */
+@media (pointer: coarse) {
+  .play-button {
+    min-width: 44px;
+    min-height: 44px;
+    /* Prevent default touch behaviors that can delay response */
+    touch-action: manipulation;
+    /* Prevent text selection during touch */
+    user-select: none;
+    /* Prevent zoom on double tap */
+    touch-action: manipulation;
+  }
+}
+
+/* Hover states for mouse-based interactions */
+@media (pointer: fine) {
+  .play-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    transition: transform 150ms ease-out;
+  }
+
+  .play-button:active:not(:disabled) {
+    transform: translateY(0);
+    transition: transform 50ms ease-out;
+  }
+}
+
+/* Focus states for keyboard navigation */
+.play-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Loading state styles */
+.play-button-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.play-button-loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Error state styles */
+.play-button-error {
+  animation: error-shake 500ms ease-out;
+}
+
+@keyframes error-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-2px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(2px);
+  }
+}
+
+/* Success state styles */
+.play-button-success {
+  animation: success-bounce 600ms ease-out;
+}
+
+@keyframes success-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-4px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Size-specific adjustments */
+.play-button-compact {
+  --icon-size: 16px;
+  --button-size: 32px;
+  --touch-size: 44px;
+}
+
+.play-button-normal {
+  --icon-size: 20px;
+  --button-size: 44px;
+  --touch-size: 48px;
+}
+
+.play-button-large {
+  --icon-size: 24px;
+  --button-size: 56px;
+  --touch-size: 60px;
+}
+
+.play-button-extra-large {
+  --icon-size: 32px;
+  --button-size: 72px;
+  --touch-size: 80px;
+}
+
+/* Variant-specific styles */
+.play-button-minimal {
+  background: transparent;
+  border: none;
+}
+
+.play-button-standard {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+.play-button-enhanced {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.play-button-icon-only {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Performance optimization classes */
+.optimize-performance {
+  contain: layout style paint;
+  content-visibility: auto;
+  will-change: auto;
+}
+
+.optimize-performance:hover {
+  will-change: transform;
+}
+
+.optimize-performance:active {
+  will-change: transform;
+}
