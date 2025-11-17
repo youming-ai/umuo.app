@@ -933,6 +933,11 @@
         background-color: transparent;
     }
 
+    .upload-area.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+
     /* ===================================
    按钮组件样式
    =================================== */

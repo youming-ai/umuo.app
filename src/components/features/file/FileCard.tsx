@@ -73,13 +73,11 @@ export default function FileCard({
           <>
             <button
               type="button"
-              className="btn-play"
+              className="btn-primary"
               onClick={() => file.id && onPlay?.(file.id)}
               aria-label="播放文件"
             >
-              <span className="material-symbols-outlined text-3xl">
-                play_arrow
-              </span>
+              <span className="material-symbols-outlined">play_arrow</span>
             </button>
             <button
               type="button"

@@ -42,7 +42,9 @@ export function PlayerFooter({
   }, [audioPlayerState]);
 
   const hasLoop = loopStart !== undefined && loopEnd !== undefined;
-  const loopLabel = hasLoop ? `${formatTime(loopStart ?? 0)} – ${formatTime(loopEnd ?? 0)}` : null;
+  const loopLabel = hasLoop
+    ? `${formatTime(loopStart ?? 0)} – ${formatTime(loopEnd ?? 0)}`
+    : null;
 
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-[var(--background-color)] via-[var(--background-color)] to-transparent">
@@ -86,7 +88,9 @@ export function PlayerFooter({
                   onMouseEnter={() => setShowVolumeControl(true)}
                   onMouseLeave={() => setShowVolumeControl(false)}
                 >
-                  <span className="material-symbols-outlined text-3xl">volume_up</span>
+                  <span className="material-symbols-outlined text-3xl">
+                    volume_up
+                  </span>
                 </button>
                 <div
                   className={`player-card absolute bottom-16 left-1/2 w-8 -translate-x-1/2 rounded-full bg-[var(--card-background)] p-2 shadow-lg ${showVolumeControl ? "block" : "hidden"}`}
@@ -99,7 +103,9 @@ export function PlayerFooter({
                       max="1"
                       step="0.01"
                       value={volume}
-                      onChange={(event) => onVolumeChange(parseFloat(event.target.value))}
+                      onChange={(event) =>
+                        onVolumeChange(parseFloat(event.target.value))
+                      }
                       className="h-full w-full cursor-pointer appearance-none bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-gray-200 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--primary-color)]"
                       style={{ writingMode: "vertical-lr" }}
                     />
@@ -116,17 +122,17 @@ export function PlayerFooter({
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--text-color)]/70 transition-colors hover:bg-[var(--primary-color)]/10 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="后退10秒"
               >
-                <span className="material-symbols-outlined text-3xl">replay_10</span>
+                <span className="material-symbols-outlined text-3xl">
+                  replay_10
+                </span>
               </button>
               <button
                 type="button"
                 onClick={onTogglePlay}
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[var(--primary-color)] text-white shadow-md"
+                className="btn-primary px-6 py-3 text-lg font-semibold"
                 aria-label={audioPlayerState.isPlaying ? "暂停" : "播放"}
               >
-                <span className="material-symbols-outlined text-4xl">
-                  {audioPlayerState.isPlaying ? "pause" : "play_arrow"}
-                </span>
+                <span>{audioPlayerState.isPlaying ? "暂停" : "播放"}</span>
               </button>
               <button
                 type="button"
@@ -135,7 +141,9 @@ export function PlayerFooter({
                 className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-[var(--text-color)]/70 transition-colors hover:bg-[var(--primary-color)]/10 disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="前进10秒"
               >
-                <span className="material-symbols-outlined text-3xl">forward_10</span>
+                <span className="material-symbols-outlined text-3xl">
+                  forward_10
+                </span>
               </button>
               <button
                 type="button"
@@ -166,7 +174,9 @@ export function PlayerFooter({
                   onMouseEnter={() => setShowSpeedMenu(true)}
                   onMouseLeave={() => setShowSpeedMenu(false)}
                 >
-                  <span className="material-symbols-outlined text-3xl">speed</span>
+                  <span className="material-symbols-outlined text-3xl">
+                    speed
+                  </span>
                 </button>
                 <div
                   className={`player-card absolute bottom-14 right-0 w-32 flex-col gap-1 rounded-lg bg-[var(--card-background)] p-2 text-sm shadow-lg ${showSpeedMenu ? "flex" : "hidden"}`}
