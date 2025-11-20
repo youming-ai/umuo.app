@@ -18,7 +18,7 @@ export interface TranscriptionErrorContext {
  */
 export function handleTranscriptionError(error: unknown, context: TranscriptionErrorContext): void {
   const errorMessage = error instanceof Error ? error.message : "未知错误";
-  const { fileId, fileName, operation } = context;
+  const { fileId, operation } = context;
 
   // 构建详细的错误消息
   const detailedMessage = buildDetailedErrorMessage(errorMessage, context);

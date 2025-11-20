@@ -5,8 +5,8 @@
 
 import { debounce, throttle } from "./performance-monitoring";
 
-export interface EventListener<T = any> {
-  callback: (data: T) => void;
+export interface EventListener<TData = unknown> {
+  callback: (data: TData) => void;
   priority?: number;
   once?: boolean;
   id: string;
@@ -21,8 +21,17 @@ export interface EventEmitterOptions {
   batchTimeout?: number;
 }
 
-export class OptimizedEventEmitter<T extends Record<string, any> = Record<string, any>> {
-  private listeners = new Map<keyof T, Map<string, EventListener>>();
+type EmitFunction<TEvents extends Record<string, unknown>> = <K extends keyof TEvents>(
+  event: K,
+  data: TEvents[K],
+) => void;
+
+type CancelableEmitFunction<TEvents extends Record<string, unknown>> = EmitFunction<TEvents> & {
+  cancel?: () => void;
+};
+
+export class OptimizedEventEmitter<T extends Record<string, unknown> = Record<string, unknown>> {
+  private listeners = new Map<keyof T, Map<string, EventListener<unknown>>>();
   private eventQueue: Array<{ type: keyof T; data: T[keyof T] }> = [];
   private options: Required<EventEmitterOptions>;
   private batchTimer?: NodeJS.Timeout;
@@ -38,9 +47,25 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
       batchTimeout: options.batchTimeout || 50,
     };
 
+    const emitImmediateFn: EmitFunction<T> = (event, data) => {
+      this.emitImmediate(event, data);
+    };
+
     // 创建防抖和节流的事件发射函数
-    this.debouncedEmit = debounce(this.emitImmediate.bind(this), this.options.debounceTime);
-    this.throttledEmit = throttle(this.emitImmediate.bind(this), this.options.throttleTime);
+    this.debouncedEmit = debounce(
+      emitImmediateFn,
+      this.options.debounceTime,
+    ) as CancelableEmitFunction<T>;
+    this.throttledEmit = throttle(
+      emitImmediateFn,
+      this.options.throttleTime,
+    ) as CancelableEmitFunction<T>;
+  }
+
+  private getListenerMap<K extends keyof T>(
+    event: K,
+  ): Map<string, EventListener<T[K]>> | undefined {
+    return this.listeners.get(event) as Map<string, EventListener<T[K]>> | undefined;
   }
 
   // 添加事件监听器
@@ -51,11 +76,11 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
   ): string {
     const id = `listener-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, new Map());
+    let eventListeners = this.getListenerMap(event);
+    if (!eventListeners) {
+      eventListeners = new Map();
+      this.listeners.set(event, eventListeners as Map<string, EventListener<unknown>>);
     }
-
-    const eventListeners = this.listeners.get(event)!;
 
     // 检查监听器数量限制
     if (eventListeners.size >= this.options.maxListeners) {
@@ -85,7 +110,7 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
 
   // 移除事件监听器
   off<K extends keyof T>(event: K, idOrCallback: string | ((data: T[K]) => void)): void {
-    const eventListeners = this.listeners.get(event);
+    const eventListeners = this.getListenerMap(event);
     if (!eventListeners) return;
 
     if (typeof idOrCallback === "string") {
@@ -117,7 +142,7 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
 
   // 立即发射事件
   private emitImmediate<K extends keyof T>(event: K, data: T[K]): void {
-    const eventListeners = this.listeners.get(event);
+    const eventListeners = this.getListenerMap(event);
     if (!eventListeners) return;
 
     // 按优先级排序监听器
@@ -264,43 +289,33 @@ export class OptimizedEventEmitter<T extends Record<string, any> = Record<string
     this.eventCounts.clear();
 
     // 重置防抖和节流函数
-    if (
-      this.debouncedEmit &&
-      typeof this.debouncedEmit === "object" &&
-      "cancel" in this.debouncedEmit
-    ) {
-      (this.debouncedEmit as any).cancel();
-    }
-    if (
-      this.throttledEmit &&
-      typeof this.throttledEmit === "object" &&
-      "cancel" in this.throttledEmit
-    ) {
-      (this.throttledEmit as any).cancel();
-    }
+    this.debouncedEmit.cancel?.();
+    this.throttledEmit.cancel?.();
   }
 
   // 私有方法声明
-  private debouncedEmit: <K extends keyof T>(event: K, data: T[K]) => void;
-  private throttledEmit: <K extends keyof T>(event: K, data: T[K]) => void;
+  private debouncedEmit: CancelableEmitFunction<T>;
+  private throttledEmit: CancelableEmitFunction<T>;
 }
 
 // 类型安全的事件发射器工厂
-export function createEventEmitter<T extends Record<string, any>>(
+export function createEventEmitter<T extends Record<string, unknown>>(
   options?: EventEmitterOptions,
 ): OptimizedEventEmitter<T> {
   return new OptimizedEventEmitter<T>(options);
 }
 
 // 针对转录系统的专用事件管理器
-export interface TranscriptionEvents {
-  "task:added": { taskId: string; task: any };
+type GenericPayload = Record<string, unknown>;
+
+export interface TranscriptionEvents extends Record<string, unknown> {
+  "task:added": { taskId: string; task: GenericPayload };
   "task:started": { taskId: string };
   "task:progress": { taskId: string; progress: number; message?: string };
-  "task:completed": { taskId: string; result: any };
+  "task:completed": { taskId: string; result: GenericPayload };
   "task:failed": { taskId: string; error: Error };
   "task:cancelled": { taskId: string };
-  "queue:updated": { queueState: any };
+  "queue:updated": { queueState: GenericPayload };
   "system:cleanup": { reason: string };
 }
 
@@ -321,11 +336,11 @@ export class TranscriptionEventManager extends OptimizedEventEmitter<Transcripti
     this.emit("task:progress", { taskId, progress, message });
   }
 
-  emitTaskAdded(taskId: string, task: any): void {
+  emitTaskAdded(taskId: string, task: GenericPayload): void {
     this.emit("task:added", { taskId, task });
   }
 
-  emitTaskCompleted(taskId: string, result: any): void {
+  emitTaskCompleted(taskId: string, result: GenericPayload): void {
     this.emit("task:completed", { taskId, result });
   }
 

@@ -53,21 +53,25 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
 
   async create(data: Partial<FileRow>, _options?: QueryOptions): Promise<FileRow> {
     this.validateData(data);
+    const name = data.name?.trim();
+    if (!name) {
+      throw new Error("File name is required");
+    }
 
     return this.executeWithMetrics(
       "create",
       async () => {
         const now = new Date();
 
-        const fileData = {
-          name: data.name,
+        const fileData: FileRow = {
+          name,
           size: data.size || 0,
           type: data.type || "",
           uploadedAt: now,
           updatedAt: now,
         };
 
-        const id = await db.files.add(fileData as any);
+        const id = await db.files.add(fileData);
         const createdFile = await this.findById(id);
 
         if (!createdFile) {
@@ -87,12 +91,12 @@ export class FileRepository extends BaseRepository<FileRow> implements IFileRepo
     return this.executeWithMetrics(
       "update",
       async () => {
-        const updateData = {
+        const updateData: Partial<FileRow> = {
           ...data,
           updatedAt: new Date(),
         };
 
-        await db.files.update(id, updateData as any);
+        await db.files.update(id, updateData);
 
         const updatedFile = await this.findById(id);
         if (!updatedFile) {

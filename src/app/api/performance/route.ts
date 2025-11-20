@@ -7,15 +7,67 @@ import { type NextRequest, NextResponse } from "next/server";
 import { apiSuccess } from "@/lib/utils/api-response";
 
 // 内存存储性能数据（生产环境应使用数据库或外部服务）
-const performanceStore = new Map<string, any[]>();
+const performanceStore = new Map<string, StoredPerformanceData[]>();
+
+type MetricValue = number | undefined;
+
+interface PerformanceMetrics {
+  [metricName: string]: MetricValue;
+  fcp?: number;
+  lcp?: number;
+  fid?: number;
+  cls?: number;
+  transcriptionTime?: number;
+  uploadTime?: number;
+  apiResponseTime?: number;
+  memoryUsage?: number;
+  errorCount?: number;
+  crashCount?: number;
+}
 
 // 性能数据接口
 interface PerformanceData {
-  metrics: Record<string, any>;
+  metrics: PerformanceMetrics;
   url: string;
   timestamp: number;
   userAgent: string;
   sessionId?: string;
+}
+
+interface StoredPerformanceData extends PerformanceData {
+  receivedAt: number;
+}
+
+interface PercentileStats {
+  p50: number;
+  p75: number;
+  p90: number;
+  p95: number;
+  avg: number;
+  min: number;
+  max: number;
+}
+
+interface PerformanceStats {
+  coreWebVitals: {
+    fcp: PercentileStats | null;
+    lcp: PercentileStats | null;
+    fid: PercentileStats | null;
+    cls: PercentileStats | null;
+  };
+  customMetrics: {
+    transcriptionTime: PercentileStats | null;
+    uploadTime: PercentileStats | null;
+    apiResponseTime: PercentileStats | null;
+  };
+  errors: {
+    totalErrors: number;
+    totalCrashes: number;
+  };
+  sessions: {
+    uniqueSessions: number;
+    averageSessionLength: number;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -84,23 +136,20 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const date =
-      searchParams.get("date") || new Date().toISOString().split("T")[0];
+    const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
     const sessionId = searchParams.get("session");
 
-    let data: any[] = [];
+    let data: StoredPerformanceData[] = [];
 
     if (sessionId) {
       // 获取特定会话的数据
       for (const [, dailyData] of performanceStore.entries()) {
-        const sessionData = dailyData.filter(
-          (item) => item.sessionId === sessionId,
-        );
+        const sessionData = dailyData.filter((item) => item.sessionId === sessionId);
         data.push(...sessionData);
       }
     } else {
       // 获取特定日期的数据
-      data = performanceStore.get(date) || [];
+      data = performanceStore.get(date) ?? [];
     }
 
     // 计算统计数据
@@ -144,48 +193,44 @@ function simpleHash(str: string): string {
 }
 
 // 检测性能问题
-function detectPerformanceIssues(metrics: Record<string, any>): string[] {
+function detectPerformanceIssues(metrics: PerformanceMetrics): string[] {
   const issues: string[] = [];
 
   // Core Web Vitals 阈值
-  if (metrics.fcp > 2500) {
+  if (isValidMetricValue(metrics.fcp) && metrics.fcp > 2500) {
     issues.push(`FCP 过慢: ${Math.round(metrics.fcp)}ms`);
   }
 
-  if (metrics.lcp > 4000) {
+  if (isValidMetricValue(metrics.lcp) && metrics.lcp > 4000) {
     issues.push(`LCP 过慢: ${Math.round(metrics.lcp)}ms`);
   }
 
-  if (metrics.fid > 300) {
+  if (isValidMetricValue(metrics.fid) && metrics.fid > 300) {
     issues.push(`FID 过慢: ${Math.round(metrics.fid)}ms`);
   }
 
-  if (metrics.cls > 0.25) {
+  if (isValidMetricValue(metrics.cls) && metrics.cls > 0.25) {
     issues.push(`CLS 过高: ${metrics.cls.toFixed(3)}`);
   }
 
   // 自定义指标阈值
-  if (metrics.transcriptionTime > 60000) {
-    issues.push(
-      `转录时间过长: ${Math.round(metrics.transcriptionTime / 1000)}秒`,
-    );
+  if (isValidMetricValue(metrics.transcriptionTime) && metrics.transcriptionTime > 60000) {
+    issues.push(`转录时间过长: ${Math.round(metrics.transcriptionTime / 1000)}秒`);
   }
 
-  if (metrics.uploadTime > 30000) {
+  if (isValidMetricValue(metrics.uploadTime) && metrics.uploadTime > 30000) {
     issues.push(`上传时间过长: ${Math.round(metrics.uploadTime / 1000)}秒`);
   }
 
-  if (metrics.apiResponseTime > 5000) {
+  if (isValidMetricValue(metrics.apiResponseTime) && metrics.apiResponseTime > 5000) {
     issues.push(`API响应时间过长: ${Math.round(metrics.apiResponseTime)}ms`);
   }
 
-  if (metrics.memoryUsage && metrics.memoryUsage > 100 * 1024 * 1024) {
-    issues.push(
-      `内存使用过高: ${Math.round(metrics.memoryUsage / 1024 / 1024)}MB`,
-    );
+  if (isValidMetricValue(metrics.memoryUsage) && metrics.memoryUsage > 100 * 1024 * 1024) {
+    issues.push(`内存使用过高: ${Math.round(metrics.memoryUsage / 1024 / 1024)}MB`);
   }
 
-  if (metrics.errorCount > 5) {
+  if (isValidMetricValue(metrics.errorCount) && metrics.errorCount > 5) {
     issues.push(`错误次数过多: ${metrics.errorCount}次`);
   }
 
@@ -193,27 +238,31 @@ function detectPerformanceIssues(metrics: Record<string, any>): string[] {
 }
 
 // 计算性能统计数据
-function calculatePerformanceStats(data: any[]): any {
+function calculatePerformanceStats(data: StoredPerformanceData[]): PerformanceStats | null {
   if (data.length === 0) {
     return null;
   }
 
   // Core Web Vitals 统计
-  const fcpValues = data.filter((d) => d.metrics.fcp).map((d) => d.metrics.fcp);
-  const lcpValues = data.filter((d) => d.metrics.lcp).map((d) => d.metrics.lcp);
-  const fidValues = data.filter((d) => d.metrics.fid).map((d) => d.metrics.fid);
-  const clsValues = data.filter((d) => d.metrics.cls).map((d) => d.metrics.cls);
+  const fcpValues = collectMetricValues(data, (metrics) => metrics.fcp);
+  const lcpValues = collectMetricValues(data, (metrics) => metrics.lcp);
+  const fidValues = collectMetricValues(data, (metrics) => metrics.fid);
+  const clsValues = collectMetricValues(data, (metrics) => metrics.cls);
 
   // 自定义指标统计
-  const transcriptionTimes = data
-    .filter((d) => d.metrics.transcriptionTime)
-    .map((d) => d.metrics.transcriptionTime);
-  const uploadTimes = data
-    .filter((d) => d.metrics.uploadTime)
-    .map((d) => d.metrics.uploadTime);
-  const apiResponseTimes = data
-    .filter((d) => d.metrics.apiResponseTime)
-    .map((d) => d.metrics.apiResponseTime);
+  const transcriptionTimes = collectMetricValues(data, (metrics) => metrics.transcriptionTime);
+  const uploadTimes = collectMetricValues(data, (metrics) => metrics.uploadTime);
+  const apiResponseTimes = collectMetricValues(data, (metrics) => metrics.apiResponseTime);
+
+  const totalErrors = data.reduce((sum, entry) => sum + (entry.metrics.errorCount ?? 0), 0);
+  const totalCrashes = data.reduce((sum, entry) => sum + (entry.metrics.crashCount ?? 0), 0);
+  const uniqueSessions = new Set(
+    data
+      .map((entry) => entry.sessionId)
+      .filter(
+        (sessionId): sessionId is string => typeof sessionId === "string" && sessionId.length > 0,
+      ),
+  ).size;
 
   return {
     coreWebVitals: {
@@ -228,27 +277,21 @@ function calculatePerformanceStats(data: any[]): any {
       apiResponseTime: calculatePercentiles(apiResponseTimes),
     },
     errors: {
-      totalErrors: data.reduce(
-        (sum, d) => sum + (d.metrics.errorCount || 0),
-        0,
-      ),
-      totalCrashes: data.reduce(
-        (sum, d) => sum + (d.metrics.crashCount || 0),
-        0,
-      ),
+      totalErrors,
+      totalCrashes,
     },
     sessions: {
-      uniqueSessions: new Set(data.map((d) => d.sessionId)).size,
+      uniqueSessions,
       averageSessionLength: calculateAverageSessionLength(data),
     },
   };
 }
 
 // 计算百分位数
-function calculatePercentiles(values: number[]): any {
+function calculatePercentiles(values: number[]): PercentileStats | null {
   if (values.length === 0) return null;
 
-  const sorted = values.sort((a, b) => a - b);
+  const sorted = [...values].sort((a, b) => a - b);
   const len = sorted.length;
 
   return {
@@ -263,17 +306,19 @@ function calculatePercentiles(values: number[]): any {
 }
 
 // 计算平均会话长度
-function calculateAverageSessionLength(data: any[]): number {
+function calculateAverageSessionLength(data: StoredPerformanceData[]): number {
   const sessionLengths = new Map<string, number[]>();
 
   data.forEach((item) => {
     const sessionId = item.sessionId;
-    const timestamp = item.timestamp;
+    if (!sessionId) {
+      return;
+    }
 
     if (!sessionLengths.has(sessionId)) {
       sessionLengths.set(sessionId, []);
     }
-    sessionLengths.get(sessionId)?.push(timestamp);
+    sessionLengths.get(sessionId)?.push(item.timestamp);
   });
 
   let totalLength = 0;
@@ -290,11 +335,21 @@ function calculateAverageSessionLength(data: any[]): number {
   return sessionCount > 0 ? totalLength / sessionCount : 0;
 }
 
+function collectMetricValues(
+  entries: StoredPerformanceData[],
+  selector: (metrics: PerformanceMetrics) => number | undefined,
+): number[] {
+  return entries
+    .map((entry) => selector(entry.metrics))
+    .filter((value): value is number => isValidMetricValue(value));
+}
+
+function isValidMetricValue(value: MetricValue): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
 // 异步处理性能数据
-async function processPerformanceData(
-  data: PerformanceData,
-  issues: string[],
-): Promise<void> {
+async function processPerformanceData(data: PerformanceData, issues: string[]): Promise<void> {
   // 这里可以添加：
   // 1. 发送到外部监控服务（如 Sentry, DataDog 等）
   // 2. 存储到数据库

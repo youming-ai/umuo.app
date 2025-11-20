@@ -5,6 +5,25 @@ import { apiSuccess } from "@/lib/utils/api-response";
  * Cloudflare Workers 健康检查 API
  * 用于监控系统运行状态和依赖服务
  */
+type FeatureFlagMap = Record<string, boolean>;
+
+interface HealthConfiguration {
+  features?: FeatureFlagMap;
+  environmentVariables?: FeatureFlagMap;
+  [section: string]: FeatureFlagMap | undefined;
+}
+
+interface ConnectionTestResult {
+  success: boolean;
+  latency?: number;
+  error?: string;
+}
+
+interface HealthConnections {
+  timestamp: string;
+  tests: Record<string, ConnectionTestResult>;
+}
+
 interface HealthData {
   status: "healthy" | "unhealthy";
   timestamp: string;
@@ -58,18 +77,8 @@ interface HealthData {
   dependencies?: {
     [key: string]: string;
   };
-  configuration?: {
-    features?: {
-      [key: string]: boolean;
-    };
-    [key: string]: any;
-  };
-  connections?: {
-    timestamp: string;
-    tests: {
-      [key: string]: any;
-    };
-  };
+  configuration?: HealthConfiguration;
+  connections?: HealthConnections;
 }
 
 interface SystemInfo {
@@ -155,9 +164,9 @@ export async function GET(_request: NextRequest) {
     };
 
     // 检查关键依赖
-    const criticalServices = ["groq"];
+    const criticalServices: (keyof HealthData["services"])[] = ["groq"];
     const unavailableServices = criticalServices.filter(
-      (service) => !healthData.services[service as keyof typeof healthData.services].available,
+      (service) => !healthData.services[service].available,
     );
 
     if (unavailableServices.length > 0) {
@@ -301,17 +310,17 @@ export async function POST(request: NextRequest) {
 
     // 如果要求测试连接
     if (testConnections) {
-      healthData.connections = {
+      const connections: HealthConnections = {
         timestamp: new Date().toISOString(),
         tests: {},
       };
 
       // 测试 KV 连接
       try {
-        const kvTest = { success: true, latency: 0 };
-        healthData.connections.tests.kv = kvTest;
+        const kvTest: ConnectionTestResult = { success: true, latency: 0 };
+        connections.tests.kv = kvTest;
       } catch (error) {
-        healthData.connections.tests.kv = {
+        connections.tests.kv = {
           success: false,
           error: error instanceof Error ? error.message : "KV connection failed",
         };
@@ -319,14 +328,16 @@ export async function POST(request: NextRequest) {
 
       // 测试 D1 连接
       try {
-        const d1Test = { success: true, latency: 0 };
-        healthData.connections.tests.d1 = d1Test;
+        const d1Test: ConnectionTestResult = { success: true, latency: 0 };
+        connections.tests.d1 = d1Test;
       } catch (error) {
-        healthData.connections.tests.d1 = {
+        connections.tests.d1 = {
           success: false,
           error: error instanceof Error ? error.message : "D1 connection failed",
         };
       }
+
+      healthData.connections = connections;
     }
 
     const response = apiSuccess(healthData);

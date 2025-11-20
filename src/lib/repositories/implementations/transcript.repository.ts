@@ -60,10 +60,15 @@ export class TranscriptRepository
       async () => {
         const now = new Date();
 
-        const transcriptData = {
-          fileId: data.fileId,
+        const transcriptData: TranscriptRow = {
+          fileId: data.fileId ?? 0,
           status: data.status || "pending",
+          rawText: data.rawText,
           text: data.text || "",
+          language: data.language,
+          duration: data.duration,
+          error: data.error,
+          processingTime: data.processingTime,
           createdAt: now,
           updatedAt: now,
         };
@@ -72,7 +77,7 @@ export class TranscriptRepository
           throw new Error("Transcript must have a fileId");
         }
 
-        const id = await db.transcripts.add(transcriptData as any);
+        const id = await db.transcripts.add(transcriptData);
         const createdTranscript = await this.findById(id);
 
         if (!createdTranscript) {
@@ -96,12 +101,12 @@ export class TranscriptRepository
     return this.executeWithMetrics(
       "update",
       async () => {
-        const updateData = {
+        const updateData: Partial<TranscriptRow> = {
           ...data,
           updatedAt: new Date(),
         };
 
-        await db.transcripts.update(id, updateData as any);
+        await db.transcripts.update(id, updateData);
 
         const updatedTranscript = await this.findById(id);
         if (!updatedTranscript) {
@@ -157,14 +162,11 @@ export class TranscriptRepository
     );
   }
 
-  async findByStatus(status: string): Promise<TranscriptRow[]> {
+  async findByStatus(status: TranscriptRow["status"]): Promise<TranscriptRow[]> {
     return this.executeWithMetrics(
       "findByStatus",
       async () => {
-        return await db.transcripts
-          .where("status")
-          .equals(status as any)
-          .toArray();
+        return await db.transcripts.where("status").equals(status).toArray();
       },
       { status },
     );
@@ -229,7 +231,7 @@ export class TranscriptRepository
 
         return {
           transcript,
-          segments: segments as Segment[],
+          segments,
         };
       },
       { transcriptId },
@@ -258,28 +260,33 @@ export class TranscriptRepository
     );
   }
 
-  async updateProgress(transcriptId: number, progress: number, status?: string): Promise<void> {
+  async updateProgress(
+    transcriptId: number,
+    progress: number,
+    status?: TranscriptRow["status"],
+  ): Promise<void> {
     await this.executeWithMetrics(
       "updateProgress",
       async () => {
         const updateData: Partial<TranscriptRow> = { updatedAt: new Date() };
         if (status) {
-          updateData.status = status as any;
+          updateData.status = status;
         }
-        await db.transcripts.update(transcriptId, updateData as any);
+        await db.transcripts.update(transcriptId, updateData);
       },
       { transcriptId, progress, status },
     );
   }
 
-  async markAsCompleted(transcriptId: number, _result: any): Promise<void> {
+  async markAsCompleted(transcriptId: number, _result: unknown): Promise<void> {
     await this.executeWithMetrics(
       "markAsCompleted",
       async () => {
-        await db.transcripts.update(transcriptId, {
+        const update: Partial<TranscriptRow> = {
           status: "completed",
           updatedAt: new Date(),
-        } as any);
+        };
+        await db.transcripts.update(transcriptId, update);
       },
       { transcriptId },
     );
@@ -289,11 +296,12 @@ export class TranscriptRepository
     await this.executeWithMetrics(
       "markAsFailed",
       async () => {
-        await db.transcripts.update(transcriptId, {
+        const update: Partial<TranscriptRow> = {
           status: "failed",
           error,
           updatedAt: new Date(),
-        } as any);
+        };
+        await db.transcripts.update(transcriptId, update);
       },
       { transcriptId, error },
     );

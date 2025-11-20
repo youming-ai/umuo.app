@@ -5,6 +5,12 @@
  */
 
 import Groq from "groq-sdk";
+import {
+  buildSegmentsFromPlainText,
+  buildSegmentsFromWords,
+  mapGroqSegmentToTranscriptionSegment,
+} from "@/lib/ai/groq-transcription-utils";
+import type { GroqTranscriptionResponse } from "@/types/transcription";
 
 export interface TranscriptionOptions {
   language?: string;
@@ -26,6 +32,15 @@ export interface TranscriptionProgress {
   status: "idle" | "processing" | "completed" | "error" | "failed" | "pending";
   progress: number;
   message: string;
+}
+
+interface PostProcessedSegment {
+  start: number;
+  end: number;
+  normalizedText?: string;
+  translation?: string;
+  annotations?: string[];
+  furigana?: string;
 }
 
 /**
@@ -124,56 +139,24 @@ async function transcribeWithGroqSDK(
   });
 
   // 处理转录结果 - 简化逻辑
-  const transcriptionData = transcription as any;
+  const transcriptionData = transcription as GroqTranscriptionResponse;
   let processedSegments: TranscriptionResult["segments"] = [];
 
-  if (transcriptionData.segments && transcriptionData.segments.length > 0) {
-    processedSegments = transcriptionData.segments.map((segment: any, index: number) => ({
-      start: segment.start || 0,
-      end: segment.end || 0,
-      text: segment.text || "",
-      wordTimestamps:
-        segment.words?.map((word: any) => ({
-          word: word.word,
-          start: word.start,
-          end: word.end,
-        })) || [],
-      confidence: segment.confidence || 0.95,
-      id: segment.id || index + 1,
-    }));
-  } else if (transcription.text) {
-    // 生成基本的segments - 简化逻辑
-    const sentences = transcription.text
-      .split(/[。！？.!?]+/)
-      .filter((s: string) => s.trim().length > 0);
-    const avgWordsPerSecond = 2.5;
-    const totalDuration =
-      transcriptionData.duration || transcription.text.length / avgWordsPerSecond;
-
-    processedSegments = sentences.map((sentence: string, index: number) => {
-      const words = sentence.trim().split(/\s+/);
-      const sentenceDuration = words.length / avgWordsPerSecond;
-      const startTime =
-        index === 0 ? 0 : sentences.slice(0, index).join("").length / avgWordsPerSecond;
-      const endTime = Math.min(startTime + sentenceDuration, totalDuration);
-
-      return {
-        start: startTime,
-        end: endTime,
-        text: sentence.trim(),
-        wordTimestamps: words.map((word: string, wordIndex: number) => ({
-          word,
-          start: startTime + wordIndex * (sentenceDuration / words.length),
-          end: startTime + (wordIndex + 1) * (sentenceDuration / words.length),
-        })),
-        confidence: 0.95,
-        id: index + 1,
-      };
-    });
+  if (Array.isArray(transcriptionData.segments) && transcriptionData.segments.length > 0) {
+    processedSegments = transcriptionData.segments.map((segment, index) =>
+      mapGroqSegmentToTranscriptionSegment(segment, index + 1),
+    );
+  } else if (Array.isArray(transcriptionData.words) && transcriptionData.words.length > 0) {
+    processedSegments = buildSegmentsFromWords(transcriptionData.words);
+  } else if (typeof transcriptionData.text === "string" && transcriptionData.text.length > 0) {
+    processedSegments = buildSegmentsFromPlainText(
+      transcriptionData.text,
+      transcriptionData.duration,
+    );
   }
 
   return {
-    text: transcription.text || "",
+    text: transcriptionData.text ?? "",
     language: transcriptionData.language || options.language || "auto",
     duration: transcriptionData.duration,
     segments: processedSegments,
@@ -245,7 +228,7 @@ async function processPostTranscription(
 
     const postProcessResult = (await response.json()) as {
       success: boolean;
-      data?: { segments?: any[] };
+      data?: { segments?: PostProcessedSegment[] };
     };
     if (!postProcessResult.success || !postProcessResult.data?.segments) return;
 

@@ -1,7 +1,13 @@
 import Groq from "groq-sdk";
 import type { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  buildSegmentsFromPlainText,
+  buildSegmentsFromWords,
+  mapGroqSegmentToTranscriptionSegment,
+} from "@/lib/ai/groq-transcription-utils";
 import { apiError, apiSuccess } from "@/lib/utils/api-response";
+import type { GroqTranscriptionResponse, TranscriptionSegment } from "@/types/transcription";
 
 // Zod schemas for validation
 const transcribeQuerySchema = z.object({
@@ -201,11 +207,11 @@ async function processTranscription(
     });
 
     // 使用类型断言访问可能的属性
-    const transcriptionData = transcription as any;
+    const transcriptionData = transcription as GroqTranscriptionResponse;
 
     console.log("转录成功完成 (Groq SDK):", {
       fileName: uploadedFile.name,
-      textLength: transcription.text?.length || 0,
+      textLength: transcriptionData.text?.length || 0,
       duration: transcriptionData.duration,
       language: transcriptionData.language,
       // 详细调试信息
@@ -213,89 +219,31 @@ async function processTranscription(
     });
 
     // 处理 Groq SDK 返回的转录结果
-    let processedSegments: Array<{
-      start: number;
-      end: number;
-      text: string;
-      wordTimestamps?: Array<{
-        word: string;
-        start: number;
-        end: number;
-      }>;
-      confidence?: number;
-      id: number;
-    }> = [];
+    let processedSegments: TranscriptionSegment[] = [];
 
-    if (transcriptionData.segments && transcriptionData.segments.length > 0) {
+    if (Array.isArray(transcriptionData.segments) && transcriptionData.segments.length > 0) {
       // 使用 Groq SDK 返回的 segments
-      processedSegments = transcriptionData.segments.map((segment: any, index: number) => ({
-        start: segment.start || 0,
-        end: segment.end || 0,
-        text: segment.text || "",
-        wordTimestamps: segment.words?.map((word: any) => ({
-          word: word.word,
-          start: word.start,
-          end: word.end,
-        })),
-        confidence: segment.confidence || 0.95,
-        id: index + 1,
-      }));
+      processedSegments = transcriptionData.segments.map((segment, index) =>
+        mapGroqSegmentToTranscriptionSegment(segment, index + 1),
+      );
       console.log("使用 Groq SDK 返回的 segments:", processedSegments.length);
-    } else if (transcriptionData.words && transcriptionData.words.length > 0) {
+    } else if (Array.isArray(transcriptionData.words) && transcriptionData.words.length > 0) {
       // 如果没有 segments 但有 words，根据 words 生成 segments
       console.log("Groq SDK 未返回 segments，根据 words 生成");
-      const wordsPerSegment = 10; // 每10个词组成一个segment
-      for (let i = 0; i < transcriptionData.words.length; i += wordsPerSegment) {
-        const segmentWords = transcriptionData.words.slice(i, i + wordsPerSegment);
-        if (segmentWords.length > 0) {
-          processedSegments.push({
-            start: segmentWords[0].start,
-            end: segmentWords[segmentWords.length - 1].end,
-            text: segmentWords.map((w: any) => w.word).join(" "),
-            wordTimestamps: segmentWords.map((word: any) => ({
-              word: word.word,
-              start: word.start,
-              end: word.end,
-            })),
-            confidence: 0.95,
-            id: Math.floor(i / wordsPerSegment) + 1,
-          });
-        }
-      }
+      processedSegments = buildSegmentsFromWords(transcriptionData.words, 10);
       console.log("根据 words 生成的 segments:", processedSegments.length);
-    } else if (transcription.text && transcription.text.length > 0) {
+    } else if (typeof transcriptionData.text === "string" && transcriptionData.text.length > 0) {
       // 生成基本的segments：按句子分割
       console.log("Groq SDK 未返回详细数据，生成基本 segments");
-      const sentences = transcription.text.split(/[。！？.!?]+/).filter((s) => s.trim().length > 0);
-      const avgWordsPerSecond = 2.5; // 假设平均每秒2.5个词
-      const totalDuration =
-        transcriptionData.duration || transcription.text.length / avgWordsPerSecond;
-
-      processedSegments = sentences.map((sentence, index) => {
-        const words = sentence.trim().split(/\s+/);
-        const sentenceDuration = words.length / avgWordsPerSecond;
-        const startTime =
-          index === 0 ? 0 : sentences.slice(0, index).join("").length / avgWordsPerSecond;
-        const endTime = Math.min(startTime + sentenceDuration, totalDuration);
-
-        return {
-          start: startTime,
-          end: endTime,
-          text: sentence.trim(),
-          wordTimestamps: words.map((word, wordIndex) => ({
-            word: word,
-            start: startTime + wordIndex * (sentenceDuration / words.length),
-            end: startTime + (wordIndex + 1) * (sentenceDuration / words.length),
-          })),
-          confidence: 0.95,
-          id: index + 1,
-        };
-      });
+      processedSegments = buildSegmentsFromPlainText(
+        transcriptionData.text,
+        transcriptionData.duration,
+      );
       console.log("生成的基本 segments:", processedSegments.length);
     }
 
     const transcriptionResponse = {
-      text: transcription.text,
+      text: transcriptionData.text ?? "",
       language: transcriptionData.language || language,
       duration: transcriptionData.duration,
       segments: processedSegments,

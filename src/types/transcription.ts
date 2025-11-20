@@ -65,6 +65,31 @@ export interface TranscriptionProgress {
   message: string;
 }
 
+// Groq SDK 响应（verbose_json）中包含的结构
+export interface GroqTranscriptionWord {
+  word?: string;
+  start?: number;
+  end?: number;
+}
+
+export interface GroqTranscriptionSegment {
+  id?: number;
+  start?: number;
+  end?: number;
+  text?: string;
+  confidence?: number;
+  words?: GroqTranscriptionWord[];
+}
+
+export interface GroqTranscriptionResponse {
+  text?: string;
+  language?: string;
+  duration?: number;
+  segments?: GroqTranscriptionSegment[];
+  words?: GroqTranscriptionWord[];
+  [key: string]: unknown;
+}
+
 // 简化的转录任务（用于UI显示）
 export interface TranscriptionTask {
   id: string;

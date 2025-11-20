@@ -7,12 +7,35 @@ import type {
   ITranscriptRepository,
 } from "./interfaces/repository.interface";
 
+type CacheStats = ReturnType<FileRepository["getCacheStats"]>;
+type StorageUsage = Awaited<ReturnType<FileRepository["getStorageUsage"]>>;
+
+interface TranscriptStatsSnapshot {
+  total: number;
+  byStatus: Record<string, number>;
+  averageProcessingTime: number;
+}
+
+interface SegmentStatsSnapshot {
+  total: number;
+  averageDuration: number;
+  totalDuration: number;
+  wordCount: number;
+}
+
+interface StorageSummary {
+  totalFiles: number;
+  totalSize: number;
+  totalTranscripts: number;
+  totalSegments: number;
+}
+
 /**
  * Repository工厂类
  * 负责创建和管理所有Repository实例
  */
 export class RepositoryFactory {
-  private static instance: RepositoryFactory;
+  private static instance: RepositoryFactory | null = null;
 
   private readonly fileRepository: FileRepository;
   private readonly transcriptRepository: TranscriptRepository;
@@ -68,9 +91,9 @@ export class RepositoryFactory {
    * 获取缓存统计信息
    */
   public getCacheStats(): {
-    files: any;
-    transcripts: any;
-    segments: any;
+    files: CacheStats;
+    transcripts: CacheStats;
+    segments: CacheStats;
   } {
     return {
       files: this.fileRepository.getCacheStats(),
@@ -107,10 +130,10 @@ export class RepositoryFactory {
    * 获取完整的数据库统计信息
    */
   public async getDatabaseStats(): Promise<{
-    files: any;
-    transcripts: any;
-    segments: any;
-    storage: any;
+    files: StorageUsage;
+    transcripts: TranscriptStatsSnapshot;
+    segments: SegmentStatsSnapshot;
+    storage: StorageSummary;
   }> {
     const [fileStats, transcriptStats, segmentStats] = await Promise.all([
       this.fileRepository.getStorageUsage(),
@@ -140,7 +163,7 @@ export class RepositoryFactory {
    * 重置工厂实例（主要用于测试）
    */
   public static resetInstance(): void {
-    RepositoryFactory.instance = null as any;
+    RepositoryFactory.instance = null;
   }
 }
 

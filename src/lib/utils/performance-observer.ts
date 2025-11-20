@@ -3,6 +3,11 @@
  * 用于监控应用性能指标和用户体验
  */
 
+type LayoutShiftEntry = PerformanceEntry & {
+  value: number;
+  hadRecentInput?: boolean;
+};
+
 // 性能指标接口
 export interface PerformanceMetrics {
   // 核心Web指标
@@ -75,8 +80,8 @@ export class PerformanceMonitor {
 
       // FID - 首次输入延迟
       const fidObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        entries.forEach((entry: any) => {
+        const entries = list.getEntries() as PerformanceEventTiming[];
+        entries.forEach((entry) => {
           this.metrics.fid = entry.processingStart - entry.startTime;
         });
       });
@@ -86,8 +91,8 @@ export class PerformanceMonitor {
       // CLS - 累积布局偏移
       let clsValue = 0;
       const clsObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        entries.forEach((entry: any) => {
+        const entries = list.getEntries() as LayoutShiftEntry[];
+        entries.forEach((entry) => {
           if (!entry.hadRecentInput) {
             clsValue += entry.value;
             this.metrics.cls = clsValue;
@@ -109,8 +114,8 @@ export class PerformanceMonitor {
   private observeUserTiming(): void {
     if ("PerformanceObserver" in window) {
       const userTimingObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        entries.forEach((entry: any) => {
+        const entries = list.getEntries() as PerformanceEntry[];
+        entries.forEach((entry) => {
           if (entry.name.startsWith("transcription-")) {
             this.metrics.transcriptionTime = entry.duration;
           } else if (entry.name.startsWith("upload-")) {
@@ -129,9 +134,9 @@ export class PerformanceMonitor {
   private observeResourceTiming(): void {
     if ("PerformanceObserver" in window) {
       const resourceObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries();
+        const entries = list.getEntries() as PerformanceResourceTiming[];
         let totalSize = 0;
-        entries.forEach((entry: any) => {
+        entries.forEach((entry) => {
           if (entry.transferSize) {
             totalSize += entry.transferSize;
           }
@@ -239,7 +244,7 @@ export class PerformanceMonitor {
   }
 
   // 报告错误
-  private reportError(error: any): void {
+  private reportError(error: Record<string, unknown>): void {
     if (Math.random() < this.config.sampleRate) {
       this.sendMetrics({
         ...this.metrics,
@@ -249,7 +254,7 @@ export class PerformanceMonitor {
   }
 
   // 发送指标数据
-  private async sendMetrics(data: PerformanceMetrics & any): Promise<void> {
+  private async sendMetrics(data: PerformanceMetrics & Record<string, unknown>): Promise<void> {
     if (!this.config.reportUrl) return;
 
     try {
@@ -285,7 +290,9 @@ export class PerformanceMonitor {
 
   // 销毁观察器
   destroy(): void {
-    this.observers.forEach((observer) => observer?.disconnect());
+    this.observers.forEach((observer) => {
+      observer?.disconnect();
+    });
     this.observers = [];
   }
 }
@@ -344,9 +351,16 @@ export const performanceUtils = {
   // 记录内存使用
   recordMemoryUsage: () => {
     if ("memory" in performance) {
-      const memory = (performance as any).memory;
-      const monitor = getPerformanceMonitor();
-      monitor.recordMetric("memoryUsage", memory.usedJSHeapSize);
+      const performanceWithMemory = performance as Performance & {
+        memory?: {
+          usedJSHeapSize: number;
+        };
+      };
+      const memory = performanceWithMemory.memory;
+      if (memory) {
+        const monitor = getPerformanceMonitor();
+        monitor.recordMetric("memoryUsage", memory.usedJSHeapSize);
+      }
     }
   },
 };

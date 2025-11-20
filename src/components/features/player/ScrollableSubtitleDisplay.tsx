@@ -193,7 +193,10 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
         {/* 字幕容器 */}
         <div
           ref={containerRef}
-          className={cn("player-subtitle-container space-y-[var(--space-subtitle-gap)]", className)}
+          className={cn(
+            "player-subtitle-container space-y-[var(--space-subtitle-gap)] text-left",
+            className,
+          )}
           data-testid="subtitle-scroll-container"
         >
           {segments.length === 0 ? (
@@ -228,7 +231,7 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                   data-testid="subtitle-card"
                   data-active={isActive}
                   className={cn(
-                    "subtitle-line mb-[var(--space-subtitle-gap)]",
+                    "subtitle-line mb-[var(--space-subtitle-gap)] w-full text-left",
                     isActive && "highlight",
                   )}
                   style={{
@@ -238,7 +241,7 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                   }}
                 >
                   {hasTokens ? (
-                    <div className="flex flex-wrap items-end">
+                    <div className="flex flex-wrap items-end justify-start gap-2">
                       {tokens.map((token, tokenIndex) => {
                         const isTokenActive =
                           isActive &&
@@ -259,7 +262,7 @@ const ScrollableSubtitleDisplay = React.memo<ScrollableSubtitleDisplayProps>(
                       })}
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                       {lines.length > 0 ? (
                         lines.map((line, lineIndex) => (
                           <p

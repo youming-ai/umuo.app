@@ -32,21 +32,20 @@ const loadingSpinnerVariants = cva(
 );
 
 export interface LoadingSpinnerProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLOutputElement>,
     VariantProps<typeof loadingSpinnerVariants> {
   label?: string;
 }
 
 export function LoadingSpinner({ className, size, variant, label, ...props }: LoadingSpinnerProps) {
   return (
-    <div
+    <output
       className={cn("flex items-center gap-2", className)}
-      role="status"
       aria-label={label || "Loading"}
       {...props}
     >
       <div className={loadingSpinnerVariants({ size, variant })} />
       {label && <span className="text-sm text-muted-foreground">{label}</span>}
-    </div>
+    </output>
   );
 }

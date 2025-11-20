@@ -42,10 +42,7 @@ export default function FileUpload({
           "audio/ogg",
           "audio/flac",
         ];
-        return (
-          validTypes.includes(file.type) ||
-          file.name.match(/\.(mp3|wav|m4a|ogg|flac)$/i)
-        );
+        return validTypes.includes(file.type) || file.name.match(/\.(mp3|wav|m4a|ogg|flac)$/i);
       });
 
       if (audioFiles.length === 0) {
@@ -54,9 +51,7 @@ export default function FileUpload({
       }
 
       if (audioFiles.length < fileArray.length) {
-        console.warn(
-          `${fileArray.length - audioFiles.length} 个文件不是支持的音频格式，已忽略`,
-        );
+        console.warn(`${fileArray.length - audioFiles.length} 个文件不是支持的音频格式，已忽略`);
       }
 
       // 检查文件数量限制
@@ -136,8 +131,19 @@ export default function FileUpload({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleFileInputClick}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " " || event.key === "Space") {
+            event.preventDefault();
+            if (!isDisabled) {
+              handleFileInputClick();
+            }
+          }
+        }}
+        role="button"
+        tabIndex={isDisabled ? -1 : 0}
         aria-label="文件上传区域"
         aria-describedby={uploadDescriptionId}
+        aria-disabled={isDisabled}
       >
         <input
           ref={fileInputRef}
@@ -157,13 +163,8 @@ export default function FileUpload({
         </span>
 
         <div className="flex flex-col items-center gap-2">
-          <p
-            className="text-xl font-bold text-[var(--text-primary)]"
-            id={uploadDescriptionId}
-          >
-            {currentFileCount >= maxFiles
-              ? "已达到文件数量上限"
-              : "拖拽文件到这里"}
+          <p className="text-xl font-bold text-[var(--text-primary)]" id={uploadDescriptionId}>
+            {currentFileCount >= maxFiles ? "已达到文件数量上限" : "拖拽文件到这里"}
           </p>
           <p className="text-md text-[var(--text-secondary)]">或者</p>
         </div>
@@ -178,9 +179,7 @@ export default function FileUpload({
           aria-describedby={uploadDescriptionId}
           disabled={isDisabled}
         >
-          <span>
-            {currentFileCount >= maxFiles ? "已达到上限" : "选择文件"}
-          </span>
+          <span>{currentFileCount >= maxFiles ? "已达到上限" : "选择文件"}</span>
         </button>
 
         <div className="flex flex-col items-center gap-1 mt-4">
@@ -190,9 +189,7 @@ export default function FileUpload({
               : `支持 MP3、WAV、M4A、OGG、FLAC 格式`}
           </p>
           {currentFileCount < maxFiles && remainingSlots > 0 && (
-            <p className="text-xs text-[var(--text-muted)]">
-              还可添加 {remainingSlots} 个文件
-            </p>
+            <p className="text-xs text-[var(--text-muted)]">还可添加 {remainingSlots} 个文件</p>
           )}
         </div>
       </section>
@@ -200,9 +197,7 @@ export default function FileUpload({
       {/* 上传进度指示器 */}
       {isUploading && (
         <div className="mt-4 text-center">
-          <p className="mb-2 text-sm text-[var(--text-muted)]">
-            上传中... {uploadProgress}%
-          </p>
+          <p className="mb-2 text-sm text-[var(--text-muted)]">上传中... {uploadProgress}%</p>
           <div className="h-2 w-full rounded-full bg-[var(--border-muted)]">
             <div
               className="bg-[var(--button-color)] h-2 rounded-full transition-all duration-300"

@@ -275,7 +275,20 @@ export function validateExtensionMatch(file: File, detectedType: string): Valida
  */
 export async function validateAudioContent(file: File): Promise<AudioProperties | ValidationError> {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContextClass =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
+
+    if (!audioContextClass) {
+      return {
+        code: "AUDIO_CONTEXT_UNAVAILABLE",
+        message: "当前环境不支持音频验证",
+        severity: "error",
+        field: "content",
+      };
+    }
+
+    const audioContext = new audioContextClass();
 
     return new Promise((resolve) => {
       const reader = new FileReader();

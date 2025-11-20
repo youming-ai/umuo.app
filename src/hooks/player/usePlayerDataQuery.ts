@@ -299,12 +299,15 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       // 注意：不在这里自动重置 shouldAutoTranscribe，让用户主动调用 resetAutoTranscription
     }
   }, [
-    shouldStartTranscription, // 使用统一状态判断
+    shouldStartTranscription,
     file,
+    transcript,
     transcriptionMutation,
     segments,
     queryClient,
     parsedFileId,
+    loading,
+    isValidId,
   ]);
 
   // 重置自动转录的函数
@@ -352,7 +355,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
         clearTimeout(timer);
       };
     }
-  }, [shouldAutoTranscribe, shouldStartTranscription, startTranscription]);
+  }, [shouldAutoTranscribe, shouldStartTranscription, startTranscription, file?.id, file?.name]);
 
   /**
    * 自动转录检测逻辑
@@ -404,7 +407,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       const timer = setTimeout(() => setTranscriptionProgress(0), 1000);
       return () => clearTimeout(timer);
     }
-  }, [isTranscribing, transcript?.status]);
+  }, [isTranscribing, transcript?.status, parsedFileId]);
 
   // 重试函数
   const retry = useCallback(() => {

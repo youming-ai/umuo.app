@@ -8,10 +8,26 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "suspicious": {
+        "noUnknownAtRules": "off"
+      }
     }
   },
   "files": {
     "includes": ["src/**/*", "*.{ts,tsx,js,jsx}"]
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["src/components/features/file/FileUpload.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useSemanticElements": "off",
+            "noNoninteractiveElementToInteractiveRole": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -57,10 +57,18 @@ export function ProgressRing({
   const strokeDashoffset = circumference - (progress / 100) * circumference;
   const actualStrokeWidth =
     strokeWidth || (thickness === "thin" ? 2 : thickness === "thick" ? 4 : 3);
+  const accessibleLabel = label || `进度 ${Math.round(progress)}%`;
 
   return (
     <div className={cn(progressRingVariants({ size, thickness }), className)} {...props}>
-      <svg className="transform -rotate-90" width={radius * 2} height={radius * 2}>
+      <svg
+        className="transform -rotate-90"
+        width={radius * 2}
+        height={radius * 2}
+        role="img"
+        aria-label={accessibleLabel}
+      >
+        <title>{accessibleLabel}</title>
         {/* 背景圆环 */}
         <circle
           cx={radius}

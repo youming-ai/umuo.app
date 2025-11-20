@@ -15,12 +15,7 @@ interface FileCardProps {
   onTranscribe?: (fileId: number) => void;
 }
 
-export default function FileCard({
-  file,
-  onPlay,
-  onDelete,
-  onTranscribe,
-}: FileCardProps) {
+export default function FileCard({ file, onPlay, onDelete, onTranscribe }: FileCardProps) {
   // 优雅地处理可能缺失的 file.id
   if (!file.id) {
     console.warn("FileCard: file.id is missing", file);
@@ -151,9 +146,7 @@ export default function FileCard({
   return (
     <div className="card-default p-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <span className={`material-symbols-outlined text-4xl ${status.color}`}>
-          {status.icon}
-        </span>
+        <span className={`material-symbols-outlined text-4xl ${status.color}`}>{status.icon}</span>
         <div>
           <p className="text-file-name">{file.name}</p>
           <p className={`text-file-status ${status.color}`}>

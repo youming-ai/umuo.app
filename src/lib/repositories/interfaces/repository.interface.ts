@@ -10,7 +10,7 @@ export interface QueryOptions {
   limit?: number;
   offset?: number;
   orderBy?: { field: string; direction: "asc" | "desc" };
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   skipCache?: boolean;
 }
 
@@ -78,7 +78,7 @@ export interface IRepository<T> {
   healthCheck(): Promise<{
     status: "healthy" | "degraded" | "unhealthy";
     message: string;
-    metrics?: any;
+    metrics?: Record<string, unknown>;
   }>;
 }
 
@@ -133,7 +133,7 @@ export interface ITranscriptRepository extends IRepository<TranscriptRow> {
 
   // 转录管理
   updateProgress(transcriptId: number, progress: number, status?: string): Promise<void>;
-  markAsCompleted(transcriptId: number, result: any): Promise<void>;
+  markAsCompleted(transcriptId: number, result: unknown): Promise<void>;
   markAsFailed(transcriptId: number, error: string): Promise<void>;
 }
 
@@ -212,7 +212,7 @@ export interface ITransactionManager {
 export interface ITransaction<_T> {
   getRepository<R>(repository: R): R;
   add<R>(repository: R, action: (repo: R) => Promise<R>): Promise<R>;
-  execute<R>(action: (repositories: any) => Promise<R>): Promise<R>;
+  execute<R>(action: (repositories: Record<string, unknown>) => Promise<R>): Promise<R>;
 }
 
 // 性能监控接口

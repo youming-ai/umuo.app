@@ -323,7 +323,17 @@ export class PerformanceMonitoring {
       return null;
     }
 
-    const memory = (performance as any).memory;
+    const performanceWithMemory = performance as Performance & {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    };
+    const memory = performanceWithMemory.memory;
+    if (!memory) {
+      return null;
+    }
     return {
       used: Math.round(memory.usedJSHeapSize / 1024 / 1024), // MB
       total: Math.round(memory.totalJSHeapSize / 1024 / 1024), // MB
@@ -418,8 +428,14 @@ export class PerformanceMonitoring {
     health: SystemHealth;
     timestamp: number;
   } {
-    const metricsRecord: Record<MetricCategory, PerformanceMetric[]> = {} as any;
-    const eventsRecord: Record<MetricCategory, PerformanceEvent[]> = {} as any;
+    const metricsRecord: Record<MetricCategory, PerformanceMetric[]> = {} as Record<
+      MetricCategory,
+      PerformanceMetric[]
+    >;
+    const eventsRecord: Record<MetricCategory, PerformanceEvent[]> = {} as Record<
+      MetricCategory,
+      PerformanceEvent[]
+    >;
 
     Object.values(MetricCategory).forEach((category) => {
       metricsRecord[category] = this.getMetricsByCategory(category);
@@ -827,11 +843,15 @@ export function usePerformanceMonitoring() {
 }
 
 // 防抖函数
+// biome-ignore lint/suspicious/noExplicitAny: helper must accept arbitrary arguments
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number,
   options: { leading?: boolean; trailing?: boolean; maxWait?: number } = {},
-): (...args: Parameters<T>) => void {
+): ((...args: Parameters<T>) => ReturnType<T>) & {
+  cancel: () => void;
+  flush: () => ReturnType<T>;
+} {
   let timeoutId: NodeJS.Timeout | undefined;
   let lastCallTime: number;
   let lastInvokeTime = 0;
@@ -841,7 +861,10 @@ export function debounce<T extends (...args: any[]) => any>(
   const { leading = false, trailing = true, maxWait } = options;
 
   function invokeFunc(time: number) {
-    const args = lastArgs!;
+    if (!lastArgs) {
+      return result;
+    }
+    const args = lastArgs;
     lastArgs = undefined;
     lastInvokeTime = time;
     result = func(...args);
@@ -930,11 +953,15 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // 节流函数
+// biome-ignore lint/suspicious/noExplicitAny: helper must accept arbitrary arguments
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
   wait: number,
   options: { leading?: boolean; trailing?: boolean } = {},
-): (...args: Parameters<T>) => void {
+): ((...args: Parameters<T>) => ReturnType<T>) & {
+  cancel: () => void;
+  flush: () => ReturnType<T>;
+} {
   let timeoutId: NodeJS.Timeout | undefined;
   let lastArgs: Parameters<T> | undefined;
   let lastThis: unknown;
@@ -945,7 +972,10 @@ export function throttle<T extends (...args: any[]) => any>(
   const { leading = true, trailing = true } = options;
 
   function invokeFunc(time: number) {
-    const args = lastArgs!;
+    if (!lastArgs) {
+      return result;
+    }
+    const args = lastArgs;
     const thisArg = lastThis;
     lastArgs = undefined;
     lastThis = undefined;

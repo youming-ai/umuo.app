@@ -57,11 +57,17 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
       async () => {
         const now = new Date();
 
-        const segmentData = {
-          transcriptId: data.transcriptId,
+        const segmentData: Segment = {
+          transcriptId: data.transcriptId ?? 0,
           start: data.start || 0,
           end: data.end || 0,
           text: data.text || "",
+          normalizedText: data.normalizedText,
+          translation: data.translation,
+          romaji: data.romaji,
+          annotations: data.annotations,
+          furigana: data.furigana,
+          wordTimestamps: data.wordTimestamps,
           createdAt: now,
           updatedAt: now,
         };
@@ -74,7 +80,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
           throw new Error("Segment start must be less than end");
         }
 
-        const id = await db.segments.add(segmentData as any);
+        const id = await db.segments.add(segmentData);
         const createdSegment = await this.findById(id);
 
         if (!createdSegment) {
@@ -98,12 +104,12 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
           throw new Error("Segment start must be less than end");
         }
 
-        const updateData = {
+        const updateData: Partial<Segment> = {
           ...data,
           updatedAt: new Date(),
         };
 
-        await db.segments.update(id, updateData as any);
+        await db.segments.update(id, updateData);
 
         const updatedSegment = await this.findById(id);
         if (!updatedSegment) {
@@ -167,7 +173,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
         const allSegments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
         return allSegments
           .filter((segment) => segment.start < endTime && segment.end > startTime)
-          .sort((a, b) => a.start - b.start) as Segment[];
+          .sort((a, b) => a.start - b.start);
       },
       { transcriptId, startTime, endTime },
     );
@@ -180,7 +186,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
         const allSegments = await db.segments.toArray();
         return allSegments.filter((segment) =>
           segment.text.toLowerCase().includes(text.toLowerCase()),
-        ) as Segment[];
+        );
       },
       { text },
     );
@@ -208,10 +214,11 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
     await this.executeWithMetrics(
       "updateTranslation",
       async () => {
-        await db.segments.update(segmentId, {
+        const update: Partial<Segment> = {
           translation,
           updatedAt: new Date(),
-        } as any);
+        };
+        await db.segments.update(segmentId, update);
       },
       { segmentId },
     );
@@ -221,10 +228,11 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
     await this.executeWithMetrics(
       "updateNormalizedText",
       async () => {
-        await db.segments.update(segmentId, {
+        const update: Partial<Segment> = {
           normalizedText,
           updatedAt: new Date(),
-        } as any);
+        };
+        await db.segments.update(segmentId, update);
       },
       { segmentId },
     );
@@ -243,7 +251,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
             .where("transcriptId")
             .equals(transcriptId)
             .and((seg) => seg.id === update.id)
-            .modify(update as any);
+            .modify(update);
           updatedCount++;
         }
         return updatedCount;
@@ -259,7 +267,7 @@ export class SegmentRepository extends BaseRepository<Segment> implements ISegme
         const segments = await db.segments.where("transcriptId").equals(transcriptId).toArray();
         return segments.filter((segment) =>
           keywords.some((keyword) => segment.text.toLowerCase().includes(keyword.toLowerCase())),
-        ) as Segment[];
+        );
       },
       { transcriptId, keywords },
     );

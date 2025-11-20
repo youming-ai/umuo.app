@@ -67,7 +67,8 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     const all = await this.findAll(options);
     return all.filter((item) =>
       fields.some((field) => {
-        const value = (item as any)[field];
+        const candidate = item as Record<string, unknown>;
+        const value = candidate[field];
         return value && String(value).toLowerCase().includes(searchTerm.toLowerCase());
       }),
     );
@@ -109,7 +110,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   async healthCheck(): Promise<{
     status: "healthy" | "degraded" | "unhealthy";
     message: string;
-    metrics?: any;
+    metrics?: Record<string, unknown>;
   }> {
     try {
       const count = await this.count();
@@ -186,8 +187,9 @@ export abstract class BaseRepository<T> implements IRepository<T> {
     }
 
     return entities.filter((entity) => {
+      const record = entity as Record<string, unknown>;
       return Object.entries(criteria).every(([key, value]) => {
-        const entityValue = (entity as any)[key];
+        const entityValue = record[key];
         if (value === null || value === undefined) return true;
         if (Array.isArray(value)) return value.includes(entityValue);
         return entityValue === value;
@@ -207,7 +209,7 @@ export abstract class BaseRepository<T> implements IRepository<T> {
   protected handleError(error: unknown, operation: string): never {
     const message = error instanceof Error ? error.message : String(error);
     const enhancedError = new Error(`${this.entityName}.${operation}: ${message}`);
-    (enhancedError as any).cause = error;
+    (enhancedError as Error & { cause?: unknown }).cause = error;
     throw enhancedError;
   }
 
