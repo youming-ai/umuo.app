@@ -70,41 +70,49 @@ export class PerformanceMonitor {
   private observeCoreWebVitals(): void {
     // LCP - 最大内容绘制
     if ("PerformanceObserver" in window) {
-      const lcpObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as PerformanceEntry;
-        this.metrics.lcp = lastEntry.startTime;
-      });
+      const lcpObserver = new globalThis.PerformanceObserver(
+        (list: PerformanceObserverEntryList) => {
+          const entries = list.getEntries();
+          const lastEntry = entries[entries.length - 1] as PerformanceEntry;
+          this.metrics.lcp = lastEntry.startTime;
+        },
+      );
       lcpObserver.observe({ entryTypes: ["largest-contentful-paint"] });
       this.observers.push(lcpObserver);
 
       // FID - 首次输入延迟
-      const fidObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries() as PerformanceEventTiming[];
-        entries.forEach((entry) => {
-          this.metrics.fid = entry.processingStart - entry.startTime;
-        });
-      });
+      const fidObserver = new globalThis.PerformanceObserver(
+        (list: PerformanceObserverEntryList) => {
+          const entries = list.getEntries() as PerformanceEventTiming[];
+          entries.forEach((entry) => {
+            this.metrics.fid = entry.processingStart - entry.startTime;
+          });
+        },
+      );
       fidObserver.observe({ entryTypes: ["first-input"] });
       this.observers.push(fidObserver);
 
       // CLS - 累积布局偏移
       let clsValue = 0;
-      const clsObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries() as LayoutShiftEntry[];
-        entries.forEach((entry) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value;
-            this.metrics.cls = clsValue;
-          }
-        });
-      });
+      const clsObserver = new globalThis.PerformanceObserver(
+        (list: PerformanceObserverEntryList) => {
+          const entries = list.getEntries() as LayoutShiftEntry[];
+          entries.forEach((entry) => {
+            if (!entry.hadRecentInput) {
+              clsValue += entry.value;
+              this.metrics.cls = clsValue;
+            }
+          });
+        },
+      );
       clsObserver.observe({ entryTypes: ["layout-shift"] });
       this.observers.push(clsObserver);
     }
 
     // FCP - 首次内容绘制
-    const fcpEntry = performance.getEntriesByName("first-contentful-paint")[0] as PerformanceEntry;
+    const fcpEntry = performance.getEntriesByName(
+      "first-contentful-paint",
+    )[0] as PerformanceEntry;
     if (fcpEntry) {
       this.metrics.fcp = fcpEntry.startTime;
     }
@@ -113,18 +121,20 @@ export class PerformanceMonitor {
   // 监控用户计时
   private observeUserTiming(): void {
     if ("PerformanceObserver" in window) {
-      const userTimingObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries() as PerformanceEntry[];
-        entries.forEach((entry) => {
-          if (entry.name.startsWith("transcription-")) {
-            this.metrics.transcriptionTime = entry.duration;
-          } else if (entry.name.startsWith("upload-")) {
-            this.metrics.uploadTime = entry.duration;
-          } else if (entry.name.startsWith("api-")) {
-            this.metrics.apiResponseTime = entry.duration;
-          }
-        });
-      });
+      const userTimingObserver = new globalThis.PerformanceObserver(
+        (list: PerformanceObserverEntryList) => {
+          const entries = list.getEntries() as PerformanceEntry[];
+          entries.forEach((entry) => {
+            if (entry.name.startsWith("transcription-")) {
+              this.metrics.transcriptionTime = entry.duration;
+            } else if (entry.name.startsWith("upload-")) {
+              this.metrics.uploadTime = entry.duration;
+            } else if (entry.name.startsWith("api-")) {
+              this.metrics.apiResponseTime = entry.duration;
+            }
+          });
+        },
+      );
       userTimingObserver.observe({ entryTypes: ["measure", "mark"] });
       this.observers.push(userTimingObserver);
     }
@@ -133,16 +143,18 @@ export class PerformanceMonitor {
   // 监控资源加载
   private observeResourceTiming(): void {
     if ("PerformanceObserver" in window) {
-      const resourceObserver = new globalThis.PerformanceObserver((list) => {
-        const entries = list.getEntries() as PerformanceResourceTiming[];
-        let totalSize = 0;
-        entries.forEach((entry) => {
-          if (entry.transferSize) {
-            totalSize += entry.transferSize;
-          }
-        });
-        this.metrics.bundleSize = totalSize;
-      });
+      const resourceObserver = new globalThis.PerformanceObserver(
+        (list: PerformanceObserverEntryList) => {
+          const entries = list.getEntries() as PerformanceResourceTiming[];
+          let totalSize = 0;
+          entries.forEach((entry) => {
+            if (entry.transferSize) {
+              totalSize += entry.transferSize;
+            }
+          });
+          this.metrics.bundleSize = totalSize;
+        },
+      );
       resourceObserver.observe({ entryTypes: ["resource"] });
       this.observers.push(resourceObserver);
     }
@@ -150,10 +162,15 @@ export class PerformanceMonitor {
 
   // 监控导航时间
   private observeNavigationTiming(): void {
-    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+    const navigation = performance.getEntriesByType(
+      "navigation",
+    )[0] as PerformanceNavigationTiming;
     if (navigation) {
       // 可以计算更多导航相关指标
-      console.log("页面加载时间:", navigation.loadEventEnd - navigation.fetchStart);
+      console.log(
+        "页面加载时间:",
+        navigation.loadEventEnd - navigation.fetchStart,
+      );
     }
   }
 
@@ -254,7 +271,9 @@ export class PerformanceMonitor {
   }
 
   // 发送指标数据
-  private async sendMetrics(data: PerformanceMetrics & Record<string, unknown>): Promise<void> {
+  private async sendMetrics(
+    data: PerformanceMetrics & Record<string, unknown>,
+  ): Promise<void> {
     if (!this.config.reportUrl) return;
 
     try {
@@ -301,7 +320,9 @@ export class PerformanceMonitor {
 let performanceMonitor: PerformanceMonitor | null = null;
 
 // 获取性能监控实例
-export function getPerformanceMonitor(config?: Partial<PerformanceConfig>): PerformanceMonitor {
+export function getPerformanceMonitor(
+  config?: Partial<PerformanceConfig>,
+): PerformanceMonitor {
   if (!performanceMonitor) {
     performanceMonitor = new PerformanceMonitor(config);
   }
