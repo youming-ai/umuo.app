@@ -8,6 +8,8 @@ import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
 import PwaRegister from "@/components/ui/PwaRegister";
 import { ThemeDebuggerToggle } from "@/components/ui/ThemeDebugger";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "影子跟读",
@@ -26,7 +28,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
@@ -67,6 +73,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeDebuggerToggle />
           <PwaRegister />
           <ToastContainer>{null}</ToastContainer>
+          <SpeedInsights />
+          <Analytics />
           {/* </ClarityProvider> */}
         </ThemeProvider>
       </body>
