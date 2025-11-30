@@ -34,6 +34,7 @@ File Management   AI Services   Text Normalization   Persistent Storage   Real-t
 - **React Hooks**: Component-level state management
 - **IndexedDB**: Persistent client-side storage
 - **Real-time Updates**: Automatic UI sync with database changes
+- **Repository Pattern**: Clean data access layer with base repository and factory pattern for type-safe database operations
 
 ## Available Commands
 
@@ -49,12 +50,18 @@ pnpm lint             # Run Biome.js linter
 pnpm format           # Format code with Biome.js
 pnpm type-check       # TypeScript type checking
 
+# Testing (Optional Infrastructure)
+pnpm test             # Run tests in watch mode
+pnpm test:run         # Run tests once
+pnpm test:coverage    # Run tests with coverage report
+pnpm test:ui          # Run tests with UI interface
+
 # Deployment (Vercel)
 pnpm deploy           # Build and deploy to production
 pnpm deploy:preview   # Build and deploy to preview
 
-# CI/Quality Pipeline  
-pnpm ci:build         # Complete CI pipeline (install, lint, type-check, build)
+# CI/Quality Pipeline
+pnpm ci:build         # Complete CI pipeline (install, lint, type-check, test, build)
 ```
 
 ## Key Directories
@@ -79,6 +86,35 @@ The application uses Dexie (IndexedDB) with the following main tables:
 - Comprehensive indexing for performance optimization
 
 **Database Utilities**: Simplified DBUtils class with batch processing support for large segment datasets
+
+### Repository Pattern Architecture
+
+The application implements a clean Repository Pattern for data access:
+
+```typescript
+// Base repository with common CRUD operations
+abstract class BaseRepository<T> implements IRepository<T>
+
+// Specific implementations
+class FileRepository extends BaseRepository<FileRow>
+class TranscriptRepository extends BaseRepository<TranscriptRow>
+class SegmentRepository extends BaseRepository<SegmentRow>
+
+// Factory for repository instances
+class RepositoryFactory {
+  static getFileRepository(): FileRepository
+  static getTranscriptRepository(): TranscriptRepository
+  static getSegmentRepository(): SegmentRepository
+}
+```
+
+**Key Features**:
+- **Type-safe operations** with TypeScript interfaces
+- **Built-in caching** with 5-minute timeout and cache management
+- **Batch processing** support for large datasets
+- **Query abstraction** with pagination, search, and filtering
+- **Health checks** and metrics for monitoring
+- **Transaction support** for complex operations
 
 ## API Routes Structure
 
@@ -143,6 +179,8 @@ export const transcriptionKeys = {
 - File chunking for large audio files handled server-side
 - Automatic cache invalidation on data changes
 - Lazy loading of components and routes
+- Memory management with WeakMap for audio URL caching to prevent memory leaks
+- Batch processing support for large segment datasets via DBUtils
 
 ### Development vs Production Configuration
 - **Development**: Standard Next.js mode with hot reload
@@ -189,6 +227,12 @@ TRANSCRIPTION_MAX_CONCURRENCY=2          # Concurrent processing
 3. Update TypeScript types in `/src/types/database.ts`
 4. Test with existing data through Dexie's migration system
 
+#### Repository Pattern Usage
+1. Use `RepositoryFactory` to get repository instances: `const fileRepo = RepositoryFactory.getFileRepository()`
+2. All repositories extend `BaseRepository` with common CRUD operations
+3. Implement custom methods in specific repository implementations as needed
+4. Leverage built-in caching and batch processing capabilities
+
 #### Adding New Components with State
 1. Create component in appropriate `/src/components/` subdirectory
 2. Use TanStack Query hooks for server state
@@ -222,7 +266,10 @@ The `ci:build` command runs the complete quality assurance pipeline:
 1. **Dependency Installation**: `pnpm install --frozen-lockfile`
 2. **Code Quality**: `pnpm lint` (Biome.js checks)
 3. **Type Safety**: `pnpm type-check` (TypeScript compilation)
-4. **Build Validation**: `pnpm build` (Production build)
+4. **Testing**: `pnpm test:run` (Vitest test suite - optional in current workflow)
+5. **Build Validation**: `pnpm build` (Production build)
+
+**Note**: While test infrastructure exists with Vitest and React Testing Library, the current development workflow focuses on type safety and code quality through automated linting and formatting.
 
 ### Build Configuration
 - **Next.js Config**: Optimized for Vercel deployment with serverless functions
@@ -274,7 +321,7 @@ The application includes intelligent auto-transcription:
 
 ## Testing and Quality Assurance
 
-**Note**: Test files have been removed from the project as of the latest cleanup. The codebase focuses on type safety and code quality through automated linting and formatting.
+**Note**: While test infrastructure with Vitest and React Testing Library is available and configured, the current development workflow primarily emphasizes type safety and code quality through automated linting and formatting. Test files exist in `__tests__` directories for key utilities and API routes.
 
 ### Type Safety
 - Strict TypeScript configuration

@@ -6,11 +6,9 @@ import {
   PlayerErrorState,
   PlayerLoadingState,
   PlayerMissingFileState,
-  PlayerNoTranscriptState,
 } from "@/components/features/player/page/PlayerFallbackStates";
 import { PlayerFooter } from "@/components/features/player/page/PlayerFooter";
 import { PlayerPageLayout } from "@/components/features/player/page/PlayerPageLayout";
-import { PlayerStatusBanner } from "@/components/features/player/page/PlayerStatusBanner";
 import ScrollableSubtitleDisplay from "@/components/features/player/ScrollableSubtitleDisplay";
 import ApiKeyError from "@/components/ui/ApiKeyError";
 import { usePlayerDataQuery } from "@/hooks/player/usePlayerDataQuery";
@@ -28,9 +26,6 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     loading,
     error,
     retry,
-    isTranscribing,
-    transcriptionProgress,
-    startTranscription,
   } = usePlayerDataQuery(fileId);
 
   const {
@@ -175,18 +170,13 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     router.push("/");
   }, [clearAudio, router]);
 
-  const handleTogglePlay = useCallback(async () => {
+  const handleTogglePlay = useCallback(() => {
     if (audioPlayerState.isPlaying) {
       onPause();
     } else {
-      // 如果没有转录记录，开始转录
-      if (!transcript && !isTranscribing && startTranscription) {
-        await startTranscription();
-      } else {
-        onPlay();
-      }
+      onPlay();
     }
-  }, [audioPlayerState.isPlaying, onPause, onPlay, transcript, isTranscribing, startTranscription]);
+  }, [audioPlayerState.isPlaying, onPause, onPlay]);
 
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
@@ -248,12 +238,6 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
         showFooter={Boolean(layoutFooter)}
         footer={layoutFooter ?? undefined}
       >
-        <PlayerStatusBanner
-          transcript={transcript}
-          isTranscribing={isTranscribing}
-          transcriptionProgress={transcriptionProgress}
-        />
-
         {segments.length > 0 ? (
           <ScrollableSubtitleDisplay
             segments={segments}
@@ -262,15 +246,9 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
             onSegmentClick={handleSegmentClick}
           />
         ) : (
-          transcript?.status === "completed" && (
-            <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-[var(--secondary-text-color)] dark:text-[var(--text-color)]/70">
-              <p>暂无字幕内容</p>
-            </div>
-          )
-        )}
-
-        {!transcript && (
-          <PlayerNoTranscriptState onBack={handleBack} onStartTranscription={startTranscription} />
+          <div className="flex flex-col items-center gap-3 py-12 text-center text-sm text-[var(--secondary-text-color)] dark:text-[var(--text-color)]/70">
+            <p>暂无字幕内容，请先在主页转录此文件</p>
+          </div>
         )}
       </PlayerPageLayout>
 

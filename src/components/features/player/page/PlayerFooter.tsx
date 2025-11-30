@@ -110,13 +110,12 @@ export function PlayerFooter({
             <button
               type="button"
               onClick={onTogglePlay}
-              className="inline-flex items-center gap-2 rounded-full bg-[var(--primary-color)] px-8 py-3 text-base font-semibold text-white shadow-lg transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary-color)] text-[var(--primary-foreground)] shadow-lg transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               aria-label={audioPlayerState.isPlaying ? "暂停" : "播放"}
             >
               <span className="material-symbols-outlined text-3xl">
                 {audioPlayerState.isPlaying ? "pause" : "play_arrow"}
               </span>
-              <span>{audioPlayerState.isPlaying ? "暂停" : "播放"}</span>
             </button>
             <button
               type="button"

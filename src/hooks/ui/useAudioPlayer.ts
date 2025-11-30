@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AudioPlayerState, FileRow } from "@/types/db/database";
 
 export interface UseAudioPlayerReturn {

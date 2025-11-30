@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 import { ThemeProvider } from "@/components/layout/contexts/ThemeContext";
 import { QueryProvider } from "@/components/layout/providers/QueryProvider";
-// import { ClarityProvider } from "@/components/providers/ClarityProvider";
 import { PageErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
@@ -59,7 +58,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider defaultTheme="dark">
-          {/* <ClarityProvider projectId="tx4r6c5h9b"> */}
           <MonitoringInitializer />
           <QueryProvider>
             <PageErrorBoundary>
@@ -71,7 +69,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ToastContainer>{null}</ToastContainer>
           <SpeedInsights />
           <Analytics />
-          {/* </ClarityProvider> */}
         </ThemeProvider>
       </body>
     </html>

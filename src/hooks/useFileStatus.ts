@@ -32,10 +32,18 @@ export function useFileStatus(fileId: number) {
 
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
-      // 根据转录记录确定状态
+      // 根据转录记录确定状态（TranscriptRow.status -> FileStatus 映射）
       if (transcript) {
+        const statusMap: Record<string, FileStatus> = {
+          pending: FileStatus.UPLOADED,
+          processing: FileStatus.TRANSCRIBING,
+          completed: FileStatus.COMPLETED,
+          failed: FileStatus.ERROR,
+        };
+        const mappedStatus = statusMap[transcript.status] || FileStatus.UPLOADED;
+
         return {
-          status: transcript.status as FileStatus,
+          status: mappedStatus,
           transcriptId: transcript.id,
           transcript,
           file,
@@ -59,34 +67,51 @@ export function useFileStatusManager(fileId: number) {
   const transcription = useTranscription();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // 更新文件状态
-  const updateFileStatus = useCallback(
-    async (status: FileStatus, error?: string) => {
+  // 更新转录状态（主要更新 TranscriptRow，FileRow.status 作为备用）
+  const updateTranscriptionStatus = useCallback(
+    async (
+      status: "pending" | "processing" | "completed" | "failed",
+      error?: string,
+    ) => {
       setIsUpdating(true);
       try {
-        await db.files.update(fileId, { status });
+        // 查找现有转录记录
+        const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
 
-        // 如果是错误状态，也更新转录记录
-        if (status === FileStatus.ERROR && error) {
-          const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
-
-          if (transcripts.length > 0) {
-            const transcriptId = transcripts[0].id;
-            if (transcriptId) {
-              await db.transcripts.update(transcriptId, {
-                status: "failed",
-                error,
-              });
-            }
-          }
+        if (transcripts.length > 0 && transcripts[0].id) {
+          // 更新现有转录记录
+          await db.transcripts.update(transcripts[0].id, {
+            status,
+            error: error || undefined,
+            updatedAt: new Date(),
+          });
+        } else if (status === "pending" || status === "processing") {
+          // 创建新的转录记录（仅在开始转录时）
+          await db.transcripts.add({
+            fileId,
+            status,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         }
+
+        // 同时更新 FileRow.status 保持向后兼容
+        const fileStatus =
+          status === "completed"
+            ? FileStatus.COMPLETED
+            : status === "failed"
+              ? FileStatus.ERROR
+              : status === "processing"
+                ? FileStatus.TRANSCRIBING
+                : FileStatus.UPLOADED;
+        await db.files.update(fileId, { status: fileStatus, updatedAt: new Date() });
 
         // 刷新查询缓存
         queryClient.invalidateQueries({
           queryKey: fileStatusKeys.forFile(fileId),
         });
       } catch (error) {
-        console.error("更新文件状态失败:", error);
+        console.error("更新转录状态失败:", error);
       } finally {
         setIsUpdating(false);
       }
@@ -98,13 +123,13 @@ export function useFileStatusManager(fileId: number) {
   const startTranscription = useCallback(async () => {
     try {
       // 设置状态为转录中
-      await updateFileStatus(FileStatus.TRANSCRIBING);
+      await updateTranscriptionStatus("processing");
 
-      // 开始转录
+      // 开始转录（支持自动重试）
       await transcription.mutateAsync({ fileId, language: "ja" });
 
       // 转录成功后设置状态为完成
-      await updateFileStatus(FileStatus.COMPLETED);
+      await updateTranscriptionStatus("completed");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "转录失败";
       handleTranscriptionError(error, {
@@ -112,18 +137,29 @@ export function useFileStatusManager(fileId: number) {
         operation: "transcribe",
         language: "ja",
       });
-      await updateFileStatus(FileStatus.ERROR, errorMessage);
+      await updateTranscriptionStatus("failed", errorMessage);
       throw error;
     }
-  }, [fileId, transcription, updateFileStatus]);
+  }, [fileId, transcription, updateTranscriptionStatus]);
 
   // 重置文件状态
   const resetFileStatus = useCallback(async () => {
-    await updateFileStatus(FileStatus.UPLOADED);
-  }, [updateFileStatus]);
+    // 删除现有转录记录并重置状态
+    const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
+    for (const transcript of transcripts) {
+      if (transcript.id) {
+        await db.segments.where("transcriptId").equals(transcript.id).delete();
+        await db.transcripts.delete(transcript.id);
+      }
+    }
+    await db.files.update(fileId, { status: FileStatus.UPLOADED, updatedAt: new Date() });
+    queryClient.invalidateQueries({
+      queryKey: fileStatusKeys.forFile(fileId),
+    });
+  }, [fileId, queryClient]);
 
   return {
-    updateFileStatus,
+    updateTranscriptionStatus,
     startTranscription,
     resetFileStatus,
     isUpdating,

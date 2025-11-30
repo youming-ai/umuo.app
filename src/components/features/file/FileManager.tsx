@@ -253,7 +253,7 @@ function FileCardWrapper({
 }) {
   // Hooks must be called before any early returns - 添加空值检查
   const { data: statusData, isLoading } = useFileStatus(file.id || 0);
-  const { startTranscription } = useFileStatusManager(file.id || 0);
+  const { startTranscription, isTranscribing } = useFileStatusManager(file.id || 0);
 
   // 优雅地处理可能缺失的 file.id
   if (!file.id) {
@@ -288,11 +288,22 @@ function FileCardWrapper({
   };
 
   return (
-    <FileCard
-      file={fileWithStatus}
-      onPlay={onPlay}
-      onDelete={onDelete}
-      onTranscribe={startTranscription}
-    />
+    <div className="relative">
+      {/* 转录中的loading遮罩 */}
+      {isTranscribing && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <span className="text-sm font-medium text-muted-foreground">正在转录...</span>
+          </div>
+        </div>
+      )}
+      <FileCard
+        file={fileWithStatus}
+        onPlay={onPlay}
+        onDelete={onDelete}
+        onTranscribe={startTranscription}
+      />
+    </div>
   );
 }
