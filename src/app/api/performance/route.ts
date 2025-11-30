@@ -8,6 +8,20 @@ import { apiSuccess } from "@/lib/utils/api-response";
 
 // 内存存储性能数据（生产环境应使用数据库或外部服务）
 const performanceStore = new Map<string, StoredPerformanceData[]>();
+const MAX_DAYS_TO_KEEP = 7; // 保留最近 7 天的数据
+
+// 清理过期数据
+function cleanupOldData(): void {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_TO_KEEP);
+  const cutoffKey = cutoffDate.toISOString().split("T")[0];
+
+  for (const key of performanceStore.keys()) {
+    if (key < cutoffKey) {
+      performanceStore.delete(key);
+    }
+  }
+}
 
 type MetricValue = number | undefined;
 
@@ -93,6 +107,8 @@ export async function POST(request: NextRequest) {
     const dateKey = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
     if (!performanceStore.has(dateKey)) {
       performanceStore.set(dateKey, []);
+      // 新的一天开始时清理过期数据
+      cleanupOldData();
     }
 
     const dailyData = performanceStore.get(dateKey);
@@ -294,11 +310,12 @@ function calculatePercentiles(values: number[]): PercentileStats | null {
   const sorted = [...values].sort((a, b) => a - b);
   const len = sorted.length;
 
+  // 使用 Math.min 防止索引越界
   return {
-    p50: sorted[Math.floor(len * 0.5)],
-    p75: sorted[Math.floor(len * 0.75)],
-    p90: sorted[Math.floor(len * 0.9)],
-    p95: sorted[Math.floor(len * 0.95)],
+    p50: sorted[Math.min(Math.floor(len * 0.5), len - 1)],
+    p75: sorted[Math.min(Math.floor(len * 0.75), len - 1)],
+    p90: sorted[Math.min(Math.floor(len * 0.9), len - 1)],
+    p95: sorted[Math.min(Math.floor(len * 0.95), len - 1)],
     avg: sorted.reduce((sum, val) => sum + val, 0) / len,
     min: sorted[0],
     max: sorted[len - 1],

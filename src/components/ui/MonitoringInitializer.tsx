@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { setErrorMonitor } from "@/lib/utils/error-handler";
 import { getMonitoringService, initializeMonitoring } from "@/lib/utils/monitoring-service";
+import { initWebVitals } from "@/lib/utils/web-vitals";
 
 export function MonitoringInitializer() {
   useEffect(() => {
@@ -23,6 +24,9 @@ export function MonitoringInitializer() {
       maxBatchSize: 25,
       flushInterval: 30000,
     });
+
+    // 初始化 Web Vitals 监控
+    initWebVitals();
 
     // 记录页面访问
     monitoringService.logCustomEvent("page", "load", {

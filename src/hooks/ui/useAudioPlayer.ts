@@ -72,13 +72,19 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   );
 
   // Handle loop playback
+  // 使用 ref 跟踪上次循环时间，防止重复触发
+  const lastLoopTimeRef = useRef<number>(-1);
+  
   useEffect(() => {
     if (
       loopStart !== undefined &&
       loopEnd !== undefined &&
       audioPlayerState.isPlaying &&
-      audioPlayerState.currentTime >= loopEnd
+      audioPlayerState.currentTime >= loopEnd &&
+      // 防止在同一位置重复触发循环
+      Math.abs(audioPlayerState.currentTime - lastLoopTimeRef.current) > 0.1
     ) {
+      lastLoopTimeRef.current = audioPlayerState.currentTime;
       handleSeek(loopStart);
     }
   }, [audioPlayerState.currentTime, audioPlayerState.isPlaying, loopStart, loopEnd, handleSeek]);

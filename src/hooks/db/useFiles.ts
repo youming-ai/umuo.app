@@ -27,17 +27,8 @@ export function useFiles(): UseFilesReturn {
       setIsLoading(true);
       setError(null);
       const allFiles = await DBUtils.getAllFiles();
-      console.log(
-        "📂 从数据库加载的文件:",
-        allFiles.map((f) => ({
-          id: f.id,
-          name: f.name,
-          uploadedAt: f.uploadedAt,
-        })),
-      );
       setFiles(allFiles);
     } catch (err) {
-      console.error("❌ 加载文件失败:", err);
       const errorMessage = err instanceof Error ? err.message : "加载文件失败";
       setError(errorMessage);
     } finally {
@@ -53,10 +44,6 @@ export function useFiles(): UseFilesReturn {
     async (newFiles: File[]) => {
       try {
         setError(null);
-        console.log(
-          "🚀 useFiles: 开始添加文件",
-          newFiles.map((f) => f.name),
-        );
 
         for (const file of newFiles) {
           const now = new Date();
@@ -71,13 +58,10 @@ export function useFiles(): UseFilesReturn {
           };
 
           await DBUtils.addFile(fileRow);
-          console.log(`✅ 文件已添加到数据库: ${file.name}`);
         }
 
-        await loadFiles(); // 重新加载文件列表
-        console.log("🔄 文件列表已刷新");
+        await loadFiles();
       } catch (err) {
-        console.error("❌ 添加文件失败:", err);
         const errorMessage = err instanceof Error ? err.message : "添加文件失败";
         setError(errorMessage);
         throw err;

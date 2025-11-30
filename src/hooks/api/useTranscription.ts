@@ -24,6 +24,11 @@ interface TranscriptionResponse {
       }>;
     }>;
   };
+  error?: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
 }
 
 // 查询转录状态的查询键
@@ -111,28 +116,13 @@ export function useTranscription() {
 
       try {
         // 调用服务器端 API 路由
-        console.log("📡 发送转录请求:", {
-          url: `/api/transcribe?fileId=${fileId}&language=${language}`,
-          method: "POST",
-          formDataKeys: Array.from(formData.keys()),
-          fileName: file.name,
-          fileSize: file.size,
-        });
-
         const response = await fetch(`/api/transcribe?fileId=${fileId}&language=${language}`, {
           method: "POST",
           body: formData,
         });
 
-        console.log("📡 API 响应状态:", {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-        });
-
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error("❌ API 错误响应:", errorData);
           throw new Error(
             errorData.message || `转录失败: ${response.statusText} (${response.status})`,
           );
@@ -141,7 +131,8 @@ export function useTranscription() {
         const result: TranscriptionResponse = await response.json();
 
         if (!result.success) {
-          throw new Error(result.data?.text || "转录请求失败");
+          // 从 error 字段获取错误信息，而不是 data
+          throw new Error(result.error?.message || "转录请求失败");
         }
 
         // 保存转录结果到数据库

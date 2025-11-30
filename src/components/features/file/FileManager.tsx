@@ -59,15 +59,6 @@ export default function FileManager({ className }: FileManagerProps) {
         setIsUploading(true);
         setUploadProgress(0);
 
-        console.log("📁 开始上传文件:", {
-          selectedFiles: selectedFiles.map((f) => ({
-            name: f.name,
-            size: f.size,
-            type: f.type,
-          })),
-          count: selectedFiles.length,
-        });
-
         // 检查文件数量限制
         const currentFileCount = files?.length || 0;
         const maxFiles = 5;
@@ -110,10 +101,7 @@ export default function FileManager({ className }: FileManagerProps) {
           setIsUploading(false);
           setUploadProgress(0);
         }, 1000);
-
-        console.log("✅ 文件上传成功");
       } catch (error) {
-        console.error("❌ 文件上传失败:", error);
         const { toast } = await import("sonner");
         toast.error(`文件上传失败: ${error instanceof Error ? error.message : "未知错误"}`);
         setIsUploading(false);

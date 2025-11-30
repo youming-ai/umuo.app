@@ -15,7 +15,8 @@ import type { FileRow, Segment, TranscriptRow } from "@/types/db/database";
 
 // 音频URL缓存管理 - 使用 WeakMap 防止内存泄漏
 const audioUrlCache = new WeakMap<Blob, string>();
-const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+// 跟踪活跃的 URL 以便在需要时清理
+const activeAudioUrls = new Set<string>();
 
 function createAudioUrl(blob: Blob): string {
   // 检查缓存
@@ -26,21 +27,21 @@ function createAudioUrl(blob: Blob): string {
 
   const url = URL.createObjectURL(blob);
   audioUrlCache.set(blob, url);
+  activeAudioUrls.add(url);
 
-  // 设置自动清理
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-    audioUrlCache.delete(blob);
-  }, CACHE_TTL);
+  // 注意：不再使用 setTimeout 自动清理
+  // WeakMap 会在 blob 被垃圾回收时自动移除引用
+  // URL 会在页面卸载或手动调用 cleanupAudioUrls 时清理
 
   return url;
 }
 
 // 清理所有缓存的音频URL
 function cleanupAudioUrls(): void {
-  // WeakMap 不需要手动清理，但我们可以添加额外的清理逻辑
-  // 这里主要用于调试和监控
-  console.log("🧹 清理音频URL缓存");
+  for (const url of activeAudioUrls) {
+    URL.revokeObjectURL(url);
+  }
+  activeAudioUrls.clear();
 }
 
 /**
@@ -132,6 +133,7 @@ interface UsePlayerDataQueryReturn {
 export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [shouldAutoTranscribe, setShouldAutoTranscribe] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const queryClient = useQueryClient();
 
   // 解析文件ID
@@ -157,18 +159,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   const isTranscribing = transcriptionMutation.isPending;
 
   // 统一计算是否应该开始自动转录
-  // 优化：使用 useMemo 避免重复计算，统一状态判断逻辑
   const shouldStartTranscription = useMemo(() => {
-    const _conditions = {
-      isValidId,
-      hasFile: !!file,
-      hasTranscript: !!transcript,
-      isLoading: loading,
-      isTranscribingPending: transcriptionMutation.isPending,
-    };
-
-    // 调试信息：自动转录状态检查
-
     return isValidId && !loading && file && !transcript && !transcriptionMutation.isPending;
   }, [isValidId, loading, file, transcript, transcriptionMutation.isPending]);
 
@@ -176,23 +167,20 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   useEffect(() => {
     return () => {
       cleanupAudioUrls();
+      // 取消正在进行的转录操作
+      abortController?.abort();
     };
-  }, []);
+  }, [abortController]);
 
   // 开始转录函数
   const startTranscription = useCallback(async () => {
-    // 优化：使用统一的状态判断，避免重复逻辑
     if (!shouldStartTranscription) {
-      console.log("❌ 转录条件不满足，跳过转录:", {
-        hasFile: !!file,
-        hasTranscript: !!transcript,
-        isPending: transcriptionMutation.isPending,
-        isLoading: loading,
-        isValidId,
-      });
       return;
     }
 
+    // 创建新的 AbortController
+    const controller = new AbortController();
+    setAbortController(controller);
     setTranscriptionProgress(0);
 
     try {
@@ -232,26 +220,12 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
 
       const newTranscript = freshData.transcript;
 
-      console.log("📝 转录数据获取完成:", {
-        transcriptId: newTranscript?.id,
-        segmentsCount: segments.length,
-        hasText: !!newTranscript?.text,
-      });
-
       // 进行文本后处理
       if (segments.length > 0 && newTranscript) {
-        console.log("🔤 开始文本后处理");
         const fullText = segments.map((seg: Segment) => seg.text).join("\n");
         try {
-          console.log("📡 发送文本后处理请求");
           const processedResult = await postProcessText(fullText, {
             language: "ja",
-          });
-          console.log("✅ 文本后处理完成:", {
-            processedCount: processedResult.segments.length,
-            hasTranslation: processedResult.segments.some(
-              (s) => "translation" in s && !!s.translation,
-            ),
           });
 
           // 更新字幕段，添加处理后的信息
@@ -273,16 +247,12 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
           }
 
           // 刷新查询缓存
-          console.log("🔄 刷新查询缓存，更新UI");
           queryClient.invalidateQueries({
             queryKey: transcriptionKeys.forFile(parsedFileId),
           });
-          console.log("🎉 转录和后处理流程全部完成");
-        } catch (processError) {
-          console.error("文本后处理失败:", processError);
+        } catch {
+          // 文本后处理失败不影响主流程
         }
-      } else {
-        console.log("⚠️ 没有segments数据，跳过后处理");
       }
     } catch (error) {
       // 统一错误处理
@@ -293,26 +263,11 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
       });
 
       setTranscriptionProgress(0);
-
-      // 转录失败后的恢复机制：允许用户重新触发自动转录
-      console.log("💡 转录失败，可通过 resetAutoTranscription() 重新触发");
-      // 注意：不在这里自动重置 shouldAutoTranscribe，让用户主动调用 resetAutoTranscription
     }
-  }, [
-    shouldStartTranscription,
-    file,
-    transcript,
-    transcriptionMutation,
-    segments,
-    queryClient,
-    parsedFileId,
-    loading,
-    isValidId,
-  ]);
+  }, [shouldStartTranscription, file, transcriptionMutation, segments, queryClient, parsedFileId]);
 
   // 重置自动转录的函数
   const resetAutoTranscription = useCallback(() => {
-    console.log("🔄 重置自动转录状态");
     setShouldAutoTranscribe(true);
     setTranscriptionProgress(0);
   }, []);
@@ -335,27 +290,19 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
    */
   useEffect(() => {
     if (shouldAutoTranscribe && shouldStartTranscription) {
-      console.log("🎵 检测到文件未转录，开始自动转录:", {
-        fileId: file?.id,
-        fileName: file?.name,
-        condition: "shouldAutoTranscribe + shouldStartTranscription",
-      });
-
       // 重置标志，防止重复触发
       setShouldAutoTranscribe(false);
 
       // 延迟执行：提供更好的用户体验
       const timer = setTimeout(() => {
-        console.log("⏰ 延迟结束，开始执行转录");
         startTranscription();
-      }, 2000); // 增加到2000ms延迟，减少频繁触发，提升用户体验
+      }, 2000);
 
       return () => {
-        console.log("🧹 清理转录定时器");
         clearTimeout(timer);
       };
     }
-  }, [shouldAutoTranscribe, shouldStartTranscription, startTranscription, file?.id, file?.name]);
+  }, [shouldAutoTranscribe, shouldStartTranscription, startTranscription]);
 
   /**
    * 自动转录检测逻辑
@@ -371,10 +318,7 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
    */
   useEffect(() => {
     if (shouldStartTranscription) {
-      console.log("🎯 检测条件满足，准备触发自动转录");
       setShouldAutoTranscribe(true);
-    } else {
-      console.log("❌ 检测条件不满足，不触发自动转录");
     }
   }, [shouldStartTranscription]);
 
@@ -382,23 +326,23 @@ export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   useEffect(() => {
     if (isTranscribing) {
       setTranscriptionProgress(10);
+      let currentProgress = 10;
+      
       const interval = setInterval(() => {
-        setTranscriptionProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return prev;
-          }
-          const newProgress = prev + 10;
+        if (currentProgress >= 90) {
+          clearInterval(interval);
+          return;
+        }
+        
+        currentProgress += 10;
+        setTranscriptionProgress(currentProgress);
 
-          // 统一进度处理
-          handleTranscriptionProgress(newProgress, {
-            fileId: parsedFileId,
-            operation: "transcribe",
-          });
-
-          return newProgress;
+        // 统一进度处理
+        handleTranscriptionProgress(currentProgress, {
+          fileId: parsedFileId,
+          operation: "transcribe",
         });
-      }, 1000); // 从500ms增加到1000ms，减少轮询频率
+      }, 1000);
 
       return () => clearInterval(interval);
     } else if (transcript?.status === "completed") {

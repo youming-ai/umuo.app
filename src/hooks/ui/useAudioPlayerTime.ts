@@ -2,6 +2,10 @@ import { useCallback } from "react";
 
 export function useAudioPlayerTime() {
   const formatTime = useCallback((seconds: number) => {
+    // 处理无效值
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return "0:00.00";
+    }
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     const ms = Math.floor((seconds % 1) * 100);
@@ -10,9 +14,11 @@ export function useAudioPlayerTime() {
 
   const parseTimeInput = useCallback((input: string): number => {
     const parts = input.split(":").map(Number);
-    if (parts.length === 1) return parts[0];
-    if (parts.length === 2) return parts[0] * 60 + parts[1];
-    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    // 过滤无效数字
+    if (parts.some((p) => !Number.isFinite(p))) return 0;
+    if (parts.length === 1) return Math.max(0, parts[0]);
+    if (parts.length === 2) return Math.max(0, parts[0] * 60 + parts[1]);
+    if (parts.length === 3) return Math.max(0, parts[0] * 3600 + parts[1] * 60 + parts[2]);
     return 0;
   }, []);
 

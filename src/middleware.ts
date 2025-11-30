@@ -1,5 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  getRateLimitConfig,
+  getRateLimitHeaders,
+} from "@/lib/utils/rate-limiter";
 
 // Theme detection middleware
 export function middleware(request: NextRequest) {
@@ -22,21 +28,54 @@ export function middleware(request: NextRequest) {
     return response;
   }
 
-  // Set security headers
-  const response = NextResponse.next();
+  // API rate limiting
+  if (pathname.startsWith("/api/")) {
+    const clientId = getClientIdentifier(request);
+    const rateLimitKey = `${clientId}:${pathname}`;
+    const config = getRateLimitConfig(pathname);
+    const result = checkRateLimit(rateLimitKey, config);
 
-  // Add security headers
+    // 如果被限流，返回 429 响应
+    if (result.limited) {
+      return new NextResponse(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: "RATE_LIMIT_EXCEEDED",
+            message: config.message || "请求过于频繁，请稍后再试",
+            retryAfter: result.retryAfter,
+          },
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            ...getRateLimitHeaders(result),
+          },
+        },
+      );
+    }
+
+    // 正常响应，添加限流头
+    const response = NextResponse.next();
+    const rateLimitHeaders = getRateLimitHeaders(result);
+    for (const [key, value] of Object.entries(rateLimitHeaders)) {
+      response.headers.set(key, value);
+    }
+
+    // Add security headers
+    response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    response.headers.set("X-DNS-Prefetch-Control", "on");
+
+    return response;
+  }
+
+  // Non-API routes: Set security headers only
+  const response = NextResponse.next();
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-
-  // Add performance headers
   response.headers.set("X-DNS-Prefetch-Control", "on");
-
-  // API rate limiting headers (basic)
-  if (pathname.startsWith("/api/")) {
-    response.headers.set("X-RateLimit-Limit", "100");
-    response.headers.set("X-RateLimit-Remaining", "99");
-  }
 
   return response;
 }

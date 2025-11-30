@@ -48,23 +48,15 @@ export interface TranscriptionResponseData {
   };
 }
 
-// TranscriptionSegment 已移至 types/transcription.ts 以避免重复
+// TranscriptionSegment 和 ProcessedSegment 已移至 types/transcription.ts 以避免重复
+// 从 types/transcription.ts 重新导出以保持向后兼容
+export type { ProcessedSegment, TranscriptionSegment } from "./transcription";
 
 export interface TranscriptionWord {
   word: string;
   start: number;
   end: number;
   confidence?: number;
-}
-
-export interface ProcessedSegment {
-  id: number;
-  start: number;
-  end: number;
-  text: string;
-  translation?: string;
-  words: TranscriptionWord[];
-  confidence: number;
 }
 
 export interface AudioUploadResponse {

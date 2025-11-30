@@ -89,23 +89,26 @@ export const DBUtils = {
 
   /**
    * Delete a file and its associated data
+   * 删除顺序：segments → transcripts → file（先删子表再删父表）
    */
   async deleteFile(id: number): Promise<void> {
     try {
       await db.transaction("rw", db.files, db.transcripts, db.segments, async () => {
-        // Delete the file
-        await db.files.delete(id);
-
-        // Get associated transcripts
+        // 1. 获取关联的 transcripts
         const transcripts = await db.transcripts.where("fileId").equals(id).toArray();
 
-        // Delete each transcript and its segments
+        // 2. 先删除每个 transcript 的 segments
         for (const transcript of transcripts) {
           if (transcript.id) {
             await db.segments.where("transcriptId").equals(transcript.id).delete();
-            await db.transcripts.delete(transcript.id);
           }
         }
+
+        // 3. 删除 transcripts
+        await db.transcripts.where("fileId").equals(id).delete();
+
+        // 4. 最后删除 file
+        await db.files.delete(id);
       });
     } catch (error) {
       throw handleError(error, "DBUtils.deleteFile");
