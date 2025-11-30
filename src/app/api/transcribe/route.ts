@@ -7,6 +7,12 @@ import {
   mapGroqSegmentToTranscriptionSegment,
 } from "@/lib/ai/groq-transcription-utils";
 import { apiError, apiSuccess } from "@/lib/utils/api-response";
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  getRateLimitConfig,
+  getRateLimitHeaders,
+} from "@/lib/utils/rate-limiter";
 import type { GroqTranscriptionResponse, TranscriptionSegment } from "@/types/transcription";
 
 // Zod schemas for validation
@@ -312,6 +318,25 @@ async function processTranscription(
 
 export async function POST(request: NextRequest) {
   try {
+    // 速率限制检查
+    const clientId = getClientIdentifier(request);
+    const rateLimitConfig = getRateLimitConfig("/api/transcribe");
+    const rateLimitResult = checkRateLimit(`transcribe:${clientId}`, rateLimitConfig);
+
+    if (rateLimitResult.limited) {
+      const headers = getRateLimitHeaders(rateLimitResult);
+      return apiError({
+        code: "RATE_LIMIT_EXCEEDED",
+        message: rateLimitConfig.message || "请求过于频繁，请稍后再试",
+        details: {
+          retryAfter: rateLimitResult.retryAfter,
+          resetTime: rateLimitResult.resetTime,
+        },
+        statusCode: 429,
+        headers,
+      });
+    }
+
     // Parse and validate query parameters
     const url = new URL(request.url);
     const searchParams = Object.fromEntries(url.searchParams);

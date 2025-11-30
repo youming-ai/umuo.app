@@ -8,6 +8,7 @@
 import { Search } from "lucide-react";
 import React, { useCallback, useState } from "react";
 
+import { useTranscriptionLanguage } from "@/components/layout/contexts/TranscriptionLanguageContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -253,7 +254,8 @@ function FileCardWrapper({
 }) {
   // Hooks must be called before any early returns - 添加空值检查
   const { data: statusData, isLoading } = useFileStatus(file.id || 0);
-  const { startTranscription, isTranscribing } = useFileStatusManager(file.id || 0);
+  const { startTranscription, cancelTranscription, isTranscribing } = useFileStatusManager(file.id || 0);
+  const { language } = useTranscriptionLanguage();
 
   // 优雅地处理可能缺失的 file.id
   if (!file.id) {
@@ -287,6 +289,11 @@ function FileCardWrapper({
     status: statusData.status,
   };
 
+  // 处理转录，使用动态语言设置
+  const handleTranscribe = () => {
+    startTranscription(language);
+  };
+
   return (
     <div className="relative">
       {/* 转录中的loading遮罩 */}
@@ -295,6 +302,14 @@ function FileCardWrapper({
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <span className="text-sm font-medium text-muted-foreground">正在转录...</span>
+            <button
+              type="button"
+              onClick={cancelTranscription}
+              className="mt-2 px-4 py-1.5 text-sm font-medium text-destructive hover:text-destructive/80 
+                         bg-destructive/10 hover:bg-destructive/20 rounded-lg transition-colors"
+            >
+              取消转录
+            </button>
           </div>
         </div>
       )}
@@ -302,7 +317,7 @@ function FileCardWrapper({
         file={fileWithStatus}
         onPlay={onPlay}
         onDelete={onDelete}
-        onTranscribe={startTranscription}
+        onTranscribe={() => handleTranscribe()}
       />
     </div>
   );

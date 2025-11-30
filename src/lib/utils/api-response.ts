@@ -28,23 +28,25 @@ export function apiSuccess(data: unknown, status: number = 200) {
 }
 
 // 错误响应函数
-export function apiError(error: AppError) {
+export function apiError(error: AppError & { headers?: Record<string, string> }) {
+  const { headers: customHeaders, ...errorData } = error;
   return NextResponse.json(
     {
       success: false,
       error: {
-        code: error.code,
-        message: error.message,
-        details: error.details,
+        code: errorData.code,
+        message: errorData.message,
+        details: errorData.details,
       },
       timestamp: new Date().toISOString(),
     },
     {
-      status: error.statusCode,
+      status: errorData.statusCode,
       headers: {
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
         pragma: "no-cache",
         expires: "0",
+        ...customHeaders,
       },
     },
   );

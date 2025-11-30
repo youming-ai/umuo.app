@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
 import { ThemeProvider } from "@/components/layout/contexts/ThemeContext";
+import { TranscriptionLanguageProvider } from "@/components/layout/contexts/TranscriptionLanguageContext";
 import { QueryProvider } from "@/components/layout/providers/QueryProvider";
 import { PageErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { ToastContainer } from "@/components/ui/ErrorToast";
@@ -58,17 +59,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen font-sans antialiased">
         <ThemeProvider defaultTheme="dark">
-          <MonitoringInitializer />
-          <QueryProvider>
-            <PageErrorBoundary>
-              <div className="relative min-h-screen">{children}</div>
-            </PageErrorBoundary>
-          </QueryProvider>
-          <ThemeDebuggerToggle />
-          <PwaRegister />
-          <ToastContainer>{null}</ToastContainer>
-          <SpeedInsights />
-          <Analytics />
+          <TranscriptionLanguageProvider>
+            <MonitoringInitializer />
+            <QueryProvider>
+              <PageErrorBoundary>
+                <div className="relative min-h-screen">{children}</div>
+              </PageErrorBoundary>
+            </QueryProvider>
+            <ThemeDebuggerToggle />
+            <PwaRegister />
+            <ToastContainer>{null}</ToastContainer>
+            <SpeedInsights />
+            <Analytics />
+          </TranscriptionLanguageProvider>
         </ThemeProvider>
       </body>
     </html>
