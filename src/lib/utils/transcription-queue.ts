@@ -19,7 +19,11 @@ interface TranscriptionQueueConfig {
 }
 
 type TaskCallback = (task: TranscriptionTask) => Promise<void>;
-type StatusChangeCallback = (fileId: number, status: TranscriptionTask["status"], error?: string) => void;
+type StatusChangeCallback = (
+  fileId: number,
+  status: TranscriptionTask["status"],
+  error?: string,
+) => void;
 
 /**
  * 转录队列管理器
@@ -55,7 +59,7 @@ export class TranscriptionQueue {
    */
   add(fileId: number, language: TranscriptionLanguageCode): AbortController {
     // 如果已经在队列或处理中，返回现有的 controller
-    const existing = this.queue.find(t => t.fileId === fileId) || this.processing.get(fileId);
+    const existing = this.queue.find((t) => t.fileId === fileId) || this.processing.get(fileId);
     if (existing) {
       return existing.abortController;
     }
@@ -71,7 +75,7 @@ export class TranscriptionQueue {
 
     this.queue.push(task);
     this.notifyStatusChange(fileId, "pending");
-    
+
     // 尝试处理队列
     this.processNext();
 
@@ -83,7 +87,7 @@ export class TranscriptionQueue {
    */
   cancel(fileId: number): boolean {
     // 检查是否在队列中
-    const queueIndex = this.queue.findIndex(t => t.fileId === fileId);
+    const queueIndex = this.queue.findIndex((t) => t.fileId === fileId);
     if (queueIndex !== -1) {
       const task = this.queue[queueIndex];
       task.abortController.abort();
@@ -140,7 +144,7 @@ export class TranscriptionQueue {
    * 检查任务是否在队列中（包括处理中）
    */
   isInQueue(fileId: number): boolean {
-    return this.queue.some(t => t.fileId === fileId) || this.processing.has(fileId);
+    return this.queue.some((t) => t.fileId === fileId) || this.processing.has(fileId);
   }
 
   /**
@@ -194,7 +198,7 @@ export class TranscriptionQueue {
       if (this.taskCallback) {
         await this.taskCallback(task);
       }
-      
+
       // 只有在未被取消的情况下才标记完成
       if (!task.abortController.signal.aborted) {
         task.status = "completed";
@@ -220,7 +224,11 @@ export class TranscriptionQueue {
   /**
    * 通知状态变更
    */
-  private notifyStatusChange(fileId: number, status: TranscriptionTask["status"], error?: string): void {
+  private notifyStatusChange(
+    fileId: number,
+    status: TranscriptionTask["status"],
+    error?: string,
+  ): void {
     if (this.statusChangeCallback) {
       this.statusChangeCallback(fileId, status, error);
     }

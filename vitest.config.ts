@@ -1,5 +1,5 @@
+import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
-import { resolve } from "path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -13,13 +13,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: [
-        "node_modules/",
-        "src/__tests__/",
-        "**/*.d.ts",
-        "**/*.config.*",
-        "**/types/**",
-      ],
+      exclude: ["node_modules/", "src/__tests__/", "**/*.d.ts", "**/*.config.*", "**/types/**"],
     },
     // 模拟浏览器 API
     alias: {

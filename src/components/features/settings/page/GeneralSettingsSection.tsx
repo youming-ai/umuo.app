@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronRightIcon } from "lucide-react";
 import {
   SettingsCard,
   SettingsRow,
@@ -9,8 +8,8 @@ import {
 } from "@/components/features/settings/SettingsCard";
 import {
   TRANSCRIPTION_LANGUAGES,
-  useTranscriptionLanguage,
   type TranscriptionLanguageCode,
+  useTranscriptionLanguage,
 } from "@/components/layout/contexts/TranscriptionLanguageContext";
 
 export function GeneralSettingsSection() {
@@ -23,10 +22,7 @@ export function GeneralSettingsSection() {
     <SettingsSection title="通用">
       <SettingsCard>
         <SettingsRow>
-          <SettingsRowContent 
-            title="转录语言" 
-            description="选择音频转录时使用的语言"
-          />
+          <SettingsRowContent title="转录语言" description="选择音频转录时使用的语言" />
           <div className="flex items-center gap-2">
             {languageOptions.map((lang) => (
               <button
@@ -36,9 +32,10 @@ export function GeneralSettingsSection() {
                 className={`
                   flex items-center justify-center w-10 h-10 rounded-lg text-2xl
                   transition-all duration-200
-                  ${language === lang.code 
-                    ? "bg-primary/20 ring-2 ring-primary scale-110" 
-                    : "bg-muted/50 hover:bg-muted hover:scale-105"
+                  ${
+                    language === lang.code
+                      ? "bg-primary/20 ring-2 ring-primary scale-110"
+                      : "bg-muted/50 hover:bg-muted hover:scale-105"
                   }
                 `}
                 title={lang.name}

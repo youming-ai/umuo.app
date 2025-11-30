@@ -74,7 +74,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   // Handle loop playback
   // 使用 ref 跟踪上次循环时间，防止重复触发
   const lastLoopTimeRef = useRef<number>(-1);
-  
+
   useEffect(() => {
     if (
       loopStart !== undefined &&

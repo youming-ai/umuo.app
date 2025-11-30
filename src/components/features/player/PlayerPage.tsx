@@ -18,15 +18,7 @@ import type { Segment } from "@/types/db/database";
 
 export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   const router = useRouter();
-  const {
-    file,
-    segments,
-    transcript,
-    audioUrl,
-    loading,
-    error,
-    retry,
-  } = usePlayerDataQuery(fileId);
+  const { file, segments, audioUrl, loading, error, retry } = usePlayerDataQuery(fileId);
 
   const {
     audioPlayerState,

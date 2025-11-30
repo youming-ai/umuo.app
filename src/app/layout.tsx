@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "../styles/globals.css";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/components/layout/contexts/ThemeContext";
 import { TranscriptionLanguageProvider } from "@/components/layout/contexts/TranscriptionLanguageContext";
 import { QueryProvider } from "@/components/layout/providers/QueryProvider";
@@ -8,8 +10,6 @@ import { ToastContainer } from "@/components/ui/ErrorToast";
 import { MonitoringInitializer } from "@/components/ui/MonitoringInitializer";
 import PwaRegister from "@/components/ui/PwaRegister";
 import { ThemeDebuggerToggle } from "@/components/ui/ThemeDebugger";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/react";
 
 export const metadata: Metadata = {
   title: "影子跟读",

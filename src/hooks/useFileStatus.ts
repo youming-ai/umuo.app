@@ -22,7 +22,7 @@ export const fileStatusKeys = {
  * TranscriptRow.status -> FileStatus 映射
  */
 function mapTranscriptStatusToFileStatus(
-  status: "pending" | "processing" | "completed" | "failed" | undefined
+  status: "pending" | "processing" | "completed" | "failed" | undefined,
 ): FileStatus {
   switch (status) {
     case "processing":
@@ -31,7 +31,6 @@ function mapTranscriptStatusToFileStatus(
       return FileStatus.COMPLETED;
     case "failed":
       return FileStatus.ERROR;
-    case "pending":
     default:
       return FileStatus.UPLOADED;
   }
@@ -56,7 +55,7 @@ export function useFileStatus(fileId: number) {
       const transcript = transcripts.length > 0 ? transcripts[0] : null;
 
       // 完全基于 TranscriptRow.status 确定状态
-      const status = transcript 
+      const status = transcript
         ? mapTranscriptStatusToFileStatus(transcript.status)
         : FileStatus.UPLOADED;
 
@@ -84,10 +83,7 @@ export function useFileStatusManager(fileId: number) {
 
   // 更新转录状态（仅更新 TranscriptRow）
   const updateTranscriptionStatus = useCallback(
-    async (
-      status: "pending" | "processing" | "completed" | "failed",
-      error?: string,
-    ) => {
+    async (status: "pending" | "processing" | "completed" | "failed", error?: string) => {
       try {
         // 查找现有转录记录
         const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
@@ -121,54 +117,57 @@ export function useFileStatusManager(fileId: number) {
   );
 
   // 开始转录（使用队列）
-  const startTranscription = useCallback(async (language: TranscriptionLanguageCode = "ja") => {
-    const queue = getTranscriptionQueue();
-    
-    // 如果已经在处理，不重复添加
-    if (queue.isInQueue(fileId)) {
-      return;
-    }
+  const startTranscription = useCallback(
+    async (language: TranscriptionLanguageCode = "ja") => {
+      const queue = getTranscriptionQueue();
 
-    setIsTranscribing(true);
-
-    // 创建 abort controller
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    try {
-      // 设置状态为转录中
-      await updateTranscriptionStatus("processing");
-
-      // 开始转录（支持自动重试和取消）
-      await transcription.mutateAsync({ 
-        fileId, 
-        language,
-        signal: abortController.signal,
-      });
-
-      // 转录成功后设置状态为完成
-      await updateTranscriptionStatus("completed");
-    } catch (error) {
-      // 检查是否是取消操作
-      if (error instanceof DOMException && error.name === "AbortError") {
-        // 取消不算错误，恢复到待转录状态
-        await updateTranscriptionStatus("pending");
+      // 如果已经在处理，不重复添加
+      if (queue.isInQueue(fileId)) {
         return;
       }
 
-      const errorMessage = error instanceof Error ? error.message : "转录失败";
-      handleTranscriptionError(error, {
-        fileId,
-        operation: "transcribe",
-        language,
-      });
-      await updateTranscriptionStatus("failed", errorMessage);
-      throw error;
-    } finally {
-      setIsTranscribing(false);
-      abortControllerRef.current = null;
-    }
-  }, [fileId, transcription, updateTranscriptionStatus]);
+      setIsTranscribing(true);
+
+      // 创建 abort controller
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      try {
+        // 设置状态为转录中
+        await updateTranscriptionStatus("processing");
+
+        // 开始转录（支持自动重试和取消）
+        await transcription.mutateAsync({
+          fileId,
+          language,
+          signal: abortController.signal,
+        });
+
+        // 转录成功后设置状态为完成
+        await updateTranscriptionStatus("completed");
+      } catch (error) {
+        // 检查是否是取消操作
+        if (error instanceof DOMException && error.name === "AbortError") {
+          // 取消不算错误，恢复到待转录状态
+          await updateTranscriptionStatus("pending");
+          return;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : "转录失败";
+        handleTranscriptionError(error, {
+          fileId,
+          operation: "transcribe",
+          language,
+        });
+        await updateTranscriptionStatus("failed", errorMessage);
+        throw error;
+      } finally {
+        setIsTranscribing(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [fileId, transcription, updateTranscriptionStatus],
+  );
 
   // 取消转录
   const cancelTranscription = useCallback(() => {

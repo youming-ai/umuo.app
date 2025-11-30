@@ -65,7 +65,6 @@ interface UsePlayerDataQueryReturn {
  */
 export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   const parsedFileId = parseInt(fileId, 10);
-  const isValidId = !Number.isNaN(parsedFileId);
 
   // 获取文件数据
   const fileQuery = useFileQuery(parsedFileId);

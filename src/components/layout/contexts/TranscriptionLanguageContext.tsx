@@ -31,10 +31,14 @@ interface TranscriptionLanguageContextType {
   /** 设置转录语言 */
   setLanguage: (language: TranscriptionLanguageCode) => void;
   /** 获取语言配置 */
-  getLanguageConfig: (code: TranscriptionLanguageCode) => (typeof TRANSCRIPTION_LANGUAGES)[TranscriptionLanguageCode];
+  getLanguageConfig: (
+    code: TranscriptionLanguageCode,
+  ) => (typeof TRANSCRIPTION_LANGUAGES)[TranscriptionLanguageCode];
 }
 
-const TranscriptionLanguageContext = createContext<TranscriptionLanguageContextType | undefined>(undefined);
+const TranscriptionLanguageContext = createContext<TranscriptionLanguageContextType | undefined>(
+  undefined,
+);
 
 const STORAGE_KEY = "umuo-transcription-language";
 const DEFAULT_LANGUAGE: TranscriptionLanguageCode = "ja";

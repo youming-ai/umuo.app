@@ -254,7 +254,9 @@ function FileCardWrapper({
 }) {
   // Hooks must be called before any early returns - 添加空值检查
   const { data: statusData, isLoading } = useFileStatus(file.id || 0);
-  const { startTranscription, cancelTranscription, isTranscribing } = useFileStatusManager(file.id || 0);
+  const { startTranscription, cancelTranscription, isTranscribing } = useFileStatusManager(
+    file.id || 0,
+  );
   const { language } = useTranscriptionLanguage();
 
   // 优雅地处理可能缺失的 file.id

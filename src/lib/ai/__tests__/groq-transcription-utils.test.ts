@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { GroqTranscriptionSegment, GroqTranscriptionWord } from "@/types/transcription";
 import {
   buildSegmentsFromPlainText,
   buildSegmentsFromWords,
   mapGroqSegmentToTranscriptionSegment,
 } from "../groq-transcription-utils";
-import type { GroqTranscriptionSegment, GroqTranscriptionWord } from "@/types/transcription";
 
 describe("groq-transcription-utils", () => {
   describe("mapGroqSegmentToTranscriptionSegment", () => {

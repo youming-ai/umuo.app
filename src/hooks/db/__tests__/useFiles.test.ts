@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useFiles } from "../useFiles";
 import { DBUtils } from "@/lib/db/db";
+import { useFiles } from "../useFiles";
 
 // Mock DBUtils
 vi.mock("@/lib/db/db", () => ({
@@ -45,7 +45,7 @@ describe("useFiles", () => {
     it("should set isLoading to true during load", async () => {
       // 让 getAllFiles 延迟返回
       (DBUtils.getAllFiles as ReturnType<typeof vi.fn>).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve([]), 100))
+        () => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
       );
 
       const { result } = renderHook(() => useFiles());
@@ -60,9 +60,7 @@ describe("useFiles", () => {
 
     it("should handle load error", async () => {
       const errorMessage = "Database connection failed";
-      (DBUtils.getAllFiles as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error(errorMessage)
-      );
+      (DBUtils.getAllFiles as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
       const { result } = renderHook(() => useFiles());
 
@@ -97,7 +95,7 @@ describe("useFiles", () => {
         expect.objectContaining({
           name: "test.mp3",
           type: "audio/mpeg",
-        })
+        }),
       );
 
       // 应该刷新文件列表
@@ -106,9 +104,7 @@ describe("useFiles", () => {
 
     it("should handle add error", async () => {
       const errorMessage = "Storage quota exceeded";
-      (DBUtils.addFile as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error(errorMessage)
-      );
+      (DBUtils.addFile as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
       const { result } = renderHook(() => useFiles());
 
@@ -122,7 +118,7 @@ describe("useFiles", () => {
       await expect(
         act(async () => {
           await result.current.addFiles([mockFile]);
-        })
+        }),
       ).rejects.toThrow(errorMessage);
 
       // 验证 addFile 被调用
@@ -189,9 +185,7 @@ describe("useFiles", () => {
 
     it("should handle delete error", async () => {
       const errorMessage = "File not found";
-      (DBUtils.deleteFile as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error(errorMessage)
-      );
+      (DBUtils.deleteFile as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(errorMessage));
 
       const { result } = renderHook(() => useFiles());
 
@@ -203,7 +197,7 @@ describe("useFiles", () => {
       await expect(
         act(async () => {
           await result.current.deleteFile("1");
-        })
+        }),
       ).rejects.toThrow(errorMessage);
 
       // 验证 deleteFile 被调用

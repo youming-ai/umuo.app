@@ -203,7 +203,7 @@ export function useTranscription() {
           }
 
           // 指数退避等待
-          const waitTime = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+          const waitTime = 1000 * 2 ** attempt; // 1s, 2s, 4s
           console.log(`转录失败，${waitTime / 1000}秒后重试 (${attempt + 1}/${maxRetries})...`);
           await delay(waitTime);
         }
