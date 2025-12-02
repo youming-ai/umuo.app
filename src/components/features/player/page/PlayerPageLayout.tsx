@@ -29,7 +29,7 @@ export function PlayerPageLayout({
             : "var(--space-player-content)",
         }}
       >
-        <div className="flex-1 px-4 py-8 sm:px-6 lg:px-8 mt-24">
+        <div className="flex-1 px-4 py-20 sm:px-6 lg:px-8 mt-24">
           <div className="mx-auto max-w-4xl">
             {/* 使用与首页一致的间距系统 */}
             <div className="space-y-8">{children}</div>
@@ -38,7 +38,9 @@ export function PlayerPageLayout({
       </main>
 
       {showFooter && footer && (
-        <footer className="flex-shrink-0 safe-area-inset-bottom">{footer}</footer>
+        <footer className="flex-shrink-0 safe-area-inset-bottom">
+          {footer}
+        </footer>
       )}
     </div>
   );

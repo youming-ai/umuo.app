@@ -18,7 +18,8 @@ import type { Segment } from "@/types/db/database";
 
 export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   const router = useRouter();
-  const { file, segments, audioUrl, loading, error, retry } = usePlayerDataQuery(fileId);
+  const { file, segments, audioUrl, loading, error, retry } =
+    usePlayerDataQuery(fileId);
 
   const {
     audioPlayerState,
@@ -41,12 +42,15 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
   const [volume, setVolume] = useState(1);
   const subtitleContainerId = useId();
 
-  const sanitizeNumber = useCallback((value: number, fallback: number = 0): number => {
-    if (!Number.isFinite(value) || Number.isNaN(value)) {
-      return fallback;
-    }
-    return value;
-  }, []);
+  const sanitizeNumber = useCallback(
+    (value: number, fallback: number = 0): number => {
+      if (!Number.isFinite(value) || Number.isNaN(value)) {
+        return fallback;
+      }
+      return value;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (file && audioUrl) {
@@ -120,7 +124,10 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
     };
 
     const handleEnded = () => {
-      const duration = sanitizeNumber(audio.duration, audioPlayerState.duration);
+      const duration = sanitizeNumber(
+        audio.duration,
+        audioPlayerState.duration,
+      );
       updatePlayerState({ isPlaying: false, currentTime: duration });
       onClearLoop();
     };
@@ -148,7 +155,13 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
       audio.removeEventListener("play", handlePlay);
       audio.removeEventListener("pause", handlePause);
     };
-  }, [updatePlayerState, sanitizeNumber, file?.duration, audioPlayerState.duration, onClearLoop]);
+  }, [
+    updatePlayerState,
+    sanitizeNumber,
+    file?.duration,
+    audioPlayerState.duration,
+    onClearLoop,
+  ]);
 
   const handleSegmentClick = (segment: Segment) => {
     handleSeek(segment.start);
@@ -244,7 +257,12 @@ export default function PlayerPageComponent({ fileId }: { fileId: string }) {
         )}
       </PlayerPageLayout>
 
-      <audio ref={audioRef} src={audioUrl ?? undefined} preload="auto" className="hidden">
+      <audio
+        ref={audioRef}
+        src={audioUrl ?? undefined}
+        preload="auto"
+        className="hidden"
+      >
         <track kind="captions" />
       </audio>
     </>

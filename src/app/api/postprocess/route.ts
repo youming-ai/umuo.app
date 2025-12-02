@@ -1,34 +1,10 @@
-import Groq from "groq-sdk";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, apiFromError, apiSuccess } from "@/lib/utils/api-response";
 import { validationError } from "@/lib/utils/error-handler";
+import { processSegmentsOptimized } from "@/lib/utils/optimized-postprocess";
 
-// Groq 模型配置
-const GROQ_CHAT_MODEL = "openai/gpt-oss-20b";
-
-// Type definitions for processed segments
-interface ProcessedSegment {
-  id: number;
-  normalizedText: string;
-  translation?: string;
-  annotations?: Array<{
-    text: string;
-    type: string;
-    reading?: string;
-  }>;
-}
-
-interface PostProcessResult {
-  originalText: string;
-  normalizedText: string;
-  translation: string | undefined;
-  annotations: string[] | undefined;
-  furigana?: string;
-  start: number;
-  end: number;
-}
-
+// 验证请求schema
 const postProcessSchema = z.object({
   segments: z.array(
     z.object({
@@ -58,7 +34,10 @@ const postProcessSchema = z.object({
 function validateRequestData(body: unknown) {
   const validation = postProcessSchema.safeParse(body);
   if (!validation.success) {
-    const error = validationError("Invalid request data", validation.error.format());
+    const error = validationError(
+      "Invalid request data",
+      validation.error.format(),
+    );
     return { isValid: false, error };
   }
   return { isValid: true, data: validation.data };
@@ -67,7 +46,9 @@ function validateRequestData(body: unknown) {
 /**
  * 验证segments数据
  */
-function validateSegments(segments: Array<{ text: string; start: number; end: number }>) {
+function validateSegments(
+  segments: Array<{ text: string; start: number; end: number }>,
+) {
   if (!segments || segments.length === 0) {
     return {
       isValid: false,
@@ -79,12 +60,13 @@ function validateSegments(segments: Array<{ text: string; start: number; end: nu
     };
   }
 
-  if (segments.length > 100) {
+  if (segments.length > 200) {
+    // 提高限制以支持优化后的处理器
     return {
       isValid: false,
       error: {
         code: "TOO_MANY_SEGMENTS" as const,
-        message: "Too many segments for post-processing (max: 100)",
+        message: "Too many segments for post-processing (max: 200)",
         statusCode: 400,
       },
     };
@@ -93,7 +75,11 @@ function validateSegments(segments: Array<{ text: string; start: number; end: nu
   // 验证每个segment的必需字段
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (!segment.text || typeof segment.start !== "number" || typeof segment.end !== "number") {
+    if (
+      !segment.text ||
+      typeof segment.start !== "number" ||
+      typeof segment.end !== "number"
+    ) {
       return {
         isValid: false,
         error: {
@@ -142,6 +128,9 @@ function handleSpecificError(error: Error) {
   return null;
 }
 
+/**
+ * 验证Groq配置
+ */
 function validateGroqConfiguration(): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
 
@@ -155,389 +144,11 @@ function validateGroqConfiguration(): { isValid: boolean; errors: string[] } {
   };
 }
 
-const defaultOptions = {
-  targetLanguage: "en",
-  enableAnnotations: true,
-  enableFurigana: true,
-};
-
-// AI SDK 使用内置的优化配置，无需手动管理客户端
-
-function buildPrompt(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage?: string,
-  enableAnnotations: boolean = true,
-  enableFurigana: boolean = true,
-): string {
-  let basePrompt = `You are a professional language teacher specializing in Japanese language learning and shadowing practice.\n\nTask: Process the following ${sourceLanguage} text for language learners.\n\nInput:\n${text}\n\nRequirements:\n1. Normalize the text (remove filler words, fix grammar, etc.)\n2. ${targetLanguage ? `Provide translation to ${targetLanguage}` : "Keep original language"}`;
-
-  if (enableAnnotations) {
-    basePrompt += `\n3. Add grammatical and cultural annotations`;
-  }
-
-  if (enableFurigana && sourceLanguage === "ja") {
-    basePrompt += `\n4. Include furigana for kanji`;
-  }
-
-  basePrompt += `\n\nOutput format:\n{\n  "normalizedText": "Clean, normalized text",\n  "translation": "Translation if requested",\n  "annotations": ["List of annotations"],\n  "furigana": "Text with furigana if applicable",\n  "terminology": {"term": "reading and definition"}\n}`;
-
-  return basePrompt;
-}
-
-interface GroqPostProcessResponse {
-  normalizedText: string;
-  translation?: string;
-  annotations?: string[];
-  furigana?: string;
-  terminology?: Record<string, string>;
-}
-
-function parseGroqResponse(responseText: string): GroqPostProcessResponse {
-  try {
-    let cleanedText = responseText.trim();
-    if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7);
-    if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3);
-    if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3);
-
-    const jsonStart = cleanedText.indexOf("{");
-    const jsonEnd = cleanedText.lastIndexOf("}");
-
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      cleanedText = cleanedText.substring(jsonStart, jsonEnd + 1);
-    }
-
-    const payload = JSON.parse(cleanedText);
-    return {
-      normalizedText: payload.normalizedText || payload.text || "",
-      translation: payload.translation,
-      annotations: payload.annotations || [],
-      furigana: payload.furigana,
-      terminology: payload.terminology || {},
-    };
-  } catch (_error) {
-    return {
-      normalizedText: responseText || "",
-      translation: "",
-      annotations: [],
-      furigana: "",
-      terminology: {},
-    };
-  }
-}
-
-async function postProcessSegmentWithGroq(
-  segment: { text: string; start: number; end: number },
-  sourceLanguage: string,
-  options: {
-    targetLanguage?: string;
-    enableAnnotations?: boolean;
-    enableFurigana?: boolean;
-  },
-) {
-  const startTime = Date.now();
-
-  try {
-    const prompt = buildPrompt(
-      segment.text,
-      sourceLanguage,
-      options.targetLanguage,
-      options.enableAnnotations,
-      options.enableFurigana,
-    );
-
-    // 使用 Groq SDK 进行文本处理
-    const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const response = await groqClient.chat.completions.create({
-      model: GROQ_CHAT_MODEL,
-      temperature: 0.3,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional language teacher specializing in Japanese language learning and shadowing practice. Provide accurate, educational responses that help learners understand and practice the language. Respond with valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-
-    const responseText = response.choices[0]?.message?.content || "";
-
-    const parsed = parseGroqResponse(responseText);
-
-    const processingTime = Date.now() - startTime;
-    console.log(`单个segment AI SDK处理完成，耗时: ${processingTime}ms`);
-
-    return {
-      originalText: segment.text,
-      normalizedText: parsed.normalizedText,
-      translation: parsed.translation,
-      annotations: parsed.annotations,
-      furigana: parsed.furigana,
-      start: segment.start,
-      end: segment.end,
-    };
-  } catch (error) {
-    const processingTime = Date.now() - startTime;
-    console.error(`单个segment AI SDK处理失败，耗时: ${processingTime}ms，错误:`, error);
-
-    // 抛出错误让上层处理fallback
-    throw error;
-  }
-}
-
-// 批量处理短文本以减少API调用次数，使用 AI SDK
-async function postProcessShortTextsBatch(
-  shortTextSegments: Array<{ text: string; start: number; end: number }>,
-  _sourceLanguage: string,
-  _options: {
-    targetLanguage?: string;
-    enableAnnotations?: boolean;
-    enableFurigana?: boolean;
-  },
-) {
-  if (shortTextSegments.length === 0) return [];
-
-  console.log(`AI SDK批量处理 ${shortTextSegments.length} 个短文本segments`);
-  const startTime = Date.now();
-
-  try {
-    // 合并所有短文本为一个批次
-    const combinedText = shortTextSegments
-      .map((seg, index) => `[SEGMENT_${index}] ${seg.text}`)
-      .join("\n");
-
-    const prompt = `You are processing multiple short text segments for Japanese language learning.
-
-Process the following segments and return results in the specified format:
-
-${combinedText}
-
-Return format (JSON):
-{
-  "segments": [
-    {
-      "id": 0,
-      "normalizedText": "normalized text",
-      "translation": "translation",
-      "annotations": ["annotation1", "annotation2"],
-      "furigana": "text with furigana"
-    }
-  ]
-}`;
-
-    // 使用 Groq SDK 进行批量处理
-    const groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY });
-    const response = await groqClient.chat.completions.create({
-      model: GROQ_CHAT_MODEL,
-      temperature: 0.3,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional language teacher specializing in Japanese language learning. Process multiple text segments efficiently. Respond with valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-    });
-
-    // 清理响应中的markdown代码块标记
-    let cleanedText = response.choices[0]?.message?.content?.trim() || "";
-    if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7);
-    if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3);
-    if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3);
-
-    const jsonStart = cleanedText.indexOf("{");
-    const jsonEnd = cleanedText.lastIndexOf("}");
-    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      cleanedText = cleanedText.substring(jsonStart, jsonEnd + 1);
-    }
-
-    const batchResponse = JSON.parse(cleanedText);
-
-    // 将批量处理结果映射回各个segment
-    if (batchResponse.segments && Array.isArray(batchResponse.segments)) {
-      const processingTime = Date.now() - startTime;
-      console.log(`批量AI SDK处理完成，耗时: ${processingTime}ms`);
-
-      return shortTextSegments.map((originalSegment, index) => {
-        const processedSegment = batchResponse.segments.find(
-          (s: ProcessedSegment) => s.id === index,
-        );
-        return {
-          originalText: originalSegment.text,
-          normalizedText: processedSegment?.normalizedText || originalSegment.text,
-          translation: processedSegment?.translation || "",
-          annotations: processedSegment?.annotations || [],
-          furigana: processedSegment?.furigana || "",
-          start: originalSegment.start,
-          end: originalSegment.end,
-        };
-      });
-    }
-
-    // Fallback: 如果解析失败，返回原始文本
-    const processingTime = Date.now() - startTime;
-    console.warn(`批量AI SDK处理解析失败，使用fallback，耗时: ${processingTime}ms`);
-
-    return shortTextSegments.map((segment) => ({
-      originalText: segment.text,
-      normalizedText: segment.text,
-      translation: "",
-      annotations: [],
-      furigana: "",
-      start: segment.start,
-      end: segment.end,
-    }));
-  } catch (error) {
-    const processingTime = Date.now() - startTime;
-    console.error(`批量AI SDK处理失败，耗时: ${processingTime}ms，错误:`, error);
-
-    // 返回fallback结果
-    return shortTextSegments.map((segment) => ({
-      originalText: segment.text,
-      normalizedText: segment.text,
-      translation: "",
-      annotations: [],
-      furigana: "",
-      start: segment.start,
-      end: segment.end,
-    }));
-  }
-}
-
-async function postProcessSegmentsWithGroq(
-  segments: Array<{ text: string; start: number; end: number }>,
-  sourceLanguage: string,
-  options: {
-    targetLanguage?: string;
-    enableAnnotations?: boolean;
-    enableFurigana?: boolean;
-  },
-) {
-  const finalOptions = { ...defaultOptions, ...options };
-
-  // 智能性能优化：动态调整并发参数
-  const SHORT_TEXT_THRESHOLD = 50; // 50个字符以下认为是短文本
-
-  // 根据segments数量动态调整并发数和批次大小
-  const segmentCount = segments.length;
-  let MAX_CONCURRENT = 3;
-  let BATCH_SIZE = 5;
-
-  if (segmentCount <= 3) {
-    MAX_CONCURRENT = 2;
-    BATCH_SIZE = 3;
-  } else if (segmentCount <= 10) {
-    MAX_CONCURRENT = 3;
-    BATCH_SIZE = 4;
-  } else if (segmentCount <= 20) {
-    MAX_CONCURRENT = 4;
-    BATCH_SIZE = 5;
-  } else {
-    MAX_CONCURRENT = 5;
-    BATCH_SIZE = 6;
-  }
-
-  console.log(`开始后处理 ${segments.length} 个segments，使用 ${MAX_CONCURRENT} 并发`);
-  const startTime = Date.now();
-
-  // 分离短文本和长文本
-  const shortTextSegments = segments.filter((seg) => seg.text.length <= SHORT_TEXT_THRESHOLD);
-  const longTextSegments = segments.filter((seg) => seg.text.length > SHORT_TEXT_THRESHOLD);
-
-  console.log(`短文本: ${shortTextSegments.length} 个，长文本: ${longTextSegments.length} 个`);
-
-  const allResults: PostProcessResult[] = [];
-
-  // 批量处理短文本
-  if (shortTextSegments.length > 0) {
-    const shortTextResults = await postProcessShortTextsBatch(
-      shortTextSegments,
-      sourceLanguage,
-      finalOptions,
-    );
-    allResults.push(...shortTextResults);
-    console.log(`短文本批量处理完成: ${shortTextResults.length} 个`);
-  }
-
-  // 逐个处理长文本（保持原有的并发逻辑）
-  if (longTextSegments.length > 0) {
-    const batches: Array<typeof longTextSegments> = [];
-    for (let i = 0; i < longTextSegments.length; i += BATCH_SIZE) {
-      batches.push(longTextSegments.slice(i, i + BATCH_SIZE));
-    }
-
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      console.log(
-        `处理长文本第 ${batchIndex + 1}/${batches.length} 批，包含 ${batch.length} 个segments`,
-      );
-
-      const batchPromises = batch.map(async (segment, segmentIndex) => {
-        try {
-          const processed = await postProcessSegmentWithGroq(segment, sourceLanguage, finalOptions);
-          console.log(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理完成`);
-          return processed;
-        } catch (error) {
-          console.error(`长文本Segment ${segmentIndex + 1}/${batch.length} 处理失败:`, error);
-          return {
-            originalText: segment.text,
-            normalizedText: segment.text,
-            translation: "",
-            annotations: [],
-            furigana: "",
-            start: segment.start,
-            end: segment.end,
-          };
-        }
-      });
-
-      const batchResults = await Promise.allSettled(batchPromises);
-
-      for (const result of batchResults) {
-        if (result.status === "fulfilled") {
-          allResults.push(result.value);
-        } else {
-          console.warn("Long text batch result rejected:", result.reason);
-          allResults.push({
-            originalText: "",
-            normalizedText: "",
-            translation: "",
-            annotations: undefined,
-            furigana: "",
-            start: 0,
-            end: 0,
-          });
-        }
-      }
-
-      if (batchIndex < batches.length - 1) {
-        // 优化批次间延迟策略：根据并发数动态调整，更激进
-        const delay = Math.min(200, Math.max(50, MAX_CONCURRENT * 50)); // 进一步减少延迟
-        console.log(`长文本批次间延迟 ${delay}ms`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-
-  const endTime = Date.now();
-  console.log(
-    `后处理完成，总耗时: ${endTime - startTime}ms，处理了 ${allResults.length} 个segments`,
-  );
-
-  return allResults;
-}
-
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
   try {
-    // 验证Groq配置
+    // 验证配置
     const configValidation = validateGroqConfiguration();
     if (!configValidation.isValid) {
       return apiError({
@@ -548,6 +159,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // 验证请求数据
     const body = await request.json();
     const validation = validateRequestData(body);
     if (!validation.isValid) {
@@ -568,9 +180,16 @@ export async function POST(request: NextRequest) {
         statusCode: 400,
       });
     }
-    const { segments, language, targetLanguage, enableAnnotations, enableFurigana } = data;
 
-    // 验证输入数据
+    const {
+      segments,
+      language,
+      targetLanguage,
+      enableAnnotations,
+      enableFurigana,
+    } = data;
+
+    // 验证segments
     const segmentValidation = validateSegments(segments);
     if (!segmentValidation.isValid) {
       return apiError(
@@ -582,26 +201,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const processedSegments = await postProcessSegmentsWithGroq(segments, language, {
-      targetLanguage,
-      enableAnnotations,
-      enableFurigana,
-    });
+    console.log(
+      `🚀 开始后处理 ${segments.length} segments (语言: ${language})`,
+    );
 
-    // Return processed segments with original metadata preserved
+    // 使用优化的后处理器
+    const processedSegments = await processSegmentsOptimized(
+      segments,
+      language,
+      {
+        targetLanguage,
+        enableAnnotations,
+        enableFurigana,
+        maxConcurrent: segments.length > 50 ? 10 : 6, // 大数据集使用更高并发
+        batchSize: segments.length > 100 ? 30 : 15,
+      },
+    );
+
+    // 保留原始数据并添加处理结果
     const finalSegments = processedSegments.map((processedSegment, index) => ({
-      ...segments[index], // Preserve original segment data
+      ...segments[index], // 保留原始segment数据
       normalizedText: processedSegment.normalizedText,
       translation: processedSegment.translation,
       annotations: processedSegment.annotations,
       furigana: processedSegment.furigana,
     }));
 
+    const totalTime = Date.now() - startTime;
+    const avgTimePerSegment = totalTime / segments.length;
+
+    console.log(
+      `✅ 后处理API完成! 总耗时: ${totalTime}ms, 平均: ${avgTimePerSegment.toFixed(2)}ms/segment, 处理了 ${finalSegments.length} 个segments`,
+    );
+
     return apiSuccess({
       processedSegments: finalSegments.length,
       segments: finalSegments,
+      metrics: {
+        totalTime,
+        avgTimePerSegment: Math.round(avgTimePerSegment),
+        segmentCount: segments.length,
+      },
     });
   } catch (error) {
+    const totalTime = Date.now() - startTime;
+    console.error(`❌ 后处理API失败 (耗时: ${totalTime}ms):`, error);
+
     // 特定错误处理
     if (error instanceof Error) {
       const specificError = handleSpecificError(error);
@@ -613,7 +258,3 @@ export async function POST(request: NextRequest) {
     return apiFromError(error, "postprocess/POST");
   }
 }
-
-// GET endpoint is not needed for stateless API
-
-// PATCH endpoint is not needed for stateless API

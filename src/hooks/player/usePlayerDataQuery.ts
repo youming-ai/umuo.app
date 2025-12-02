@@ -61,7 +61,7 @@ interface UsePlayerDataQueryReturn {
 
 /**
  * 播放器数据查询 Hook - 简化版
- * 只负责获取文件和转录数据，不处理自动转录逻辑
+ * 只负责获取文件和转录数据
  */
 export function usePlayerDataQuery(fileId: string): UsePlayerDataQueryReturn {
   const parsedFileId = parseInt(fileId, 10);
