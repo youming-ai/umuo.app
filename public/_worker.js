@@ -11,40 +11,22 @@ export default {
       if (response.ok) {
         // 为特定文件类型设置正确的 MIME 类型
         const pathname = url.pathname;
-        if (
-          pathname.endsWith(".css") &&
-          !response.headers.get("Content-Type")
-        ) {
+        if (pathname.endsWith(".css") && !response.headers.get("Content-Type")) {
           response = new Response(response.body, response);
           response.headers.set("Content-Type", "text/css");
-        } else if (
-          pathname.endsWith(".js") &&
-          !response.headers.get("Content-Type")
-        ) {
+        } else if (pathname.endsWith(".js") && !response.headers.get("Content-Type")) {
           response = new Response(response.body, response);
           response.headers.set("Content-Type", "application/javascript");
-        } else if (
-          pathname.endsWith(".woff") &&
-          !response.headers.get("Content-Type")
-        ) {
+        } else if (pathname.endsWith(".woff") && !response.headers.get("Content-Type")) {
           response = new Response(response.body, response);
           response.headers.set("Content-Type", "font/woff");
-        } else if (
-          pathname.endsWith(".woff2") &&
-          !response.headers.get("Content-Type")
-        ) {
+        } else if (pathname.endsWith(".woff2") && !response.headers.get("Content-Type")) {
           response = new Response(response.body, response);
           response.headers.set("Content-Type", "font/woff2");
-        } else if (
-          pathname.endsWith(".ttf") &&
-          !response.headers.get("Content-Type")
-        ) {
+        } else if (pathname.endsWith(".ttf") && !response.headers.get("Content-Type")) {
           response = new Response(response.body, response);
           response.headers.set("Content-Type", "font/ttf");
-        } else if (
-          pathname.endsWith(".eot") &&
-          !response.headers.get("Content-Type")
-        ) {
+        } else if (pathname.endsWith(".eot") && !response.headers.get("Content-Type")) {
           response = new Response(response.body, response);
           response.headers.set("Content-Type", "application/vnd.ms-fontobject");
         }

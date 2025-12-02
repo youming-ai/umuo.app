@@ -34,10 +34,7 @@ const postProcessSchema = z.object({
 function validateRequestData(body: unknown) {
   const validation = postProcessSchema.safeParse(body);
   if (!validation.success) {
-    const error = validationError(
-      "Invalid request data",
-      validation.error.format(),
-    );
+    const error = validationError("Invalid request data", validation.error.format());
     return { isValid: false, error };
   }
   return { isValid: true, data: validation.data };
@@ -46,9 +43,7 @@ function validateRequestData(body: unknown) {
 /**
  * 验证segments数据
  */
-function validateSegments(
-  segments: Array<{ text: string; start: number; end: number }>,
-) {
+function validateSegments(segments: Array<{ text: string; start: number; end: number }>) {
   if (!segments || segments.length === 0) {
     return {
       isValid: false,
@@ -75,11 +70,7 @@ function validateSegments(
   // 验证每个segment的必需字段
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
-    if (
-      !segment.text ||
-      typeof segment.start !== "number" ||
-      typeof segment.end !== "number"
-    ) {
+    if (!segment.text || typeof segment.start !== "number" || typeof segment.end !== "number") {
       return {
         isValid: false,
         error: {
@@ -181,13 +172,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const {
-      segments,
-      language,
-      targetLanguage,
-      enableAnnotations,
-      enableFurigana,
-    } = data;
+    const { segments, language, targetLanguage, enableAnnotations, enableFurigana } = data;
 
     // 验证segments
     const segmentValidation = validateSegments(segments);
@@ -201,22 +186,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(
-      `🚀 开始后处理 ${segments.length} segments (语言: ${language})`,
-    );
+    console.log(`🚀 开始后处理 ${segments.length} segments (语言: ${language})`);
 
     // 使用优化的后处理器
-    const processedSegments = await processSegmentsOptimized(
-      segments,
-      language,
-      {
-        targetLanguage,
-        enableAnnotations,
-        enableFurigana,
-        maxConcurrent: segments.length > 50 ? 10 : 6, // 大数据集使用更高并发
-        batchSize: segments.length > 100 ? 30 : 15,
-      },
-    );
+    const processedSegments = await processSegmentsOptimized(segments, language, {
+      targetLanguage,
+      enableAnnotations,
+      enableFurigana,
+      maxConcurrent: segments.length > 50 ? 10 : 6, // 大数据集使用更高并发
+      batchSize: segments.length > 100 ? 30 : 15,
+    });
 
     // 保留原始数据并添加处理结果
     const finalSegments = processedSegments.map((processedSegment, index) => ({

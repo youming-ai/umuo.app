@@ -38,9 +38,7 @@ export function PlayerPageLayout({
       </main>
 
       {showFooter && footer && (
-        <footer className="flex-shrink-0 safe-area-inset-bottom">
-          {footer}
-        </footer>
+        <footer className="flex-shrink-0 safe-area-inset-bottom">{footer}</footer>
       )}
     </div>
   );

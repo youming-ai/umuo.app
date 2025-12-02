@@ -3,6 +3,8 @@
  * 提供精确的进度反馈和状态跟踪
  */
 
+import { useState, useEffect } from "react";
+
 export interface ProgressStep {
   id: string;
   name: string;
@@ -20,7 +22,14 @@ export interface TranscriptionProgress {
   currentStep: number;
   steps: ProgressStep[];
   overallProgress: number; // 0-100
-  status: "idle" | "preparing" | "uploading" | "transcribing" | "postprocessing" | "completed" | "error";
+  status:
+  | "idle"
+  | "preparing"
+  | "uploading"
+  | "transcribing"
+  | "postprocessing"
+  | "completed"
+  | "error";
   startTime?: number;
   estimatedCompletionTime?: number;
   error?: string;
@@ -90,7 +99,8 @@ export class ProgressManager {
       overallProgress: 0,
       status: "preparing",
       startTime: Date.now(),
-      estimatedCompletionTime: Date.now() + mergedSteps.reduce((sum, step) => sum + (step.estimatedDuration || 0), 0),
+      estimatedCompletionTime:
+        Date.now() + mergedSteps.reduce((sum, step) => sum + (step.estimatedDuration || 0), 0),
     };
 
     this.activeProgress.set(fileId, progress);
@@ -107,12 +117,12 @@ export class ProgressManager {
     fileId: number,
     stepId: string,
     progress: number,
-    details?: { error?: string; description?: string }
+    details?: { error?: string; description?: string },
   ): void {
     const transcriptionProgress = this.activeProgress.get(fileId);
     if (!transcriptionProgress) return;
 
-    const step = transcriptionProgress.steps.find(s => s.id === stepId);
+    const step = transcriptionProgress.steps.find((s) => s.id === stepId);
     if (!step) return;
 
     // 更新步骤
@@ -140,7 +150,10 @@ export class ProgressManager {
    */
   moveToNextStep(fileId: number): void {
     const transcriptionProgress = this.activeProgress.get(fileId);
-    if (!transcriptionProgress || transcriptionProgress.currentStep >= transcriptionProgress.totalSteps - 1) {
+    if (
+      !transcriptionProgress ||
+      transcriptionProgress.currentStep >= transcriptionProgress.totalSteps - 1
+    ) {
       return;
     }
 
@@ -188,7 +201,7 @@ export class ProgressManager {
     if (!transcriptionProgress) return;
 
     // 完成所有步骤
-    transcriptionProgress.steps.forEach(step => {
+    transcriptionProgress.steps.forEach((step) => {
       step.progress = 100;
       if (!step.endTime) {
         step.endTime = Date.now();
@@ -282,7 +295,8 @@ export class ProgressManager {
       const elapsed = Date.now() - transcriptionProgress.startTime;
       if (transcriptionProgress.overallProgress > 0) {
         const totalEstimated = (elapsed / transcriptionProgress.overallProgress) * 100;
-        transcriptionProgress.estimatedCompletionTime = transcriptionProgress.startTime + totalEstimated;
+        transcriptionProgress.estimatedCompletionTime =
+          transcriptionProgress.startTime + totalEstimated;
       }
     }
   }
@@ -362,7 +376,7 @@ export class ProgressManager {
       byStatus: {} as Record<string, number>,
     };
 
-    this.activeProgress.forEach(progress => {
+    this.activeProgress.forEach((progress) => {
       stats.byStatus[progress.status] = (stats.byStatus[progress.status] || 0) + 1;
     });
 
@@ -397,6 +411,3 @@ export function useTranscriptionProgress(fileId: number) {
 
   return progress;
 }
-
-// 导出类型和实例
-export type { TranscriptionProgress, ProgressStep };

@@ -112,20 +112,17 @@ export async function updateTranscriptionStatus(
 export async function getFilesStatus(fileIds: number[]): Promise<Map<number, FileStatus>> {
   try {
     // 批量查询转录记录
-    const transcripts = await db.transcripts
-      .where("fileId")
-      .anyOf(fileIds)
-      .toArray();
+    const transcripts = await db.transcripts.where("fileId").anyOf(fileIds).toArray();
 
     const statusMap = new Map<number, FileStatus>();
 
     // 初始化所有文件为 UPLOADED 状态
-    fileIds.forEach(fileId => {
+    fileIds.forEach((fileId) => {
       statusMap.set(fileId, FileStatus.UPLOADED);
     });
 
     // 更新有转录记录的文件状态
-    transcripts.forEach(transcript => {
+    transcripts.forEach((transcript) => {
       if (transcript.fileId) {
         statusMap.set(transcript.fileId, mapTranscriptStatusToFileStatus(transcript.status));
       }
@@ -136,7 +133,7 @@ export async function getFilesStatus(fileIds: number[]): Promise<Map<number, Fil
     console.error("批量获取文件状态失败:", error);
     // 出错时返回错误状态
     const errorMap = new Map<number, FileStatus>();
-    fileIds.forEach(fileId => {
+    fileIds.forEach((fileId) => {
       errorMap.set(fileId, FileStatus.ERROR);
     });
     return errorMap;
@@ -155,7 +152,7 @@ export async function cleanupFailedTranscriptions(olderThanDays: number = 7): Pr
     const failedTranscripts = await db.transcripts
       .where("status")
       .equals("failed")
-      .and(transcript => transcript.updatedAt < cutoffDate)
+      .and((transcript) => transcript.updatedAt < cutoffDate)
       .toArray();
 
     for (const transcript of failedTranscripts) {

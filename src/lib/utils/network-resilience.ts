@@ -3,6 +3,8 @@
  * 提供智能的网络中断检测、恢复和重试机制
  */
 
+import { useState, useEffect } from "react";
+
 export interface NetworkStatus {
   isOnline: boolean;
   connectionType?: string;
@@ -43,13 +45,13 @@ export class NetworkMonitor {
 
   constructor() {
     // 监听在线/离线事件
-    window.addEventListener('online', this.handleOnline.bind(this));
-    window.addEventListener('offline', this.handleOffline.bind(this));
+    window.addEventListener("online", this.handleOnline.bind(this));
+    window.addEventListener("offline", this.handleOffline.bind(this));
 
     // 如果支持网络信息API，监听网络变化
-    if ('connection' in navigator) {
+    if ("connection" in navigator) {
       const connection = (navigator as any).connection;
-      connection.addEventListener('change', this.handleConnectionChange.bind(this));
+      connection.addEventListener("change", this.handleConnectionChange.bind(this));
       this.updateNetworkInfo();
     }
 
@@ -89,9 +91,9 @@ export class NetworkMonitor {
   async checkConnection(): Promise<boolean> {
     try {
       // 尝试连接到可靠的服务器
-      const response = await fetch('/api/health', {
-        method: 'HEAD',
-        cache: 'no-cache',
+      const response = await fetch("/api/health", {
+        method: "HEAD",
+        cache: "no-cache",
         signal: AbortSignal.timeout(5000),
       });
 
@@ -129,11 +131,11 @@ export class NetworkMonitor {
    * 更新网络信息
    */
   private updateNetworkInfo(): void {
-    if ('connection' in navigator) {
+    if ("connection" in navigator) {
       const connection = (navigator as any).connection;
       this.updateStatus({
         isOnline: navigator.onLine,
-        connectionType: connection.type || 'unknown',
+        connectionType: connection.type || "unknown",
         effectiveType: connection.effectiveType,
         downlink: connection.downlink,
         rtt: connection.rtt,
@@ -147,11 +149,11 @@ export class NetworkMonitor {
    */
   private updateStatus(updates: Partial<NetworkStatus>): void {
     this.currentStatus = { ...this.currentStatus, ...updates };
-    this.listeners.forEach(callback => {
+    this.listeners.forEach((callback) => {
       try {
         callback(this.currentStatus);
       } catch (error) {
-        console.error('网络状态监听器执行失败:', error);
+        console.error("网络状态监听器执行失败:", error);
       }
     });
   }
@@ -191,7 +193,7 @@ export class NetworkResilienceManager {
       onSuccess?: (result: T) => void;
       onError?: (error: unknown, attempt: number) => void;
       onRetry?: (attempt: number, delay: number) => void;
-    } = {}
+    } = {},
   ): Promise<T> {
     const finalConfig: RetryConfig = {
       maxRetries: 3,
@@ -256,7 +258,7 @@ export class NetworkResilienceManager {
         // 检查网络状态
         const networkStatus = this.networkMonitor.getCurrentStatus();
         if (!networkStatus.isOnline) {
-          throw new Error('网络连接不可用');
+          throw new Error("网络连接不可用");
         }
 
         // 执行操作
@@ -265,7 +267,6 @@ export class NetworkResilienceManager {
         // 成功执行
         networkOperation.onSuccess?.(result);
         return;
-
       } catch (error) {
         attempt++;
 
@@ -312,12 +313,12 @@ export class NetworkResilienceManager {
       try {
         await this.executeOperation(operation);
       } catch (error) {
-        console.error('重试操作失败:', error);
+        console.error("重试操作失败:", error);
       }
     }
 
     this.isProcessingQueue = false;
-    console.log('✅ 重试队列处理完成');
+    console.log("✅ 重试队列处理完成");
   }
 
   /**
@@ -352,7 +353,7 @@ export class NetworkResilienceManager {
    * 睡眠函数
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -368,7 +369,7 @@ export class NetworkResilienceManager {
   cancelAllOperations(): void {
     this.pendingOperations.clear();
     this.retryQueue.length = 0;
-    console.log('🚫 已取消所有网络操作');
+    console.log("🚫 已取消所有网络操作");
   }
 
   /**
@@ -387,13 +388,13 @@ export const networkResilienceManager = new NetworkResilienceManager();
  */
 export async function resilientFetch(
   url: string,
-  options: RequestInit & { retryConfig?: Partial<RetryConfig> } = {}
+  options: RequestInit & { retryConfig?: Partial<RetryConfig> } = {},
 ): Promise<Response> {
   const { retryConfig, ...fetchOptions } = options;
 
   return networkResilienceManager.executeWithResilience(
     () => fetch(url, fetchOptions),
-    retryConfig
+    retryConfig,
   );
 }
 
@@ -402,7 +403,7 @@ export async function resilientFetch(
  */
 export function useNetworkStatus() {
   const [networkStatus, setNetworkStatus] = useState<NetworkStatus>(() =>
-    networkResilienceManager.getNetworkMonitor().getCurrentStatus()
+    networkResilienceManager.getNetworkMonitor().getCurrentStatus(),
   );
 
   useEffect(() => {
@@ -421,6 +422,3 @@ export function useNetworkStatus() {
 
   return networkStatus;
 }
-
-// 导出类型和实例
-export type { NetworkStatus, RetryConfig, NetworkOperation };

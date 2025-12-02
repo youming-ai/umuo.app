@@ -12,10 +12,10 @@ import { playerKeys } from "@/hooks/player/usePlayerDataQuery";
  * 缓存失效策略枚举
  */
 export enum CacheInvalidationStrategy {
-  IMMEDIATE = "immediate",    // 立即失效
-  DELAYED = "delayed",        // 延迟失效
-  SELECTIVE = "selective",    // 选择性失效
-  OPTIMISTIC = "optimistic",  // 乐观更新
+  IMMEDIATE = "immediate", // 立即失效
+  DELAYED = "delayed", // 延迟失效
+  SELECTIVE = "selective", // 选择性失效
+  OPTIMISTIC = "optimistic", // 乐观更新
 }
 
 /**
@@ -23,7 +23,7 @@ export enum CacheInvalidationStrategy {
  */
 export interface CacheOperation {
   type: "invalidate" | "update" | "remove" | "prefetch";
-  queryKey: any[];
+  queryKey: readonly any[];
   strategy: CacheInvalidationStrategy;
   delay?: number;
   data?: any;
@@ -71,7 +71,7 @@ export class SmartCacheManager {
             type: "invalidate",
             queryKey: playerKeys.file(fileId),
             strategy: CacheInvalidationStrategy.SELECTIVE,
-          }
+          },
         );
         break;
 
@@ -89,7 +89,7 @@ export class SmartCacheManager {
             queryKey: playerKeys.file(fileId),
             strategy: CacheInvalidationStrategy.DELAYED,
             delay: 500,
-          }
+          },
         );
         break;
 
@@ -110,7 +110,7 @@ export class SmartCacheManager {
             type: "remove",
             queryKey: playerKeys.file(fileId),
             strategy: CacheInvalidationStrategy.IMMEDIATE,
-          }
+          },
         );
         break;
     }
@@ -147,7 +147,7 @@ export class SmartCacheManager {
     }
 
     // 少量文件逐个处理
-    fileIds.forEach(fileId => {
+    fileIds.forEach((fileId) => {
       this.invalidateFileRelated(fileId, operation);
     });
   }
@@ -156,12 +156,7 @@ export class SmartCacheManager {
    * 乐观更新缓存
    * 在等待服务器响应时立即更新UI
    */
-  optimisticUpdate<T>(
-    queryKey: any[],
-    newData: T,
-    rollbackData: T,
-    promise: Promise<any>
-  ): void {
+  optimisticUpdate<T>(queryKey: any[], newData: T, rollbackData: T, promise: Promise<any>): void {
     // 立即更新缓存
     this.queryClient.setQueryData(queryKey, newData);
 
@@ -205,16 +200,17 @@ export class SmartCacheManager {
     // 清理超过1小时未访问的缓存
     const staleThreshold = 60 * 60 * 1000; // 1小时
 
-    cache.forEach(query => {
-      if (query.state.lastUpdated && (now - query.state.lastUpdated.getTime()) > staleThreshold) {
+    cache.forEach((query) => {
+      if (query.state.dataUpdatedAt && now - query.state.dataUpdatedAt > staleThreshold) {
         this.queryClient.removeQueries({ queryKey: query.queryKey });
       }
     });
 
     // 清理失败查询的缓存
     this.queryClient.removeQueries({
-      predicate: (query) => query.state.status === 'error' &&
-        (now - (query.state.lastUpdated?.getTime() || 0)) > 10 * 60 * 1000 // 10分钟前的错误
+      predicate: (query) =>
+        query.state.status === "error" &&
+        now - (query.state.dataUpdatedAt || 0) > 10 * 60 * 1000, // 10分钟前的错误
     });
 
     console.log("🧹 智能缓存清理完成");
@@ -245,15 +241,18 @@ export class SmartCacheManager {
     const operations = this.batchOperations.splice(0);
 
     // 按类型分组操作
-    const groupedOperations = operations.reduce((groups, op) => {
-      const key = `${op.type}-${op.strategy}`;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(op);
-      return groups;
-    }, {} as Record<string, CacheOperation[]>);
+    const groupedOperations = operations.reduce(
+      (groups, op) => {
+        const key = `${op.type}-${op.strategy}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(op);
+        return groups;
+      },
+      {} as Record<string, CacheOperation[]>,
+    );
 
     // 执行分组操作
-    Object.values(groupedOperations).forEach(group => {
+    Object.values(groupedOperations).forEach((group) => {
       this.executeOperationGroup(group);
     });
 
@@ -264,7 +263,7 @@ export class SmartCacheManager {
    * 执行一组操作
    */
   private executeOperationGroup(operations: CacheOperation[]): void {
-    operations.forEach(operation => {
+    operations.forEach((operation) => {
       const { type, queryKey, strategy, delay = 0, data } = operation;
 
       switch (strategy) {
@@ -292,7 +291,7 @@ export class SmartCacheManager {
   /**
    * 执行单个缓存操作
    */
-  private executeOperation(type: string, queryKey: any[], data?: any): void {
+  private executeOperation(type: string, queryKey: readonly any[], data?: any): void {
     switch (type) {
       case "invalidate":
         this.queryClient.invalidateQueries({ queryKey });
@@ -314,7 +313,7 @@ export class SmartCacheManager {
   /**
    * 调度延迟操作
    */
-  private scheduleDelayedOperation(type: string, queryKey: any[], delay: number, data?: any): void {
+  private scheduleDelayedOperation(type: string, queryKey: readonly any[], delay: number, data?: any): void {
     const key = JSON.stringify(queryKey);
 
     // 取消已有的延迟操作
@@ -335,7 +334,7 @@ export class SmartCacheManager {
    * 执行选择性操作
    * 基于缓存状态决定是否执行操作
    */
-  private executeSelectiveOperation(type: string, queryKey: any[], data?: any): void {
+  private executeSelectiveOperation(type: string, queryKey: readonly any[], data?: any): void {
     const query = this.queryClient.getQueryCache().find({ queryKey });
 
     // 如果缓存是新鲜的，跳过失效
@@ -359,9 +358,9 @@ export class SmartCacheManager {
 
     return {
       totalQueries: cache.length,
-      activeQueries: cache.filter(q => q.state.fetchStatus === 'fetching').length,
-      staleQueries: cache.filter(q => q.isStale()).length,
-      errorQueries: cache.filter(q => q.state.status === 'error').length,
+      activeQueries: cache.filter((q) => q.state.fetchStatus === "fetching").length,
+      staleQueries: cache.filter((q) => q.isStale()).length,
+      errorQueries: cache.filter((q) => q.state.status === "error").length,
     };
   }
 
@@ -370,7 +369,7 @@ export class SmartCacheManager {
    */
   destroy(): void {
     // 清理延迟操作
-    this.pendingInvalidations.forEach(timeout => clearTimeout(timeout));
+    this.pendingInvalidations.forEach((timeout) => clearTimeout(timeout));
     this.pendingInvalidations.clear();
 
     // 清理批次操作
@@ -413,11 +412,14 @@ export function getCacheManager(queryClient?: QueryClient): SmartCacheManager {
 /**
  * 定期清理缓存
  */
-setInterval(() => {
-  try {
-    const manager = getCacheManager();
-    manager.cleanupSmartCache();
-  } catch (error) {
-    // 忽略未初始化的错误
-  }
-}, 10 * 60 * 1000); // 每10分钟清理一次
+setInterval(
+  () => {
+    try {
+      const manager = getCacheManager();
+      manager.cleanupSmartCache();
+    } catch (error) {
+      // 忽略未初始化的错误
+    }
+  },
+  10 * 60 * 1000,
+); // 每10分钟清理一次

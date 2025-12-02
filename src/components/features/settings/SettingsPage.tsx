@@ -1,14 +1,14 @@
 "use client";
 
 import { FeedbackSection } from "@/components/features/settings/page/FeedbackSection";
-import { GeneralSettingsSection } from "@/components/features/settings/page/GeneralSettingsSection";
+import { LearningLanguageSection } from "@/components/features/settings/page/LearningLanguageSection";
 import { SettingsLayout } from "@/components/features/settings/SettingsLayout";
 
 export default function SettingsPage() {
   return (
     <SettingsLayout>
       <div className="space-y-8">
-        <GeneralSettingsSection />
+        <LearningLanguageSection />
         <FeedbackSection />
       </div>
     </SettingsLayout>

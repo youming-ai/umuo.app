@@ -167,9 +167,7 @@ export default function FileCard({
   return (
     <div className="card-default p-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <span className={`material-symbols-outlined text-4xl ${status.color}`}>
-          {status.icon}
-        </span>
+        <span className={`material-symbols-outlined text-4xl ${status.color}`}>{status.icon}</span>
         <div>
           <p className="text-file-name">{file.name}</p>
           <p className={`text-file-status ${status.color}`}>

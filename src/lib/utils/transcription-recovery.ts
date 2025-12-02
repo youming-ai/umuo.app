@@ -188,7 +188,7 @@ export class TranscriptionErrorClassifier {
     return "文件处理失败，请检查文件格式和大小";
   }
 
-  private static calculateRetryDelay(attempt: number, baseDelay: number): number {
+  static calculateRetryDelay(attempt: number, baseDelay: number): number {
     // 指数退避 + 随机抖动，避免雷群效应
     const exponentialDelay = baseDelay * Math.pow(2, attempt);
     const jitter = Math.random() * 0.3 * exponentialDelay; // 30% 随机抖动
@@ -331,7 +331,6 @@ export async function smartRetry<T>(
       // 操作成功，清理重试状态
       retryManager.resetRetry(context.fileId);
       return result;
-
     } catch (error) {
       // 分类错误
       const strategy = TranscriptionErrorClassifier.classifyError(error, context);
@@ -349,13 +348,13 @@ export async function smartRetry<T>(
 
       console.warn(
         `操作失败，准备重试 (${attempt}/${strategy.maxRetries}): ${strategy.userMessage}`,
-        { fileId: context.fileId, error }
+        { fileId: context.fileId, error },
       );
 
       // 等待重试延迟
       const delay = retryManager.getRetryDelay(context.fileId, strategy);
       if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       // 更新上下文中的尝试次数
@@ -368,6 +367,9 @@ export async function smartRetry<T>(
 /**
  * 定期清理过期记录
  */
-setInterval(() => {
-  globalRetryManager.cleanup();
-}, 60 * 60 * 1000); // 每小时清理一次
+setInterval(
+  () => {
+    globalRetryManager.cleanup();
+  },
+  60 * 60 * 1000,
+); // 每小时清理一次

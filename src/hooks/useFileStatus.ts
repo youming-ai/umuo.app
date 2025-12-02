@@ -6,11 +6,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TranscriptionLanguageCode } from "@/components/layout/contexts/TranscriptionLanguageContext";
+import { useTranscriptionLanguage } from "@/components/layout/contexts/TranscriptionLanguageContext";
 import { useTranscription } from "@/hooks/api/useTranscription";
-import {
-  getFileRealStatus,
-  safeUpdateTranscriptionStatus,
-} from "@/lib/utils/file-status-manager";
+import { getFileRealStatus, safeUpdateTranscriptionStatus } from "@/lib/utils/file-status-manager";
 import { handleTranscriptionError } from "@/lib/utils/transcription-error-handler";
 import { getTranscriptionQueue } from "@/lib/utils/transcription-queue";
 import { FileStatus } from "@/types/db/database";
@@ -56,15 +54,13 @@ export function useFileStatus(fileId: number) {
 export function useFileStatusManager(fileId: number) {
   const queryClient = useQueryClient();
   const transcription = useTranscription();
+  const { learningLanguage } = useTranscriptionLanguage();
   const [isTranscribing, setIsTranscribing] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // 更新转录状态（使用统一的状态管理器）
   const updateTranscriptionStatus = useCallback(
-    async (
-      status: "pending" | "processing" | "completed" | "failed",
-      error?: string,
-    ) => {
+    async (status: "pending" | "processing" | "completed" | "failed", error?: string) => {
       try {
         // 使用统一的状态管理器进行安全的状态更新
         await safeUpdateTranscriptionStatus(fileId, status, error);
@@ -80,9 +76,9 @@ export function useFileStatusManager(fileId: number) {
     [fileId, queryClient],
   );
 
-  // 开始转录（使用队列）
+  // 开始转录（使用队列和学习语言配置）
   const startTranscription = useCallback(
-    async (language: TranscriptionLanguageCode = "ja") => {
+    async (language?: TranscriptionLanguageCode) => {
       const queue = getTranscriptionQueue();
 
       // 如果已经在处理，不重复添加
@@ -100,10 +96,13 @@ export function useFileStatusManager(fileId: number) {
         // 设置状态为转录中
         await updateTranscriptionStatus("processing");
 
+        // 使用学习语言中的目标语言，如果没有指定语言参数
+        const targetLang = language || learningLanguage.targetLanguage;
+
         // 开始转录（支持自动重试和取消）
         await transcription.mutateAsync({
           fileId,
-          language,
+          language: targetLang,
           signal: abortController.signal,
         });
 
@@ -117,8 +116,7 @@ export function useFileStatusManager(fileId: number) {
           return;
         }
 
-        const errorMessage =
-          error instanceof Error ? error.message : "转录失败";
+        const errorMessage = error instanceof Error ? error.message : "转录失败";
         handleTranscriptionError(error, {
           fileId,
           operation: "transcribe",
@@ -131,7 +129,7 @@ export function useFileStatusManager(fileId: number) {
         abortControllerRef.current = null;
       }
     },
-    [fileId, transcription, updateTranscriptionStatus],
+    [fileId, transcription, updateTranscriptionStatus, learningLanguage],
   );
 
   // 取消转录
@@ -148,10 +146,7 @@ export function useFileStatusManager(fileId: number) {
     cancelTranscription();
 
     // 删除现有转录记录
-    const transcripts = await db.transcripts
-      .where("fileId")
-      .equals(fileId)
-      .toArray();
+    const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
     for (const transcript of transcripts) {
       if (transcript.id) {
         await db.segments.where("transcriptId").equals(transcript.id).delete();
@@ -218,15 +213,12 @@ export function useBatchFileStatus() {
         // 执行转录
         await transcription.mutateAsync({
           fileId: task.fileId,
-          language: task.language,
+          language: language,
           signal: task.abortController.signal,
         });
 
         // 更新状态为完成
-        const transcripts = await db.transcripts
-          .where("fileId")
-          .equals(task.fileId)
-          .toArray();
+        const transcripts = await db.transcripts.where("fileId").equals(task.fileId).toArray();
         if (transcripts.length > 0 && transcripts[0].id) {
           await db.transcripts.update(transcripts[0].id, {
             status: "completed",
@@ -244,10 +236,7 @@ export function useBatchFileStatus() {
       // 设置状态变更回调
       queue.setStatusChangeCallback(async (fileId, status, error) => {
         if (status === "failed") {
-          const transcripts = await db.transcripts
-            .where("fileId")
-            .equals(fileId)
-            .toArray();
+          const transcripts = await db.transcripts.where("fileId").equals(fileId).toArray();
           if (transcripts.length > 0 && transcripts[0].id) {
             await db.transcripts.update(transcripts[0].id, {
               status: "failed",

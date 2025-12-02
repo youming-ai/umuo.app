@@ -63,9 +63,9 @@ class OptimizedPostProcessor {
     const categorizedSegments = this.categorizeSegments(segments);
     console.log(
       `文本分类: 极短 ${categorizedSegments.ultraShort.length}, ` +
-      `短 ${categorizedSegments.short.length}, ` +
-      `中 ${categorizedSegments.medium.length}, ` +
-      `长 ${categorizedSegments.long.length}`
+        `短 ${categorizedSegments.short.length}, ` +
+        `中 ${categorizedSegments.medium.length}, ` +
+        `长 ${categorizedSegments.long.length}`,
     );
 
     // 并行处理所有类别
@@ -80,9 +80,9 @@ class OptimizedPostProcessor {
     const allProcessed: ProcessedSegment[] = [];
 
     results.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
+      if (result.status === "fulfilled") {
         allProcessed.push(...result.value);
-        const categoryNames = ['极短文本', '短文本', '中等文本', '长文本'];
+        const categoryNames = ["极短文本", "短文本", "中等文本", "长文本"];
         console.log(`✅ ${categoryNames[index]}处理完成: ${result.value.length} 个`);
       } else {
         console.error(`❌ 处理类别 ${index} 失败:`, result.reason);
@@ -98,7 +98,7 @@ class OptimizedPostProcessor {
 
     console.log(
       `🎉 优化后处理完成! 总耗时: ${processingTime}ms, ` +
-      `平均: ${avgTimePerSegment.toFixed(2)}ms/segment`
+        `平均: ${avgTimePerSegment.toFixed(2)}ms/segment`,
     );
 
     return orderedResults;
@@ -113,14 +113,14 @@ class OptimizedPostProcessor {
     const MEDIUM_THRESHOLD = 120;
 
     return {
-      ultraShort: segments.filter(seg => seg.text.length <= ULTRA_SHORT_THRESHOLD),
-      short: segments.filter(seg =>
-        seg.text.length > ULTRA_SHORT_THRESHOLD && seg.text.length <= SHORT_THRESHOLD
+      ultraShort: segments.filter((seg) => seg.text.length <= ULTRA_SHORT_THRESHOLD),
+      short: segments.filter(
+        (seg) => seg.text.length > ULTRA_SHORT_THRESHOLD && seg.text.length <= SHORT_THRESHOLD,
       ),
-      medium: segments.filter(seg =>
-        seg.text.length > SHORT_THRESHOLD && seg.text.length <= MEDIUM_THRESHOLD
+      medium: segments.filter(
+        (seg) => seg.text.length > SHORT_THRESHOLD && seg.text.length <= MEDIUM_THRESHOLD,
       ),
-      long: segments.filter(seg => seg.text.length > MEDIUM_THRESHOLD),
+      long: segments.filter((seg) => seg.text.length > MEDIUM_THRESHOLD),
     };
   }
 
@@ -169,20 +169,20 @@ class OptimizedPostProcessor {
     // 并行处理批次
     for (let i = 0; i < batches.length; i += CONCURRENT_BATCHES) {
       const currentBatches = batches.slice(i, i + CONCURRENT_BATCHES);
-      const batchPromises = currentBatches.map(batch =>
-        this.processBatchOptimized(batch, sourceLanguage, options)
+      const batchPromises = currentBatches.map((batch) =>
+        this.processBatchOptimized(batch, sourceLanguage, options),
       );
 
       const batchResults = await Promise.allSettled(batchPromises);
-      batchResults.forEach(result => {
-        if (result.status === 'fulfilled') {
+      batchResults.forEach((result) => {
+        if (result.status === "fulfilled") {
           results.push(...result.value);
         }
       });
 
       // 微小延迟
       if (i + CONCURRENT_BATCHES < batches.length) {
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise((resolve) => setTimeout(resolve, 20));
       }
     }
 
@@ -202,15 +202,15 @@ class OptimizedPostProcessor {
     const CONCURRENT = Math.min(6, segments.length);
     const chunks = this.chunkArray(segments, Math.ceil(segments.length / CONCURRENT));
 
-    const chunkPromises = chunks.map(chunk =>
-      this.processChunkSequentially(chunk, sourceLanguage, options)
+    const chunkPromises = chunks.map((chunk) =>
+      this.processChunkSequentially(chunk, sourceLanguage, options),
     );
 
     const chunkResults = await Promise.allSettled(chunkPromises);
     const results: ProcessedSegment[] = [];
 
-    chunkResults.forEach(result => {
-      if (result.status === 'fulfilled') {
+    chunkResults.forEach((result) => {
+      if (result.status === "fulfilled") {
         results.push(...result.value);
       }
     });
@@ -231,15 +231,15 @@ class OptimizedPostProcessor {
     const CONCURRENT = Math.min(3, segments.length);
     const chunks = this.chunkArray(segments, Math.ceil(segments.length / CONCURRENT));
 
-    const chunkPromises = chunks.map(chunk =>
-      this.processChunkSequentially(chunk, sourceLanguage, options, 100) // 长文本增加延迟
+    const chunkPromises = chunks.map(
+      (chunk) => this.processChunkSequentially(chunk, sourceLanguage, options, 100), // 长文本增加延迟
     );
 
     const chunkResults = await Promise.allSettled(chunkPromises);
     const results: ProcessedSegment[] = [];
 
-    chunkResults.forEach(result => {
-      if (result.status === 'fulfilled') {
+    chunkResults.forEach((result) => {
+      if (result.status === "fulfilled") {
         results.push(...result.value);
       }
     });
@@ -259,9 +259,7 @@ class OptimizedPostProcessor {
       return [await this.processSingleSegment(segments[0], sourceLanguage, options)];
     }
 
-    const combinedText = segments
-      .map((seg, index) => `[SEGMENT_${index}] ${seg.text}`)
-      .join('\n');
+    const combinedText = segments.map((seg, index) => `[SEGMENT_${index}] ${seg.text}`).join("\n");
 
     const prompt = this.buildBatchPrompt(combinedText, sourceLanguage, options);
 
@@ -272,7 +270,8 @@ class OptimizedPostProcessor {
         messages: [
           {
             role: "system",
-            content: "You are a professional language teacher. Process multiple text segments efficiently. Respond with valid JSON only.",
+            content:
+              "You are a professional language teacher. Process multiple text segments efficiently. Respond with valid JSON only.",
           },
           { role: "user", content: prompt },
         ],
@@ -322,7 +321,7 @@ class OptimizedPostProcessor {
 
       // 添加延迟以避免API限流
       if (i < segments.length - 1 && delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
@@ -345,7 +344,8 @@ class OptimizedPostProcessor {
       messages: [
         {
           role: "system",
-          content: "You are a professional language teacher. Provide accurate, educational responses. Respond with valid JSON.",
+          content:
+            "You are a professional language teacher. Provide accurate, educational responses. Respond with valid JSON.",
         },
         { role: "user", content: prompt },
       ],
@@ -409,7 +409,7 @@ Return JSON:
       prompt += `\nAdd grammatical/cultural annotations`;
     }
 
-    if (options.enableFurigana && sourceLanguage === 'ja') {
+    if (options.enableFurigana && sourceLanguage === "ja") {
       prompt += `\nInclude furigana`;
     }
 
@@ -473,7 +473,7 @@ Return JSON:
    * 创建fallback结果
    */
   private createFallbackResults(segments: Segment[]): ProcessedSegment[] {
-    return segments.map(segment => this.createFallbackResult(segment));
+    return segments.map((segment) => this.createFallbackResult(segment));
   }
 
   private createFallbackResult(segment: Segment): ProcessedSegment {
@@ -495,10 +495,11 @@ Return JSON:
     originalSegments: Segment[],
     processedResults: ProcessedSegment[],
   ): ProcessedSegment[] {
-    return originalSegments.map(originalSegment => {
-      const matching = processedResults.find(result =>
-        Math.abs(result.start - originalSegment.start) < 0.1 &&
-        Math.abs(result.end - originalSegment.end) < 0.1
+    return originalSegments.map((originalSegment) => {
+      const matching = processedResults.find(
+        (result) =>
+          Math.abs(result.start - originalSegment.start) < 0.1 &&
+          Math.abs(result.end - originalSegment.end) < 0.1,
       );
 
       return matching || this.createFallbackResult(originalSegment);
