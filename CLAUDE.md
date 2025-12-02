@@ -34,7 +34,7 @@ File Management   AI Services   Text Normalization   Persistent Storage   Real-t
 - **React Hooks**: Component-level state management
 - **IndexedDB**: Persistent client-side storage
 - **Real-time Updates**: Automatic UI sync with database changes
-- **Repository Pattern**: Clean data access layer with base repository and factory pattern for type-safe database operations
+- **Database Utilities**: Simplified DBUtils class for direct database operations
 
 ## Available Commands
 
@@ -87,33 +87,32 @@ The application uses Dexie (IndexedDB) with the following main tables:
 
 **Database Utilities**: Simplified DBUtils class with batch processing support for large segment datasets
 
-### Repository Pattern Architecture
+### Database Operations
 
-The application implements a clean Repository Pattern for data access:
+The application uses a simplified `DBUtils` class in `/src/lib/db/db.ts` for direct database operations:
 
 ```typescript
-// Base repository with common CRUD operations
-abstract class BaseRepository<T> implements IRepository<T>
+class DBUtils {
+  // Core CRUD operations
+  static async add<T>(table: Dexie.Table<T, number>, item: Omit<T, 'id'>): Promise<number>
+  static async get<T>(table: Dexie.Table<T, number>, id: number): Promise<T | undefined>
+  static async update<T>(table: Dexie.Table<T, number>, id: number, changes: Partial<T>): Promise<number>
+  static async delete<T>(table: Dexie.Table<T, number>, id: number): Promise<void>
 
-// Specific implementations
-class FileRepository extends BaseRepository<FileRow>
-class TranscriptRepository extends BaseRepository<TranscriptRow>
-class SegmentRepository extends BaseRepository<SegmentRow>
+  // Batch operations
+  static async bulkAdd<T>(table: Dexie.Table<T, number>, items: Omit<T, 'id'>[]): Promise<number[]>
+  static async bulkUpdate<T>(table: Dexie.Table<T, number>, items: Array<{id: number, changes: Partial<T>}): Promise<number[]>
 
-// Factory for repository instances
-class RepositoryFactory {
-  static getFileRepository(): FileRepository
-  static getTranscriptRepository(): TranscriptRepository
-  static getSegmentRepository(): SegmentRepository
+  // Query operations
+  static async where<T>(table: Dexie.Table<T, number>, predicate: (item: T) => boolean): Promise<T[]>
+  static async orderBy<T>(table: Dexie.Table<T, number>, key: keyof T, direction?: 'asc' | 'desc'): Promise<T[]>
 }
 ```
 
 **Key Features**:
-- **Type-safe operations** with TypeScript interfaces
-- **Built-in caching** with 5-minute timeout and cache management
+- **Type-safe operations** with TypeScript generics
 - **Batch processing** support for large datasets
-- **Query abstraction** with pagination, search, and filtering
-- **Health checks** and metrics for monitoring
+- **Simplified query interface** for common database patterns
 - **Transaction support** for complex operations
 
 ## API Routes Structure
@@ -121,6 +120,100 @@ class RepositoryFactory {
 - `/api/transcribe` - Main transcription endpoint using Groq
 - `/api/postprocess` - Text normalization and enhancement
 - `/api/progress/[fileId]` - Real-time progress tracking
+
+## Advanced Features
+
+### Transcription Language System
+The application includes a sophisticated multi-language transcription system with context-based language selection:
+
+```typescript
+// Available languages
+type TranscriptionLanguage = 'chinese' | 'english' | 'japanese'
+
+// Language configuration
+const languageConfig = {
+  chinese: { code: 'zh', name: 'Chinese', whisper: 'chinese' },
+  english: { code: 'en', name: 'English', whisper: 'english' },
+  japanese: { code: 'ja', name: 'Japanese', whisper: 'japanese' }
+}
+```
+
+**Key Features**:
+- **Dynamic Language Selection**: Users can change transcription language via context
+- **Context Persistence**: Language preferences saved to local storage
+- **Real-time Updates**: UI automatically updates when language changes
+- **Groq Integration**: Language codes mapped to Groq Whisper model parameters
+- **Localized UI**: Interface elements and labels adapt to selected language
+
+**Context Provider**: `TranscriptionLanguageContext` in `/src/components/layout/contexts/TranscriptionLanguageContext.tsx`
+
+### Advanced Error Handling System
+The application implements a comprehensive error handling system with recovery strategies:
+
+```typescript
+// Error categorization and handling
+class ErrorHandler {
+  // Error types: Network, API, Transcription, FileProcessing, Database
+  static handleError(error: Error, context: string): void
+  static shouldRetry(error: Error, attemptCount: number): boolean
+  static getRetryDelay(attemptCount: number): number
+}
+```
+
+**Key Features**:
+- **Error Categorization**: Intelligent classification of different error types
+- **Automatic Retries**: Exponential backoff with configurable retry attempts
+- **User-Friendly Messages**: Contextual error messages with recovery suggestions
+- **Toast Notifications**: Real-time error feedback via react-hot-toast
+- **Error Monitoring**: Centralized error logging and aggregation
+- **Graceful Degradation**: Fallback mechanisms for AI service failures
+
+**Implementation**: `/src/lib/utils/error-handler.ts`
+
+### Rate Limiting System
+Sophisticated API protection using sliding window algorithm:
+
+```typescript
+class RateLimiter {
+  // Sliding window implementation
+  static async checkLimit(key: string, limit: number, windowMs: number): Promise<boolean>
+  static async getRemainingRequests(key: string, limit: number, windowMs: number): Promise<number>
+}
+```
+
+**Key Features**:
+- **Sliding Window Algorithm**: More accurate than fixed window limiting
+- **Multiple Rate Limits**: Different limits for various API endpoints
+- **Redis Integration**: Distributed rate limiting for production
+- **Graceful Handling**: Proper HTTP status codes (429) and retry headers
+- **Burst Protection**: Handles traffic spikes efficiently
+
+**Implementation**: `/src/lib/utils/rate-limiter.ts`
+
+### Memory Management
+Optimized memory usage for audio processing and caching:
+
+```typescript
+// Audio URL caching with WeakMap to prevent memory leaks
+const audioUrlCache = new WeakMap<Blob, string>()
+
+// Automatic cleanup on component unmount
+useEffect(() => {
+  return () => {
+    // Clean up audio URLs and revoke object URLs
+    cleanupAudioResources()
+  }
+}, [])
+```
+
+**Key Features**:
+- **WeakMap Caching**: Prevents memory leaks for audio URL references
+- **Automatic Cleanup**: Resource cleanup on component unmount
+- **Object URL Management**: Proper revocation of blob URLs
+- **Memory Monitoring**: Tracking of memory usage patterns
+- **Garbage Collection**: Optimized for browser garbage collection
+
+**Implementation**: Audio URL management in `usePlayerDataQuery` and player components
 
 ## Component Architecture
 
@@ -227,11 +320,12 @@ TRANSCRIPTION_MAX_CONCURRENCY=2          # Concurrent processing
 3. Update TypeScript types in `/src/types/database.ts`
 4. Test with existing data through Dexie's migration system
 
-#### Repository Pattern Usage
-1. Use `RepositoryFactory` to get repository instances: `const fileRepo = RepositoryFactory.getFileRepository()`
-2. All repositories extend `BaseRepository` with common CRUD operations
-3. Implement custom methods in specific repository implementations as needed
-4. Leverage built-in caching and batch processing capabilities
+#### Database Operations Usage
+1. Use `DBUtils` static methods for database operations: `DBUtils.add(db.files, fileData)`
+2. Leverage batch operations for large datasets: `DBUtils.bulkAdd(db.segments, segments)`
+3. Use query methods for data retrieval: `DBUtils.where(db.files, file => file.size > 1000000)`
+4. Implement transaction blocks for complex operations
+5. Use type-safe operations with TypeScript generics for type safety
 
 #### Adding New Components with State
 1. Create component in appropriate `/src/components/` subdirectory
@@ -278,9 +372,19 @@ The `ci:build` command runs the complete quality assurance pipeline:
 - **Package Optimization**: Standard Next.js optimization for serverless deployment
 
 ### Performance Monitoring
-- **Lighthouse Integration**: Automated performance audits
-- **Bundle Analysis**: Webpack bundle analyzer for optimization
+- **Vercel Analytics**: Integrated analytics for performance monitoring
+- **Speed Insights**: Real user performance data and Core Web Vitals
+- **Web Vitals Monitoring**: Custom Web Vitals tracking in `/src/lib/web-vitals.ts`
+- **Bundle Analysis**: Webpack bundle analyzer via `pnpm build:analyze`
+- **Lighthouse Integration**: Automated performance audits in CI/CD
 - **Production Optimization**: Standard Next.js optimization for Vercel serverless functions
+
+### Performance Features
+- **Real-time Monitoring**: Live performance data from production users
+- **Core Web Vitals**: LCP, FID, CLS tracking and alerting
+- **Resource Optimization**: Lazy loading and code splitting
+- **Cache Strategies**: Optimized caching headers for static assets and API responses
+- **Database Performance**: Indexed indexing and query optimization
 
 ## Styling System
 
@@ -321,13 +425,44 @@ The application includes intelligent auto-transcription:
 
 ## Testing and Quality Assurance
 
-**Note**: While test infrastructure with Vitest and React Testing Library is available and configured, the current development workflow primarily emphasizes type safety and code quality through automated linting and formatting. Test files exist in `__tests__` directories for key utilities and API routes.
+The application maintains comprehensive test infrastructure with Vitest and React Testing Library, though the current development workflow emphasizes type safety and code quality through automated linting and formatting.
+
+### Testing Framework Configuration
+- **Test Runner**: Vitest with TypeScript support
+- **Testing Library**: React Testing Library for component testing
+- **Mock Browser APIs**: fake-indexeddb for IndexedDB testing
+- **Coverage**: Available via `pnpm test:coverage`
+
+### Available Test Commands
+```bash
+pnpm test             # Run tests in watch mode
+pnpm test:run         # Run tests once
+pnpm test:coverage    # Run tests with coverage report
+pnpm test:ui          # Run tests with UI interface
+```
+
+### Test Structure
+- **Database Tests**: `/src/lib/db/__tests__/db.test.ts` - Database operations and migrations
+- **API Tests**: `/src/app/api/*/__tests__/` - API route testing
+- **Utility Tests**: `/src/lib/utils/__tests__/` - Utility function testing
+- **Component Tests**: Component-level tests in development
+
+### Mock Configuration
+```typescript
+// Browser API mocks for testing
+import { fakeIndexedDB } from 'fake-indexeddb'
+
+// Mock implementations
+global.indexedDB = fakeIndexedDB()
+global.Blob = class MockBlob {}
+global.URL.createObjectURL = jest.fn()
+```
 
 ### Type Safety
 - Strict TypeScript configuration
 - Comprehensive type definitions in `/src/types/`
 - Zod schemas for API request/response validation
-- Repository pattern with TypeScript interfaces for data access
+- Type-safe database operations via DBUtils generics
 
 ### Code Quality
 - Biome.js for linting and formatting
@@ -338,10 +473,13 @@ The application includes intelligent auto-transcription:
 ### Recent Cleanup and Optimization
 - **Migration to Groq SDK**: Simplified AI integration by removing AI SDK abstraction layer
 - **File Management Simplification**: Removed grid/list view toggle, implemented unified FileManager component
-- **Repository Pattern**: Implemented clean data access layer with base repository and factory pattern
+- **Database Utilities**: Replaced repository pattern with simplified DBUtils class for direct operations
 - **Memory Management**: Added WeakMap for audio URL caching to prevent memory leaks
 - **State Management Optimization**: Consolidated transcription hooks and removed redundant state management
 - **Performance Optimization**: Streamlined database operations and improved indexing
+- **Error Handling Enhancement**: Implemented comprehensive error handling system with retry mechanisms
+- **Multi-language Support**: Added transcription language context for Chinese, English, and Japanese
+- **Rate Limiting**: Implemented sophisticated API protection with sliding window algorithm
 
 ## Theme System & Debugging
 
@@ -371,23 +509,17 @@ The application supports 4 distinct themes with WCAG AA compliance:
 ```json
 {
   "formatter": {
-    "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
     "lineWidth": 100
   },
   "linter": {
-    "enabled": true,
     "rules": {
       "recommended": true,
       "suspicious": {
         "noUnknownAtRules": "off"
       }
     }
-  },
-  "files": {
-    "ignoreUnknown": false,
-    "includes": ["src/**/*"]
   }
 }
 ```

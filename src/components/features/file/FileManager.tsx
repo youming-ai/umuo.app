@@ -254,7 +254,7 @@ function FileCardWrapper({
 }) {
   // Hooks must be called before any early returns - 添加空值检查
   const { data: statusData, isLoading } = useFileStatus(file.id || 0);
-  const { startTranscription, cancelTranscription, isTranscribing } = useFileStatusManager(
+  const { startTranscription, isTranscribing } = useFileStatusManager(
     file.id || 0,
   );
   const { language } = useTranscriptionLanguage();
@@ -300,18 +300,10 @@ function FileCardWrapper({
     <div className="relative">
       {/* 转录中的loading遮罩 */}
       {isTranscribing && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/80">
           <div className="flex flex-col items-center gap-3">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             <span className="text-sm font-medium text-muted-foreground">正在转录...</span>
-            <button
-              type="button"
-              onClick={cancelTranscription}
-              className="mt-2 px-4 py-1.5 text-sm font-medium text-destructive hover:text-destructive/80 
-                         bg-destructive/10 hover:bg-destructive/20 rounded-lg transition-colors"
-            >
-              取消转录
-            </button>
           </div>
         </div>
       )}
